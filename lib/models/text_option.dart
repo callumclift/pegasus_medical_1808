@@ -1,0 +1,1 @@
+enum TextOption { PlainText, EncryptedText, Date, Time, EncryptedDate, DateTime }

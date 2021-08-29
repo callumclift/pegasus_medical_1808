@@ -1,0 +1,1 @@
+enum ShareOption { Email, Share, Print, Download }
