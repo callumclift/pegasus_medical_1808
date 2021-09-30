@@ -19,13 +19,25 @@ import 'package:intl/intl.dart';
 
 class TransferReportOverall extends StatefulWidget {
 
+  final int initialIndex;
   final bool fromJob;
   final String jobId;
   final bool fillDetails;
   final bool edit;
-  final int initialIndex;
+  final bool saved;
+  final int savedId;
 
-  TransferReportOverall([this.initialIndex = 0, this.fromJob = false, this.jobId = '1', this.fillDetails = false, this.edit = false]);
+  TransferReportOverall(
+      [
+        this.initialIndex = 0,
+        this.fromJob = false,
+        this.jobId = '1',
+        this.fillDetails = false,
+        this.edit = false,
+        this.saved = false,
+        this.savedId = 0
+      ]
+      );
 
   @override
   _TransferReportOverallState createState() => _TransferReportOverallState();
@@ -95,11 +107,11 @@ class _TransferReportOverallState extends State<TransferReportOverall> with Sing
                 TextButton(
                   onPressed: () async {
                     FocusScope.of(context).requestFocus(new FocusNode());
-                    await context.read<TransferReportModel>().resetTemporaryRecord(widget.jobId);
+                    await context.read<TransferReportModel>().resetTemporaryRecord(widget.jobId, widget.saved, widget.savedId);
                     if(kIsWeb){
-                      await context.read<TransferReportModel>().resetTemporaryRecord(widget.jobId);
+                      await context.read<TransferReportModel>().resetTemporaryRecord(widget.jobId, widget.saved, widget.savedId);
                     }
-                    //context.read<TransferReportModel>().resetTemporaryTransferReport(widget.jobId);
+                    //context.read<TransferReportModel>().resetTemporaryTransferReport(widget.jobId, widget.saved, widget.savedId);
                     Navigator.pushReplacement(
                       context,
                       PageRouteBuilder(
@@ -174,7 +186,7 @@ class _TransferReportOverallState extends State<TransferReportOverall> with Sing
 
 
 
-        Map<String, dynamic> transferReport = await context.read<TransferReportModel>().getTemporaryRecord(widget.edit, widget.jobId);
+        Map<String, dynamic> transferReport = await context.read<TransferReportModel>().getTemporaryRecord(widget.edit, widget.jobId, widget.saved, widget.savedId);
         if(transferReport[Strings.startTime] == null) hasStartTime = false;
         if(transferReport[Strings.finishTime] == null) hasFinishTime = false;
 
@@ -255,14 +267,14 @@ class _TransferReportOverallState extends State<TransferReportOverall> with Sing
                     Duration(hours: startTimeTime.hour, minutes: startTimeTime.minute));
 
                 await context.read<TransferReportModel>().updateTemporaryRecord(widget.edit, Strings.startTime, DateTime.fromMillisecondsSinceEpoch(
-                    startTime.millisecondsSinceEpoch).toIso8601String(), widget.jobId);
+                    startTime.millisecondsSinceEpoch).toIso8601String(), widget.jobId, widget.saved, widget.savedId);
 
                 // await _databaseHelper.updateTemporaryTransferReportField(
                 //     widget.edit,
                 //     {
                 //       Strings.startTime: DateTime.fromMillisecondsSinceEpoch(
                 //           startTime.millisecondsSinceEpoch).toIso8601String()
-                //     }, user.uid, widget.jobId);
+                //     }, user.uid, widget.jobId, widget.saved, widget.savedId);
 
                 hasStartTime = true;
               }
@@ -344,14 +356,14 @@ class _TransferReportOverallState extends State<TransferReportOverall> with Sing
                     Duration(hours: finishTimeTime.hour, minutes: finishTimeTime.minute));
 
                 await context.read<TransferReportModel>().updateTemporaryRecord(widget.edit, Strings.finishTime, DateTime.fromMillisecondsSinceEpoch(
-                    finishTime.millisecondsSinceEpoch).toIso8601String(), widget.jobId);
+                    finishTime.millisecondsSinceEpoch).toIso8601String(), widget.jobId, widget.saved, widget.savedId);
 
                 // await _databaseHelper.updateTemporaryTransferReportField(
                 //     widget.edit,
                 //     {
                 //       Strings.finishTime: DateTime.fromMillisecondsSinceEpoch(
                 //           finishTime.millisecondsSinceEpoch).toIso8601String()
-                //     }, user.uid, widget.jobId);
+                //     }, user.uid, widget.jobId, widget.saved, widget.savedId);
 
                 hasFinishTime = true;
 
@@ -368,11 +380,11 @@ class _TransferReportOverallState extends State<TransferReportOverall> with Sing
                     totalHours = (minutes / 60).toStringAsFixed(1).replaceAll(RegExp(r"([.]*0)(?!.*\d)"), "");
                   }
 
-                await context.read<TransferReportModel>().updateTemporaryRecord(widget.edit, Strings.totalHours, totalHours, widget.jobId);
+                await context.read<TransferReportModel>().updateTemporaryRecord(widget.edit, Strings.totalHours, totalHours, widget.jobId, widget.saved, widget.savedId);
 
                   // await _databaseHelper.updateTemporaryTransferReportField(
                   //     widget.edit,
-                  //     {Strings.totalHours: totalHours}, user.uid, widget.jobId);
+                  //     {Strings.totalHours: totalHours}, user.uid, widget.jobId, widget.saved, widget.savedId);
 
               } else {
                 Navigator.pushReplacement(
@@ -473,7 +485,7 @@ class _TransferReportOverallState extends State<TransferReportOverall> with Sing
                   Duration(hours: startTimeTime.hour, minutes: startTimeTime.minute));
 
               await context.read<TransferReportModel>().updateTemporaryRecord(widget.edit, Strings.startTime, DateTime.fromMillisecondsSinceEpoch(
-                        startTime.millisecondsSinceEpoch).toIso8601String(), widget.jobId);
+                        startTime.millisecondsSinceEpoch).toIso8601String(), widget.jobId, widget.saved, widget.savedId);
 
 
               // await _databaseHelper.updateTemporaryTransferReportField(
@@ -481,7 +493,7 @@ class _TransferReportOverallState extends State<TransferReportOverall> with Sing
               //     {
               //       Strings.startTime: DateTime.fromMillisecondsSinceEpoch(
               //           startTime.millisecondsSinceEpoch).toIso8601String()
-              //     }, user.uid, widget.jobId);
+              //     }, user.uid, widget.jobId, widget.saved, widget.savedId);
 
               hasStartTime = true;
 
@@ -498,11 +510,11 @@ class _TransferReportOverallState extends State<TransferReportOverall> with Sing
                 totalHours = (minutes / 60).toStringAsFixed(1).replaceAll(RegExp(r"([.]*0)(?!.*\d)"), "");
               }
 
-              await context.read<TransferReportModel>().updateTemporaryRecord(widget.edit, Strings.totalHours, totalHours, widget.jobId);
+              await context.read<TransferReportModel>().updateTemporaryRecord(widget.edit, Strings.totalHours, totalHours, widget.jobId, widget.saved, widget.savedId);
 
               // await _databaseHelper.updateTemporaryTransferReportField(
               //     widget.edit,
-              //     {Strings.totalHours: totalHours}, user.uid, widget.jobId);
+              //     {Strings.totalHours: totalHours}, user.uid, widget.jobId, widget.saved, widget.savedId);
 
 
             }
@@ -583,7 +595,7 @@ class _TransferReportOverallState extends State<TransferReportOverall> with Sing
                   Duration(hours: finishTimeTime.hour, minutes: finishTimeTime.minute));
 
               await context.read<TransferReportModel>().updateTemporaryRecord(widget.edit, Strings.finishTime, DateTime.fromMillisecondsSinceEpoch(
-                  finishTime.millisecondsSinceEpoch).toIso8601String(), widget.jobId);
+                  finishTime.millisecondsSinceEpoch).toIso8601String(), widget.jobId, widget.saved, widget.savedId);
 
 
               // await _databaseHelper.updateTemporaryTransferReportField(
@@ -591,7 +603,7 @@ class _TransferReportOverallState extends State<TransferReportOverall> with Sing
               //     {
               //       Strings.finishTime: DateTime.fromMillisecondsSinceEpoch(
               //           finishTime.millisecondsSinceEpoch).toIso8601String()
-              //     }, user.uid, widget.jobId);
+              //     }, user.uid, widget.jobId, widget.saved, widget.savedId);
 
               hasFinishTime = true;
 
@@ -608,11 +620,11 @@ class _TransferReportOverallState extends State<TransferReportOverall> with Sing
                 totalHours = (minutes / 60).toStringAsFixed(1).replaceAll(RegExp(r"([.]*0)(?!.*\d)"), "");
               }
 
-              await context.read<TransferReportModel>().updateTemporaryRecord(widget.edit, Strings.totalHours, totalHours, widget.jobId);
+              await context.read<TransferReportModel>().updateTemporaryRecord(widget.edit, Strings.totalHours, totalHours, widget.jobId, widget.saved, widget.savedId);
 
               // await _databaseHelper.updateTemporaryTransferReportField(
               //     widget.edit,
-              //     {Strings.totalHours: totalHours}, user.uid, widget.jobId);
+              //     {Strings.totalHours: totalHours}, user.uid, widget.jobId, widget.saved, widget.savedId);
 
 
             }
@@ -623,7 +635,7 @@ class _TransferReportOverallState extends State<TransferReportOverall> with Sing
         if(hasStartTime && hasFinishTime) {
 
 
-          Map<String, dynamic> validationResult = await context.read<TransferReportModel>().validateTransferReport(widget.jobId, widget.edit);
+          Map<String, dynamic> validationResult = await context.read<TransferReportModel>().validateTransferReport(widget.jobId, widget.edit, widget.saved, widget.savedId);
           if(validationResult['successJobDetails'] == false || validationResult['successVehicleChecklist'] == false || validationResult['successPatientDetails'] == false){
             //Navigator.of(context).pop();
             showDialog(
@@ -711,7 +723,7 @@ class _TransferReportOverallState extends State<TransferReportOverall> with Sing
               }
 
             } else {
-              bool success = await context.read<TransferReportModel>().submitTransferReport(widget.jobId);
+              bool success = await context.read<TransferReportModel>().submitTransferReport(widget.jobId, widget.edit, widget.saved, widget.savedId);
               FocusScope.of(context).requestFocus(new FocusNode());
               if(success){
                 Navigator.pushReplacement(
@@ -737,9 +749,78 @@ class _TransferReportOverallState extends State<TransferReportOverall> with Sing
 
 
     }
+
+
+    void _saveForLater() async {
+      FocusScope.of(context).unfocus();
+
+      bool submitForm = await showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(32.0))),
+              contentPadding: EdgeInsets.fromLTRB(10, 10, 10, 0),
+              titlePadding: EdgeInsets.all(0),
+              title: Container(
+                padding: EdgeInsets.only(top: 10, bottom: 10),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [purpleDesign, purpleDesign]),
+                  borderRadius: BorderRadius.only(topLeft: Radius.circular(32),
+                      topRight: Radius.circular(32)),
+                ),
+                child: Center(child: Text("Save for later", style: TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold),),),
+              ),
+              content: Text(
+                  'This form will be moved to your saved list, do you wish to proceed?'),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () {
+                    FocusScope.of(context).requestFocus(new FocusNode());
+                    Navigator.of(context).pop(false);
+                  },
+                  child: Text(
+                    'No',
+                    style: TextStyle(
+                        color: blueDesign, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    Navigator.of(context).pop(true);
+                  },
+                  child: Text(
+                    'Yes',
+                    style: TextStyle(
+                        color: blueDesign, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            );
+          });
+
+
+      if (submitForm) {
+        bool success = await context.read<TransferReportModel>().saveForLater(widget.jobId, widget.saved, widget.savedId);
+        FocusScope.of(context).requestFocus(new FocusNode());
+        if(success){
+          Navigator.pushReplacement(
+            context,
+            PageRouteBuilder(
+              pageBuilder: (context, animation1, animation2) => TransferReportOverall(tabIndex == null ? widget.initialIndex : tabIndex),
+              transitionDuration: Duration(seconds: 0),
+            ),
+          );
+        }
+      }
+    }
     // TODO: implement build
     return Scaffold(
-      drawer: widget.edit ? null : SideDrawer(),
+        drawer: widget.edit || widget.saved ? null : SideDrawer(),
       appBar: AppBar(backgroundColor: greyDesign1,
 
         iconTheme: IconThemeData(color: Colors.white),
@@ -767,8 +848,9 @@ class _TransferReportOverallState extends State<TransferReportOverall> with Sing
             ),
           ],
         ),actions: <Widget>[
-          widget.edit ? Container() : IconButton(icon: Icon(Icons.refresh), onPressed: _resetTransferReport),
-          IconButton(icon: Icon(Icons.send), onPressed: _submitForm)
+          widget.edit || widget.saved ? Container() : IconButton(icon: Icon(Icons.refresh), onPressed: _resetTransferReport),
+          widget.saved || widget.edit ? Container() : IconButton(icon: Icon(Icons.watch_later_outlined), onPressed: _saveForLater),
+          IconButton(icon: Icon(Icons.send), onPressed: _submitForm),
         ],
       ),
       body: Consumer<AuthenticationModel>(
@@ -783,20 +865,20 @@ class _TransferReportOverallState extends State<TransferReportOverall> with Sing
               physics: NeverScrollableScrollPhysics(),
               controller: tabController,
               children: <Widget>[
-                TransferReportSection1(widget.fromJob, widget.jobId, widget.fillDetails, widget.edit),
-                TransferReportSection2(widget.fromJob, widget.jobId, widget.fillDetails, widget.edit),
-                TransferReportSection3(widget.fromJob, widget.jobId, widget.fillDetails, widget.edit),
-                TransferReportSection4(widget.fromJob, widget.jobId, widget.fillDetails, widget.edit),
-                TransferReportSection5(widget.fromJob, widget.jobId, widget.fillDetails, widget.edit),
+                TransferReportSection1(widget.fromJob, widget.jobId, widget.fillDetails, widget.edit, widget.saved, widget.savedId),
+                TransferReportSection2(widget.fromJob, widget.jobId, widget.fillDetails, widget.edit, widget.saved, widget.savedId),
+                TransferReportSection3(widget.fromJob, widget.jobId, widget.fillDetails, widget.edit, widget.saved, widget.savedId),
+                TransferReportSection4(widget.fromJob, widget.jobId, widget.fillDetails, widget.edit, widget.saved, widget.savedId),
+                TransferReportSection5(widget.fromJob, widget.jobId, widget.fillDetails, widget.edit, widget.saved, widget.savedId),
               ],
             ) : TabBarView(
               controller: tabController,
               children: <Widget>[
-                TransferReportSection1(widget.fromJob, widget.jobId, widget.fillDetails, widget.edit),
-                TransferReportSection2(widget.fromJob, widget.jobId, widget.fillDetails, widget.edit),
-                TransferReportSection3(widget.fromJob, widget.jobId, widget.fillDetails, widget.edit),
-                TransferReportSection4(widget.fromJob, widget.jobId, widget.fillDetails, widget.edit),
-                TransferReportSection5(widget.fromJob, widget.jobId, widget.fillDetails, widget.edit),
+                TransferReportSection1(widget.fromJob, widget.jobId, widget.fillDetails, widget.edit, widget.saved, widget.savedId),
+                TransferReportSection2(widget.fromJob, widget.jobId, widget.fillDetails, widget.edit, widget.saved, widget.savedId),
+                TransferReportSection3(widget.fromJob, widget.jobId, widget.fillDetails, widget.edit, widget.saved, widget.savedId),
+                TransferReportSection4(widget.fromJob, widget.jobId, widget.fillDetails, widget.edit, widget.saved, widget.savedId),
+                TransferReportSection5(widget.fromJob, widget.jobId, widget.fillDetails, widget.edit, widget.saved, widget.savedId),
               ],
             ),
           );

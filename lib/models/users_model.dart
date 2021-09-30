@@ -80,13 +80,6 @@ class UsersModel extends ChangeNotifier {
     }
   }
 
-  //TextEditingController _searchController = TextEditingController();
-
-
-  // TextEditingController get searchController {
-  //   return _searchController;
-  // }
-
   TextEditingController _searchControllerRaiseJob = TextEditingController();
 
   String searchControllerValueRaiseJob = '';
@@ -388,9 +381,6 @@ class UsersModel extends ChangeNotifier {
   }
 
   Future<void> searchUsers() async{
-
-    print('inside');
-
     _isLoading = true;
     notifyListeners();
     String searchString;
@@ -729,12 +719,9 @@ class UsersModel extends ChangeNotifier {
             print(errorMessage);
             message = 'Something went wrong. Please try again';
           }
-
         }
 
-
       }
-
 
     } else {
       message = 'No data connection, please try again when you have a valid connection';
@@ -894,11 +881,7 @@ class UsersModel extends ChangeNotifier {
       final http.StreamedResponse streamedResponse = await request.send().timeout(Duration(seconds: 60));
       final http.Response response =
       await http.Response.fromStream(streamedResponse);
-      print(response.statusCode);
-      print(response.body);
       if (response.statusCode != 200 && response.statusCode != 201) {
-        print(json.decode(response.body));
-        print(response.body);
         if(response.body.contains('The email address is already in use by another account')) message = 'This email address is already in use by another account';
       } else if(response.statusCode == 200 || response.statusCode == 201){
         success = true;

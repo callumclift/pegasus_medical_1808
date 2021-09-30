@@ -4,7 +4,6 @@ import 'package:pegasus_medical_1808/shared/global_config.dart';
 import 'package:pegasus_medical_1808/utils/database_helper.dart';
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../locator.dart';
@@ -91,15 +90,24 @@ class BookingFormModel extends ChangeNotifier {
   static const String EDITED_BOOKING_FORMS_STORE_NAME = 'edited_booking_forms';
   final _editedBookingFormsStore = Db.intMapStoreFactory.store(EDITED_BOOKING_FORMS_STORE_NAME);
 
+  static const String SAVED_BOOKING_FORMS_STORE_NAME = 'saved_booking_forms';
+  final _savedBookingFormsStore = Db.intMapStoreFactory.store(SAVED_BOOKING_FORMS_STORE_NAME);
+
   // Private getter to shorten the amount of code needed to get the
   // singleton instance of an opened database.
   Future<Db.Database> get _db async => await AppDatabase.instance.database;
 
 
   Future<void> setupTemporaryRecord() async {
-    int count = await _temporaryBookingFormsStore.count(await _db);
 
-    if(count == 0){
+    final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
+        [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, '1')]
+    ));
+    List records = await _temporaryBookingFormsStore.find(
+      await _db,
+      finder: finder,
+    );
+    if(records.length == 0){
       // Generate a random ID based on the date and a random string for virtual zero chance of duplicates
       int _id = DateTime.now().millisecondsSinceEpoch + int.parse(random_string.randomNumeric(2));
       await _temporaryBookingFormsStore.record(_id).put(await _db,
@@ -107,26 +115,35 @@ class BookingFormModel extends ChangeNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> getTemporaryRecord(bool edit, String selectedJobId) async{
-
-    final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
-        [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, selectedJobId)]
-    ));
+  Future<Map<String, dynamic>> getTemporaryRecord(bool edit, String selectedJobId, bool saved, int savedId) async{
 
     List records;
 
     if(edit){
+      final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
+          [Db.Filter.equals(Strings.documentId, selectedBookingForm[Strings.documentId]), Db.Filter.equals(Strings.jobId, selectedJobId)]
+      ));
       records = await _editedBookingFormsStore.find(
         await _db,
         finder: finder,
       );
+    } else if(saved) {
+      final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
+          [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.localId, savedId)]
+      ));
+      records = await _savedBookingFormsStore.find(
+        await _db,
+        finder: finder,
+      );
     } else {
+      final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
+          [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, selectedJobId)]
+      ));
       records = await _temporaryBookingFormsStore.find(
         await _db,
         finder: finder,
       );
     }
-
 
     return records[0].value;
 
@@ -161,6 +178,15 @@ class BookingFormModel extends ChangeNotifier {
     return records;
   }
 
+  Future <List<dynamic>> getSavedRecords() async{
+    final Db.Finder finder = Db.Finder(filter: Db.Filter.equals(Strings.uid, user.uid));
+    List records = await _savedBookingFormsStore.find(
+      await _db,
+      finder: finder,
+    );
+    return records;
+  }
+
   Future <void> deletePendingRecord(int localId) async{
     final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
         [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.localId, localId)]
@@ -172,23 +198,33 @@ class BookingFormModel extends ChangeNotifier {
     );
   }
 
-  Future<bool> checkRecordExists(bool edit, String selectedJobId) async{
+  Future<bool> checkRecordExists(bool edit, String selectedJobId, bool saved, int savedId) async{
 
     bool hasRecord = false;
-
-    final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
-        [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, selectedJobId)]
-    ));
-
     List records;
 
 
     if(edit){
+
+      final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
+          [Db.Filter.equals(Strings.documentId, selectedBookingForm[Strings.documentId]), Db.Filter.equals(Strings.jobId, selectedJobId)]
+      ));
       records = await _editedBookingFormsStore.find(
         await _db,
         finder: finder,
       );
+    } else if(saved){
+      final Db.Finder finder = Db.Finder(filter: Db.Filter.equals(Strings.localId, savedId));
+      records = await _savedBookingFormsStore.find(
+        await _db,
+        finder: finder,
+      );
+
     } else {
+
+      final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
+          [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, selectedJobId)]
+      ));
       records = await _temporaryBookingFormsStore.find(
         await _db,
         finder: finder,
@@ -202,17 +238,22 @@ class BookingFormModel extends ChangeNotifier {
 
   }
 
-  Future<void> updateTemporaryRecord(bool edit, String field, var value, String selectedJobId) async {
-
-    final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
-        [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, selectedJobId)]
-    ));
-
+  Future<void> updateTemporaryRecord(bool edit, String field, var value, String selectedJobId, bool saved, int savedId) async {
 
     if(edit){
+      final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
+          [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, selectedJobId)]
+      ));
       await _editedBookingFormsStore.update(await _db, {field: value},
           finder: finder);
+    } else if(saved){
+      final Db.Finder finder = Db.Finder(filter: Db.Filter.equals(Strings.localId, savedId));
+      await _savedBookingFormsStore.update(await _db, {field: value},
+          finder: finder);
     } else {
+      final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
+          [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, selectedJobId)]
+      ));
       await _temporaryBookingFormsStore.update(await _db, {field: value},
           finder: finder);
     }
@@ -239,11 +280,17 @@ class BookingFormModel extends ChangeNotifier {
   }
 
 
-  void resetTemporaryRecord(String chosenJobId) async {
+  void resetTemporaryRecord(String chosenJobId, bool saved, int savedId) async {
 
-    final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
-        [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, chosenJobId)]
-    ));
+    Db.Finder finder;
+
+    if(saved){
+      finder = Db.Finder(filter: Db.Filter.equals(Strings.localId, savedId));
+    } else {
+      finder = Db.Finder(filter: Db.Filter.and(
+          [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, chosenJobId)]
+      ));
+    }
 
     await _temporaryBookingFormsStore.update(await _db, {
       Strings.formVersion: 1,
@@ -273,6 +320,7 @@ class BookingFormModel extends ChangeNotifier {
       Strings.bfEthnicity: null,
       Strings.bfCovidStatus: null,
       Strings.bfRmn: null,
+      Strings.bfRmn1: null,
       Strings.bfHca: null,
       Strings.bfHca1: null,
       Strings.bfHca2: null,
@@ -303,12 +351,12 @@ class BookingFormModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> validateBookingForm(String jobId, bool edit) async {
+  Future<bool> validateBookingForm(String jobId, bool edit, bool saved, int savedId) async {
 
     bool success = true;
 
     //Map<String, dynamic> bookingForm = await _databaseHelper.getTemporaryBookingForm(edit, user.uid, jobId);
-    Map<String, dynamic> bookingForm = await getTemporaryRecord(edit, jobId);
+    Map<String, dynamic> bookingForm = await getTemporaryRecord(edit, jobId, saved, savedId);
 
 
     if(bookingForm[Strings.jobRef]== null || bookingForm[Strings.jobRef].toString().trim() == ''){
@@ -479,29 +527,22 @@ class BookingFormModel extends ChangeNotifier {
 
   }
 
+  Future<bool> saveForLater(String jobId, bool saved, int savedId) async {
 
-  Future<bool> submitBookingForm(String jobId, [bool edit = false]) async {
-
-    GlobalFunctions.showLoadingDialog('Submitting Transport Booking...');
+    GlobalFunctions.showLoadingDialog('Saving Transport Booking...');
     String message = '';
     bool success = false;
-
-    //Semabast
-    int count = await _bookingFormsStore.count(await _db);
-    //int count = await _databaseHelper.getRowCount(Strings.bookingFormTable);
     int id;
 
-    if (count == 0) {
-      id = 1;
+    if(saved){
+      id = savedId;
     } else {
-      id = count + 1;
+      id = DateTime.now().millisecondsSinceEpoch + int.parse(random_string.randomNumeric(2));
     }
 
-    //Sembast
-    Map<String, dynamic> bookingForm = await getTemporaryRecord(false, jobId);
 
-    //Map<String, dynamic> bookingForm = await _databaseHelper.getTemporaryBookingForm(false, user.uid, jobId);
 
+    Map<String, dynamic> bookingForm = await getTemporaryRecord(false, '1', saved, savedId);
 
     Map<String, dynamic> localData = {
       Strings.localId: id,
@@ -535,6 +576,131 @@ class BookingFormModel extends ChangeNotifier {
       Strings.bfEthnicity: bookingForm[Strings.bfEthnicity],
       Strings.bfCovidStatus: bookingForm[Strings.bfCovidStatus],
       Strings.bfRmn: bookingForm[Strings.bfRmn],
+      Strings.bfRmn1: bookingForm[Strings.bfRmn1],
+      Strings.bfHca: bookingForm[Strings.bfHca],
+      Strings.bfHca1: bookingForm[Strings.bfHca1],
+      Strings.bfHca2: bookingForm[Strings.bfHca2],
+      Strings.bfHca3: bookingForm[Strings.bfHca3],
+      Strings.bfHca4: bookingForm[Strings.bfHca4],
+      Strings.bfHca5: bookingForm[Strings.bfHca5],
+      Strings.bfCurrentPresentation: bookingForm[Strings.bfCurrentPresentation],
+      Strings.bfSpecificCarePlanYes: bookingForm[Strings.bfSpecificCarePlanYes],
+      Strings.bfSpecificCarePlanNo: bookingForm[Strings.bfSpecificCarePlanNo],
+      Strings.bfSpecificCarePlan: bookingForm[Strings.bfSpecificCarePlan],
+      Strings.bfPatientWarningsYes: bookingForm[Strings.bfPatientWarningsYes],
+      Strings.bfPatientWarningsNo: bookingForm[Strings.bfPatientWarningsNo],
+      Strings.bfPatientWarnings: bookingForm[Strings.bfPatientWarnings],
+      Strings.bfPresentingRisks: bookingForm[Strings.bfPresentingRisks],
+      Strings.bfPreviousRisks: bookingForm[Strings.bfPreviousRisks],
+      Strings.bfGenderConcernsYes: bookingForm[Strings.bfGenderConcernsYes],
+      Strings.bfGenderConcernsNo: bookingForm[Strings.bfGenderConcernsNo],
+      Strings.bfGenderConcerns: bookingForm[Strings.bfGenderConcerns],
+      Strings.bfSafeguardingConcernsYes: bookingForm[Strings.bfSafeguardingConcernsYes],
+      Strings.bfSafeguardingConcernsNo: bookingForm[Strings.bfSafeguardingConcernsNo],
+      Strings.bfSafeguardingConcerns: bookingForm[Strings.bfSafeguardingConcerns],
+      Strings.bfAmbulanceRegistration: bookingForm[Strings.bfAmbulanceRegistration],
+      Strings.bfTimeDue: bookingForm[Strings.bfTimeDue],
+      Strings.assignedUserId: bookingForm[Strings.assignedUserId],
+      Strings.assignedUserName: bookingForm[Strings.assignedUserName],
+    };
+
+    await _savedBookingFormsStore.record(id).put(await _db,
+        localData);
+
+    message = 'Transport Booking saved to device';
+    success = true;
+
+    if(success) resetTemporaryRecord(jobId, false, 0);
+    GlobalFunctions.dismissLoadingDialog();
+    GlobalFunctions.showToast(message);
+    return success;
+  }
+
+  Future<void> deleteSavedRecord(int id) async {
+    await _savedBookingFormsStore.record(id).delete(await _db);
+    _bookingForms.removeWhere((element) => element[Strings.localId] == id);
+    notifyListeners();
+  }
+
+
+  Future<void> getSavedRecordsList() async{
+
+    _isLoading = true;
+    notifyListeners();
+    String message = '';
+
+    List<Map<String, dynamic>> _fetchedRecordList = [];
+
+    try {
+
+      List<dynamic> records = await getSavedRecords();
+
+      if(records.length > 0){
+        for(var record in records){
+          _fetchedRecordList.add(record.value);
+        }
+
+        _bookingForms = List.from(_fetchedRecordList.reversed);
+      } else {
+        message = 'No saved records available';
+      }
+
+    } catch(e){
+      print(e);
+      message = 'Something went wrong. Please try again';
+
+    }
+    _isLoading = false;
+    notifyListeners();
+    _selBookingFormId = null;
+    if(message != '') GlobalFunctions.showToast(message);
+
+  }
+
+
+  Future<bool> submitBookingForm(String jobId, bool edit, bool saved, int savedId) async {
+
+    GlobalFunctions.showLoadingDialog('Submitting Transport Booking...');
+    String message = '';
+    bool success = false;
+    int id = DateTime.now().millisecondsSinceEpoch + int.parse(random_string.randomNumeric(2));
+
+    //Sembast
+    Map<String, dynamic> bookingForm = await getTemporaryRecord(false, jobId, saved, savedId);
+
+    Map<String, dynamic> localData = {
+      Strings.localId: id,
+      Strings.documentId: null,
+      Strings.uid: user.uid,
+      Strings.jobId: '1',
+      Strings.formVersion: '1',
+      Strings.jobRef: bookingForm[Strings.jobRef],
+      Strings.bfRequestedBy: bookingForm[Strings.bfRequestedBy],
+      Strings.bfJobTitle: bookingForm[Strings.bfJobTitle],
+      Strings.bfJobContact: bookingForm[Strings.bfJobContact],
+      Strings.bfJobAuthorisingManager: bookingForm[Strings.bfJobAuthorisingManager],
+      Strings.bfJobDate: bookingForm[Strings.bfJobDate],
+      Strings.bfJobTime: bookingForm[Strings.bfJobTime],
+      Strings.bfTransportCoordinator: bookingForm[Strings.bfTransportCoordinator],
+      Strings.bfCollectionDateTime: bookingForm[Strings.bfCollectionDateTime],
+      Strings.bfCollectionAddress: bookingForm[Strings.bfCollectionAddress],
+      Strings.bfCollectionPostcode: bookingForm[Strings.bfCollectionPostcode],
+      Strings.bfCollectionTel: bookingForm[Strings.bfCollectionTel],
+      Strings.bfDestinationAddress: bookingForm[Strings.bfDestinationAddress],
+      Strings.bfDestinationPostcode: bookingForm[Strings.bfDestinationPostcode],
+      Strings.bfDestinationTel: bookingForm[Strings.bfDestinationTel],
+      Strings.bfInvoiceDetails: bookingForm[Strings.bfInvoiceDetails],
+      Strings.bfCostCode: bookingForm[Strings.bfCostCode],
+      Strings.bfPurchaseOrder: bookingForm[Strings.bfPurchaseOrder],
+      Strings.bfPatientName: bookingForm[Strings.bfPatientName],
+      Strings.bfLegalStatus: bookingForm[Strings.bfLegalStatus],
+      Strings.bfDateOfBirth: bookingForm[Strings.bfDateOfBirth],
+      Strings.bfNhsNumber: bookingForm[Strings.bfNhsNumber],
+      Strings.bfGender: bookingForm[Strings.bfGender],
+      Strings.bfEthnicity: bookingForm[Strings.bfEthnicity],
+      Strings.bfCovidStatus: bookingForm[Strings.bfCovidStatus],
+      Strings.bfRmn: bookingForm[Strings.bfRmn],
+      Strings.bfRmn1: bookingForm[Strings.bfRmn1],
       Strings.bfHca: bookingForm[Strings.bfHca],
       Strings.bfHca1: bookingForm[Strings.bfHca1],
       Strings.bfHca2: bookingForm[Strings.bfHca2],
@@ -565,21 +731,10 @@ class BookingFormModel extends ChangeNotifier {
     };
 
     //Sembast
-    int _id = DateTime.now().millisecondsSinceEpoch + int.parse(random_string.randomNumeric(2));
-    await _bookingFormsStore.record(_id).put(await _db,
-        localData);
+    await _bookingFormsStore.record(id).put(await _db, localData);
 
     message = 'Transport Booking has successfully been added to local database';
-
-    // int result = await _databaseHelper.add(Strings.bookingFormTable, localData);
-    //
-    // if (result != 0) {
-    //   message = 'Transport Booking has successfully been added to local database';
-    // }
-
-
     bool hasDataConnection = await GlobalFunctions.hasDataConnection();
-
 
     if(hasDataConnection){
 
@@ -590,13 +745,8 @@ class BookingFormModel extends ChangeNotifier {
 
       if(authenticated){
 
-
         try {
 
-          await GlobalFunctions.checkFirebaseStorageFail(_databaseHelper);
-
-
-          DocumentReference ref =
           await FirebaseFirestore.instance.collection('booking_forms').add({
             Strings.uid: user.uid,
             Strings.jobId: '1',
@@ -628,6 +778,7 @@ class BookingFormModel extends ChangeNotifier {
             Strings.bfEthnicity: bookingForm[Strings.bfEthnicity],
             Strings.bfCovidStatus: bookingForm[Strings.bfCovidStatus],
             Strings.bfRmn: bookingForm[Strings.bfRmn],
+            Strings.bfRmn1: bookingForm[Strings.bfRmn1],
             Strings.bfHca: bookingForm[Strings.bfHca],
             Strings.bfHca1: bookingForm[Strings.bfHca1],
             Strings.bfHca2: bookingForm[Strings.bfHca2],
@@ -658,31 +809,13 @@ class BookingFormModel extends ChangeNotifier {
           });
 
           //Sembast
-          await _bookingFormsStore.record(_id).delete(await _db);
+          await _bookingFormsStore.record(id).delete(await _db);
+          if(saved){
+            deleteSavedRecord(savedId);
+          }
           message = 'Transport Booking uploaded successfully';
           success = true;
 
-          // DocumentSnapshot snap = await ref.get();
-          //
-          // Map<String, dynamic> localData = {
-          //   Strings.documentId: snap.id,
-          //   Strings.serverUploaded: 1,
-          //   'timestamp': DateTime.fromMillisecondsSinceEpoch(snap.data()[Strings.timestamp].millisecondsSinceEpoch).toIso8601String()
-          // };
-          //
-          // int queryResult = await _databaseHelper.updateRow(
-          //     Strings.bookingFormTable,
-          //     localData,
-          //     Strings.localId,
-          //     id);
-          //
-          // if (queryResult != 0) {
-          //   success = true;
-          //   message = 'Transport Booking uploaded successfully';
-          // } else {
-          //   message =
-          //   'Transport Booking uploaded successfully to the server';
-          // }
 
         } on TimeoutException catch (_) {
           // A timeout occurred.
@@ -704,18 +837,18 @@ class BookingFormModel extends ChangeNotifier {
     }
 
     //Sembast
-    if(success) resetTemporaryRecord(jobId);
+    if(success) resetTemporaryRecord(jobId, saved, savedId);
 
-    //if(success) resetTemporaryBookingForm(jobId);
     GlobalFunctions.dismissLoadingDialog();
     if(edit){
       _navigationService.goBack();
       _navigationService.goBack();
     }
+    if(saved){
+      _navigationService.goBack();
+    }
     GlobalFunctions.showToast(message);
     return success;
-
-
   }
 
   Future<bool> editBookingForm(String jobId, [bool edit = false]) async {
@@ -725,7 +858,7 @@ class BookingFormModel extends ChangeNotifier {
     bool success = false;
 
     //Map<String, dynamic> bookingForm = await _databaseHelper.getTemporaryBookingForm(true, user.uid, jobId);
-    Map<String, dynamic> bookingForm = await getTemporaryRecord(true, jobId);
+    Map<String, dynamic> bookingForm = await getTemporaryRecord(true, jobId, false, 0);
 
 
     bool hasDataConnection = await GlobalFunctions.hasDataConnection();
@@ -744,7 +877,6 @@ class BookingFormModel extends ChangeNotifier {
         try {
 
           await FirebaseFirestore.instance.collection('booking_forms').doc(bookingForm[Strings.documentId]).update({
-            Strings.uid: user.uid,
             Strings.jobId: '1',
             Strings.formVersion: '1',
             Strings.jobRef: GlobalFunctions.databaseValueString(bookingForm[Strings.jobRef]),
@@ -774,6 +906,7 @@ class BookingFormModel extends ChangeNotifier {
             Strings.bfEthnicity: bookingForm[Strings.bfEthnicity],
             Strings.bfCovidStatus: bookingForm[Strings.bfCovidStatus],
             Strings.bfRmn: bookingForm[Strings.bfRmn],
+            Strings.bfRmn1: bookingForm[Strings.bfRmn1],
             Strings.bfHca: bookingForm[Strings.bfHca],
             Strings.bfHca1: bookingForm[Strings.bfHca1],
             Strings.bfHca2: bookingForm[Strings.bfHca2],
@@ -799,96 +932,20 @@ class BookingFormModel extends ChangeNotifier {
             Strings.bfTimeDue: bookingForm[Strings.bfTimeDue],
             Strings.assignedUserId: bookingForm[Strings.assignedUserId],
             Strings.assignedUserName: bookingForm[Strings.assignedUserName],
-            Strings.timestamp: FieldValue.serverTimestamp(),
             Strings.serverUploaded: 1,
           });
 
           //Sembast
 
           final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
-              [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, jobId)]
+              [Db.Filter.equals(Strings.documentId, selectedBookingForm[Strings.documentId]), Db.Filter.equals(Strings.jobId, jobId)]
           ));
 
-
-          await _bookingFormsStore.delete(await _db,
+          await _editedBookingFormsStore.delete(await _db,
               finder: finder);
           message = 'Transport Booking uploaded successfully';
           success = true;
-
-          // Map<String, dynamic> localData = {
-          //   Strings.documentId: bookingForm[Strings.documentId],
-          //   Strings.uid: bookingForm[Strings.uid],
-          //   Strings.jobId: bookingForm[Strings.jobId],
-          //   Strings.formVersion: bookingForm[Strings.formVersion],
-          //   Strings.jobRef: bookingForm[Strings.jobRef],
-          //   Strings.bfRequestedBy: bookingForm[Strings.bfRequestedBy],
-          //   Strings.bfJobTitle: bookingForm[Strings.bfJobTitle],
-          //   Strings.bfJobContact: bookingForm[Strings.bfJobContact],
-          //   Strings.bfJobAuthorisingManager: bookingForm[Strings.bfJobAuthorisingManager],
-          //   Strings.bfJobDate: bookingForm[Strings.bfJobDate],
-          //   Strings.bfJobTime: bookingForm[Strings.bfJobTime],
-          //   Strings.bfTransportCoordinator: bookingForm[Strings.bfTransportCoordinator],
-          //   Strings.bfCollectionDateTime: bookingForm[Strings.bfCollectionDateTime],
-          //   Strings.bfCollectionAddress: bookingForm[Strings.bfCollectionAddress],
-          //   Strings.bfCollectionPostcode: bookingForm[Strings.bfCollectionPostcode],
-          //   Strings.bfCollectionTel: bookingForm[Strings.bfCollectionTel],
-          //   Strings.bfDestinationAddress: bookingForm[Strings.bfDestinationAddress],
-          //   Strings.bfDestinationPostcode: bookingForm[Strings.bfDestinationPostcode],
-          //   Strings.bfDestinationTel: bookingForm[Strings.bfDestinationTel],
-          //   Strings.bfInvoiceDetails: bookingForm[Strings.bfInvoiceDetails],
-          //   Strings.bfCostCode: bookingForm[Strings.bfCostCode],
-          //   Strings.bfPurchaseOrder: bookingForm[Strings.bfPurchaseOrder],
-          //   Strings.bfPatientName: bookingForm[Strings.bfPatientName],
-          //   Strings.bfLegalStatus: bookingForm[Strings.bfLegalStatus],
-          //   Strings.bfDateOfBirth: bookingForm[Strings.bfDateOfBirth],
-          //   Strings.bfNhsNumber: bookingForm[Strings.bfNhsNumber],
-          //   Strings.bfGender: bookingForm[Strings.bfGender],
-          //   Strings.bfEthnicity: bookingForm[Strings.bfEthnicity],
-          //   Strings.bfCovidStatus: bookingForm[Strings.bfCovidStatus],
-          //   Strings.bfRmn: bookingForm[Strings.bfRmn],
-          //   Strings.bfHca: bookingForm[Strings.bfHca],
-          //   Strings.bfHca1: bookingForm[Strings.bfHca1],
-          //   Strings.bfHca2: bookingForm[Strings.bfHca2],
-          //   Strings.bfHca3: bookingForm[Strings.bfHca3],
-          //   Strings.bfHca4: bookingForm[Strings.bfHca4],
-          //   Strings.bfHca5: bookingForm[Strings.bfHca5],
-          //   Strings.bfCurrentPresentation: bookingForm[Strings.bfCurrentPresentation],
-          //   Strings.bfSpecificCarePlanYes: bookingForm[Strings.bfSpecificCarePlanYes],
-          //   Strings.bfSpecificCarePlanNo: bookingForm[Strings.bfSpecificCarePlanNo],
-          //   Strings.bfSpecificCarePlan: bookingForm[Strings.bfSpecificCarePlan],
-          //   Strings.bfPatientWarningsYes: bookingForm[Strings.bfPatientWarningsYes],
-          //   Strings.bfPatientWarningsNo: bookingForm[Strings.bfPatientWarningsNo],
-          //   Strings.bfPatientWarnings: bookingForm[Strings.bfPatientWarnings],
-          //   Strings.bfPresentingRisks: bookingForm[Strings.bfPresentingRisks],
-          //   Strings.bfPreviousRisks: bookingForm[Strings.bfPreviousRisks],
-          //   Strings.bfGenderConcernsYes: bookingForm[Strings.bfGenderConcernsYes],
-          //   Strings.bfGenderConcernsNo: bookingForm[Strings.bfGenderConcernsNo],
-          //   Strings.bfGenderConcerns: bookingForm[Strings.bfGenderConcerns],
-          //   Strings.bfSafeguardingConcernsYes: bookingForm[Strings.bfSafeguardingConcernsYes],
-          //   Strings.bfSafeguardingConcernsNo: bookingForm[Strings.bfSafeguardingConcernsNo],
-          //   Strings.bfSafeguardingConcerns: bookingForm[Strings.bfSafeguardingConcerns],
-          //   Strings.bfAmbulanceRegistration: bookingForm[Strings.bfAmbulanceRegistration],
-          //   Strings.bfTimeDue: bookingForm[Strings.bfTimeDue],
-          //   Strings.assignedUserId: bookingForm[Strings.assignedUserId],
-          //   Strings.assignedUserName: bookingForm[Strings.assignedUserName],
-          // };
-          //
-          // int queryResult = await _databaseHelper.updateRow(
-          //     Strings.bookingFormTable,
-          //     localData,
-          //     Strings.documentId,
-          //     bookingForm[Strings.documentId]);
-          //
-          // if (queryResult != 0) {
-          //   success = true;
-          //   message = 'Transport Booking uploaded successfully';
-          // } else {
-          //   message =
-          //   'Transport Booking uploaded successfully to the server';
-          // }
-
-
-
+          getBookingForms();
         } on TimeoutException catch (_) {
           // A timeout occurred.
           message = 'Network Timeout communicating with the server, unable to edit Transport Booking';
@@ -918,16 +975,12 @@ class BookingFormModel extends ChangeNotifier {
 
   }
 
-
   Future<void> getBookingForms() async{
 
     _isLoading = true;
     notifyListeners();
     String message = '';
-
     List<Map<String, dynamic>> _fetchedBookingFormList = [];
-    DatabaseHelper databaseHelper = DatabaseHelper();
-
     try {
 
       bool hasDataConnection = await GlobalFunctions.hasDataConnection();
@@ -936,50 +989,6 @@ class BookingFormModel extends ChangeNotifier {
 
         GlobalFunctions.showToast('No data connection, unable to fetch Transport Bookings');
         _bookingForms = [];
-
-        // int localChecklistCount;
-        //
-        // if(user.role == 'Super User'){
-        //   localChecklistCount = await databaseHelper.getRowCountWhere(Strings.bookingFormTable, Strings.serverUploaded, 1);
-        //
-        // } else {
-        //   localChecklistCount = await databaseHelper.getRowCountWhereAndWhere(Strings.bookingFormTable, Strings.serverUploaded, 1, Strings.uid, user.uid);
-        //
-        // }
-        //
-        //
-        // if (localChecklistCount > 0) {
-        //
-        //   List<Map<String, dynamic>> localRecords = [];
-        //
-        //   if(user.role == 'Super User'){
-        //     localRecords = await databaseHelper.getRowsWhereOrderByDirection(Strings.bookingFormTable, Strings.serverUploaded, 1, Strings.timestamp, 'DESC');
-        //
-        //   } else {
-        //     localRecords = await databaseHelper.getRowsWhereAndWhereOrderByDirection(Strings.bookingFormTable, Strings.serverUploaded, 1, Strings.uid, user.uid, Strings.timestamp, 'DESC');
-        //
-        //   }
-        //
-        //
-        //   if(localRecords.length >0){
-        //
-        //     for (Map<String, dynamic> localRecord in localRecords) {
-        //
-        //       final Map<String, dynamic> bookingForm = localBookingForm(localRecord);
-        //
-        //       _fetchedBookingFormList.add(bookingForm);
-        //     }
-        //
-        //     _bookingForms = _fetchedBookingFormList;
-        //     message = 'No data connection, unable to fetch latest Transport Bookings';
-        //
-        //   }
-        //
-        // } else {
-        //   _bookingForms = [];
-        //   message = 'No Transport Bookings available, please try again when you have a data connection';
-        // }
-
 
       } else {
 
@@ -1009,10 +1018,6 @@ class BookingFormModel extends ChangeNotifier {
             }
           }
 
-
-
-
-
           Map<String, dynamic> snapshotData = {};
 
           if(snapshot.docs.length < 1){
@@ -1025,27 +1030,6 @@ class BookingFormModel extends ChangeNotifier {
               final Map<String, dynamic> bookingForm = onlineBookingForm(snapshotData, snap.id);
 
               _fetchedBookingFormList.add(bookingForm);
-
-              // Map<String, dynamic> localData = Map.from(bookingForm);
-              // int queryResult;
-              //
-              // int existingBookingForm = await databaseHelper.checkBookingFormExists(snap.id);
-              //
-              // if (existingBookingForm == 0) {
-              //
-              //   queryResult = await databaseHelper.add(Strings.bookingFormTable, localData);
-              // } else {
-              //
-              //   queryResult = await databaseHelper.updateRow(Strings.bookingFormTable, localData, Strings.documentId, snap.id);
-              //
-              // }
-              //
-              // if (queryResult != 0) {
-              //
-              //   print('added to local db');
-              // } else {
-              //   print('issue with local db');
-              // }
 
             }
 
@@ -1079,7 +1063,6 @@ class BookingFormModel extends ChangeNotifier {
     String message = '';
 
     List<Map<String, dynamic>> _fetchedBookingFormList = [];
-    DatabaseHelper databaseHelper = DatabaseHelper();
 
     try {
 
@@ -1142,27 +1125,6 @@ class BookingFormModel extends ChangeNotifier {
               final Map<String, dynamic> bookingForm = onlineBookingForm(snapshotData, snap.id);
 
               _fetchedBookingFormList.add(bookingForm);
-
-              // Map<String, dynamic> localData = Map.from(bookingForm);
-              // int queryResult;
-              //
-              // int existingBookingForm = await databaseHelper.checkBookingFormExists(snap.id);
-              //
-              // if (existingBookingForm == 0) {
-              //
-              //   queryResult = await databaseHelper.add(Strings.bookingFormTable, localData);
-              // } else {
-              //
-              //   queryResult = await databaseHelper.updateRow(Strings.bookingFormTable, localData, Strings.documentId, snap.id);
-              //
-              // }
-              //
-              // if (queryResult != 0) {
-              //
-              //   print('added to local db');
-              // } else {
-              //   print('issue with local db');
-              // }
 
             }
 
@@ -1458,7 +1420,6 @@ class BookingFormModel extends ChangeNotifier {
 
   }
 
-
   Future<bool> searchMoreBookingForms(DateTime dateFrom, DateTime dateTo) async{
 
     _isLoading = true;
@@ -1557,7 +1518,6 @@ class BookingFormModel extends ChangeNotifier {
 
   }
 
-
   Map<String, dynamic> localBookingForm(Map<String, dynamic> localRecord){
     return {
       Strings.documentId: GlobalFunctions.databaseValueString(localRecord[Strings.documentId]),
@@ -1590,6 +1550,7 @@ class BookingFormModel extends ChangeNotifier {
       Strings.bfEthnicity: localRecord[Strings.bfEthnicity],
       Strings.bfCovidStatus: localRecord[Strings.bfCovidStatus],
       Strings.bfRmn: localRecord[Strings.bfRmn],
+      Strings.bfRmn1: localRecord[Strings.bfRmn1],
       Strings.bfHca: localRecord[Strings.bfHca],
       Strings.bfHca1: localRecord[Strings.bfHca1],
       Strings.bfHca2: localRecord[Strings.bfHca2],
@@ -1655,6 +1616,7 @@ class BookingFormModel extends ChangeNotifier {
       Strings.bfEthnicity: localRecord[Strings.bfEthnicity],
       Strings.bfCovidStatus: localRecord[Strings.bfCovidStatus],
       Strings.bfRmn: localRecord[Strings.bfRmn],
+      Strings.bfRmn1: localRecord[Strings.bfRmn1],
       Strings.bfHca: localRecord[Strings.bfHca],
       Strings.bfHca1: localRecord[Strings.bfHca1],
       Strings.bfHca2: localRecord[Strings.bfHca2],
@@ -1720,6 +1682,7 @@ class BookingFormModel extends ChangeNotifier {
       Strings.bfEthnicity: localRecord[Strings.bfEthnicity],
       Strings.bfCovidStatus: localRecord[Strings.bfCovidStatus],
       Strings.bfRmn: localRecord[Strings.bfRmn],
+      Strings.bfRmn1: localRecord[Strings.bfRmn1],
       Strings.bfHca: localRecord[Strings.bfHca],
       Strings.bfHca1: localRecord[Strings.bfHca1],
       Strings.bfHca2: localRecord[Strings.bfHca2],
@@ -1749,8 +1712,6 @@ class BookingFormModel extends ChangeNotifier {
       Strings.timestamp: localRecord[Strings.timestamp]
     };
   }
-
-
 
   Future<Map<String, dynamic>> uploadPendingBookingForms() async {
     _isLoading = true;
@@ -1787,11 +1748,6 @@ class BookingFormModel extends ChangeNotifier {
         for (Map<String, dynamic> bookingForm in bookingForms) {
 
           success = false;
-
-          await GlobalFunctions.checkFirebaseStorageFail(_databaseHelper);
-
-
-          DocumentReference ref =
           await FirebaseFirestore.instance.collection('booking_forms').add({
             Strings.uid: user.uid,
             Strings.jobId: '1',
@@ -1823,6 +1779,7 @@ class BookingFormModel extends ChangeNotifier {
             Strings.bfEthnicity: bookingForm[Strings.bfEthnicity],
             Strings.bfCovidStatus: bookingForm[Strings.bfCovidStatus],
             Strings.bfRmn: bookingForm[Strings.bfRmn],
+            Strings.bfRmn1: bookingForm[Strings.bfRmn1],
             Strings.bfHca: bookingForm[Strings.bfHca],
             Strings.bfHca1: bookingForm[Strings.bfHca1],
             Strings.bfHca2: bookingForm[Strings.bfHca2],
@@ -1895,9 +1852,7 @@ class BookingFormModel extends ChangeNotifier {
     return {'success': success, 'message': message};
   }
 
-
   Future<void> setUpEditedBookingForm() async{
-
     Map<String, dynamic> editedReport = editedBookingForm(selectedBookingForm);
     Map<String, dynamic> localData = Map.from(editedReport);
     await _databaseHelper.deleteAllRows(Strings.editedBookingFormTable);
@@ -1913,1452 +1868,6 @@ class BookingFormModel extends ChangeNotifier {
     _databaseHelper.resetTemporaryBookingForm(user.uid, chosenJobId);
     notifyListeners();
   }
-
-//   Future<bool> sharePdf(ShareOption option, [List<String> emailList]) async {
-//
-//     bool success = false;
-//     final dateFormat = DateFormat("dd/MM/yyyy");
-//     final dateTimeFormat = DateFormat("dd/MM/yyyy HH:mm");
-//     final timeFormat = DateFormat("HH:mm");
-//     final ByteData fontData = await rootBundle.load("assets/fonts/OpenSans-Regular.ttf");
-//     final Font ttf = Font.ttf(fontData.buffer.asByteData());
-//     final ByteData fontDataBold = await rootBundle.load("assets/fonts/OpenSans-Bold.ttf");
-//     final Font ttfBold = Font.ttf(fontDataBold.buffer.asByteData());
-//
-//     Widget textField(TextOption option, String value, [double width = 120, double minHeight = 20, double maxHeight]) {
-//
-//
-//       if(option == TextOption.Date){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = dateFormat.format(DateTime.parse(value));
-//         }
-//       } else if(option == TextOption.PlainText){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = value;
-//         }
-//       } else if(option == TextOption.EncryptedText){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = GlobalFunctions.decryptString(value);
-//         }
-//       } else if(option == TextOption.Time){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = timeFormat.format(DateTime.parse(value));
-//         }
-//       } else if(option == TextOption.EncryptedDate){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = dateFormat.format(DateTime.parse(GlobalFunctions.decryptString(value)));
-//         }
-//       } else if(option == TextOption.EncryptedText){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = GlobalFunctions.decryptString(value);
-//         }
-//       }
-//
-//       return ConstrainedBox(constraints: maxHeight == null ? BoxConstraints(minHeight: minHeight) : BoxConstraints(minHeight: minHeight, maxHeight: maxHeight),
-//           child: Container(
-//             width: width,
-//             padding: const EdgeInsets.all(5),
-//             decoration: BoxDecoration(
-//               borderRadius: 5,
-//               border: BoxBorder(
-//                 top: true,
-//                 left: true,
-//                 right: true,
-//                 bottom: true,
-//                 width: 1,
-//                 color: PdfColors.grey,
-//               ),
-//             ),
-//             child: Column(
-//               mainAxisSize: MainAxisSize.min,
-//               crossAxisAlignment: CrossAxisAlignment.start,
-//               children: <Widget>[
-//                 Text(value, style: TextStyle(fontSize: 8)),
-//               ],
-//             ),
-//           ));
-//     }
-//
-//     Widget singleLineFieldSmall(String text, String value){
-//       return Column(
-//           children: [
-//             Row(
-//                 children: [
-//                   Container(width: 90, child: Text(text, style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8))),
-//                   SizedBox(width: 5),
-//                   ConstrainedBox(constraints: BoxConstraints(minHeight: 20),
-//                       child: Container(
-//                         width: 100,
-//                         padding: const EdgeInsets.all(5),
-//                         decoration: BoxDecoration(
-//                           borderRadius: 5,
-//                           border: BoxBorder(
-//                             top: true,
-//                             left: true,
-//                             right: true,
-//                             bottom: true,
-//                             width: 1,
-//                             color: PdfColors.grey,
-//                           ),
-//                         ),
-//                         child: Column(
-//                           mainAxisSize: MainAxisSize.min,
-//                           crossAxisAlignment: CrossAxisAlignment.start,
-//                           children: <Widget>[
-//                             Text(value == null ? '' : value, style: TextStyle(fontSize: 8)),
-//                           ],
-//                         ),
-//                       )),
-//                 ]
-//             ),
-//             Container(height: 4)
-//           ]
-//       );
-//     }
-//
-//     Widget singleLineField(String text, String value, [TextOption option = TextOption.EncryptedText, bool small = false]){
-//
-//       if(option == TextOption.Date){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = dateFormat.format(DateTime.parse(value));
-//         }
-//       } else if(option == TextOption.PlainText){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = value;
-//         }
-//       } else if(option == TextOption.EncryptedText){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = GlobalFunctions.decryptString(value);
-//         }
-//       } else if(option == TextOption.Time){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = timeFormat.format(DateTime.parse(value));
-//         }
-//       } else if(option == TextOption.EncryptedDate){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = dateFormat.format(DateTime.parse(GlobalFunctions.decryptString(value)));
-//         }
-//       } else if(option == TextOption.EncryptedText){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = GlobalFunctions.decryptString(value);
-//         }
-//       }
-//
-//
-//
-//       return Column(
-//           children: [
-//             Row(
-//                 children: [
-//                   Container(width: 90, child: Text(text, style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8))),
-//                   SizedBox(width: 5),
-//                   small ? ConstrainedBox(constraints: BoxConstraints(minHeight: 20),
-//                       child: Container(
-//                         width: 100,
-//                         padding: const EdgeInsets.all(5),
-//                         decoration: BoxDecoration(
-//                           borderRadius: 5,
-//                           border: BoxBorder(
-//                             top: true,
-//                             left: true,
-//                             right: true,
-//                             bottom: true,
-//                             width: 1,
-//                             color: PdfColors.grey,
-//                           ),
-//                         ),
-//                         child: Column(
-//                           mainAxisSize: MainAxisSize.min,
-//                           crossAxisAlignment: CrossAxisAlignment.start,
-//                           children: <Widget>[
-//                             Text(value == null ? '' : value, style: TextStyle(fontSize: 8)),
-//                           ],
-//                         ),
-//                       )) :Expanded(child: ConstrainedBox(constraints: BoxConstraints(minHeight: 20),
-//                       child: Container(
-//                         padding: const EdgeInsets.all(5),
-//                         decoration: BoxDecoration(
-//                           borderRadius: 5,
-//                           border: BoxBorder(
-//                             top: true,
-//                             left: true,
-//                             right: true,
-//                             bottom: true,
-//                             width: 1,
-//                             color: PdfColors.grey,
-//                           ),
-//                         ),
-//                         child: Column(
-//                           mainAxisSize: MainAxisSize.min,
-//                           crossAxisAlignment: CrossAxisAlignment.start,
-//                           children: <Widget>[
-//                             Text(value == null ? '' : value, style: TextStyle(fontSize: 8)),
-//                           ],
-//                         ),
-//                       ))),
-//                 ]
-//             ),
-//             Container(height: 4)
-//           ]
-//       );
-//     }
-//
-//     Widget doubleLineField(String text1, String value1, String text2, String value2, [TextOption option1 = TextOption.EncryptedText, TextOption option2 = TextOption.EncryptedText, FlutterImage.Image signature, PdfDocument doc]){
-//
-//       if(option1 == TextOption.Date){
-//         if(value1 == null){
-//           value1 = '';
-//         } else {
-//           value1 = dateFormat.format(DateTime.parse(value1));
-//         }
-//       } else if(option1 == TextOption.PlainText){
-//         if(value1 == null){
-//           value1 = '';
-//         } else {
-//           value1 = value1;
-//         }
-//       } else if(option1 == TextOption.EncryptedText){
-//         if(value1 == null){
-//           value1 = '';
-//         } else {
-//           value1 = GlobalFunctions.decryptString(value1);
-//         }
-//       } else if(option1 == TextOption.Time){
-//         if(value1 == null){
-//           value1 = '';
-//         } else {
-//           value1 = timeFormat.format(DateTime.parse(value1));
-//         }
-//       } else if(option1 == TextOption.EncryptedDate){
-//         if(value1 == null){
-//           value1 = '';
-//         } else {
-//           value1 = dateFormat.format(DateTime.parse(GlobalFunctions.decryptString(value1)));
-//         }
-//       } else if(option1 == TextOption.EncryptedText){
-//         if(value1 == null){
-//           value1 = '';
-//         } else {
-//           value1 = GlobalFunctions.decryptString(value1);
-//         }
-//       }
-//
-//       if(option2 == TextOption.Date){
-//         if(value2 == null){
-//           value2 = '';
-//         } else {
-//           value2 = dateFormat.format(DateTime.parse(value2));
-//         }
-//       } else if(option2 == TextOption.PlainText){
-//         if(value2 == null){
-//           value2 = '';
-//         } else {
-//           value2 = value2;
-//         }
-//       } else if(option2 == TextOption.EncryptedText){
-//         if(value2 == null){
-//           value2 = '';
-//         } else {
-//           value2 = GlobalFunctions.decryptString(value2);
-//         }
-//       } else if(option2 == TextOption.Time){
-//         if(value2 == null){
-//           value2 = '';
-//         } else {
-//           value2 = timeFormat.format(DateTime.parse(value2));
-//         }
-//       } else if(option2 == TextOption.EncryptedDate){
-//         if(value2 == null){
-//           value2 = '';
-//         } else {
-//           value2 = dateFormat.format(DateTime.parse(GlobalFunctions.decryptString(value2)));
-//         }
-//       } else if(option2 == TextOption.EncryptedText){
-//         if(value2 == null){
-//           value2 = '';
-//         } else {
-//           value2 = GlobalFunctions.decryptString(value2);
-//         }
-//       }
-//
-//
-//
-//       return Column(
-//           children: [
-//             Row(
-//                 children: [
-//                   Container(width: 90, child: Text(text1, style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8))),
-//                   SizedBox(width: 5),
-//                   Expanded(child: ConstrainedBox(constraints: BoxConstraints(minHeight: 20),
-//                       child: Container(
-//                         padding: const EdgeInsets.all(3),
-//                         decoration: BoxDecoration(
-//                           borderRadius: 5,
-//                           border: BoxBorder(
-//                             top: true,
-//                             left: true,
-//                             right: true,
-//                             bottom: true,
-//                             width: 1,
-//                             color: PdfColors.grey,
-//                           ),
-//                         ),
-//                         child: Column(
-//                           mainAxisSize: MainAxisSize.min,
-//                           crossAxisAlignment: CrossAxisAlignment.start,
-//                           children: <Widget>[
-//                             value1 == 'signature' && signature != null ? Container(height: 20, child: FittedBox(alignment: Alignment.centerLeft, child: Image(PdfImage(doc,
-//                                 image: signature.data.buffer
-//                                     .asUint8List(),
-//                                 width: signature.width,
-//                                 height: signature.height)))) : Text(value1 == null || value1 == 'signature' ? '' : value1, style: TextStyle(fontSize: 8))
-//                           ],
-//                         ),
-//                       ))),
-//                   SizedBox(width: 10),
-//                   Container(width: 90, child: Text(text2, style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8))),
-//                   SizedBox(width: 5),
-//                   Expanded(child: ConstrainedBox(constraints: BoxConstraints(minHeight: 20),
-//                       child: Container(
-//                         padding: const EdgeInsets.all(3),
-//                         decoration: BoxDecoration(
-//                           borderRadius: 5,
-//                           border: BoxBorder(
-//                             top: true,
-//                             left: true,
-//                             right: true,
-//                             bottom: true,
-//                             width: 1,
-//                             color: PdfColors.grey,
-//                           ),
-//                         ),
-//                         child: Column(
-//                           mainAxisSize: MainAxisSize.min,
-//                           crossAxisAlignment: CrossAxisAlignment.start,
-//                           children: <Widget>[
-//                             value2 == 'signature' && signature != null ? Container(height: 20, child: FittedBox(alignment: Alignment.centerLeft, child: Image(PdfImage(doc,
-//                                 image: signature.data.buffer
-//                                     .asUint8List(),
-//                                 width: signature.width,
-//                                 height: signature.height)))) : Text(value2 == null || value2 == 'signature' ? '' : value2, style: TextStyle(fontSize: 8)),
-//                           ],
-//                         ),
-//                       ))),
-//                 ]
-//             ),
-//             Container(height: 4)
-//           ]
-//       );
-//     }
-//
-//     Widget tripleLineField(String text1, String value1, String text2, String value2, String text3, String value3, [TextOption option1 = TextOption.EncryptedText, TextOption option2 = TextOption.EncryptedText, TextOption option3 = TextOption.EncryptedText, FlutterImage.Image signature, PdfDocument doc]){
-//
-//       if(option1 == TextOption.Date){
-//         if(value1 == null){
-//           value1 = '';
-//         } else {
-//           value1 = dateFormat.format(DateTime.parse(value1));
-//         }
-//       } else if(option1 == TextOption.PlainText){
-//         if(value1 == null){
-//           value1 = '';
-//         } else {
-//           value1 = value1;
-//         }
-//       } else if(option1 == TextOption.EncryptedText){
-//         if(value1 == null){
-//           value1 = '';
-//         } else {
-//           value1 = GlobalFunctions.decryptString(value1);
-//         }
-//       } else if(option1 == TextOption.Time){
-//         if(value1 == null){
-//           value1 = '';
-//         } else {
-//           value1 = timeFormat.format(DateTime.parse(value1));
-//         }
-//       } else if(option1 == TextOption.EncryptedDate){
-//         if(value1 == null){
-//           value1 = '';
-//         } else {
-//           value1 = dateFormat.format(DateTime.parse(GlobalFunctions.decryptString(value1)));
-//         }
-//       } else if(option1 == TextOption.EncryptedText){
-//         if(value1 == null){
-//           value1 = '';
-//         } else {
-//           value1 = GlobalFunctions.decryptString(value1);
-//         }
-//       }
-//
-//       if(option2 == TextOption.Date){
-//         if(value2 == null){
-//           value2 = '';
-//         } else {
-//           value2 = dateFormat.format(DateTime.parse(value2));
-//         }
-//       } else if(option2 == TextOption.PlainText){
-//         if(value2 == null){
-//           value2 = '';
-//         } else {
-//           value2 = value2;
-//         }
-//       } else if(option2 == TextOption.EncryptedText){
-//         if(value2 == null){
-//           value2 = '';
-//         } else {
-//           value2 = GlobalFunctions.decryptString(value2);
-//         }
-//       } else if(option2 == TextOption.Time){
-//         if(value2 == null){
-//           value2 = '';
-//         } else {
-//           value2 = timeFormat.format(DateTime.parse(value2));
-//         }
-//       } else if(option2 == TextOption.EncryptedDate){
-//         if(value2 == null){
-//           value2 = '';
-//         } else {
-//           value2 = dateFormat.format(DateTime.parse(GlobalFunctions.decryptString(value2)));
-//         }
-//       } else if(option2 == TextOption.EncryptedText){
-//         if(value2 == null){
-//           value2 = '';
-//         } else {
-//           value2 = GlobalFunctions.decryptString(value2);
-//         }
-//       }
-//
-//       if(option3 == TextOption.Date){
-//         if(value3 == null){
-//           value3 = '';
-//         } else {
-//           value3 = dateFormat.format(DateTime.parse(value3));
-//         }
-//       } else if(option3 == TextOption.PlainText){
-//         if(value3 == null){
-//           value3 = '';
-//         } else {
-//           value3 = value3;
-//         }
-//       } else if(option3 == TextOption.EncryptedText){
-//         if(value3 == null){
-//           value3 = '';
-//         } else {
-//           value3 = GlobalFunctions.decryptString(value3);
-//         }
-//       } else if(option3 == TextOption.Time){
-//         if(value3 == null){
-//           value3 = '';
-//         } else {
-//           value3 = timeFormat.format(DateTime.parse(value3));
-//         }
-//       } else if(option3 == TextOption.EncryptedDate){
-//         if(value3 == null){
-//           value3 = '';
-//         } else {
-//           value3 = dateFormat.format(DateTime.parse(GlobalFunctions.decryptString(value3)));
-//         }
-//       } else if(option3 == TextOption.EncryptedText){
-//         if(value3 == null){
-//           value3 = '';
-//         } else {
-//           value3 = GlobalFunctions.decryptString(value3);
-//         }
-//       }
-//
-//
-//
-//       return Column(
-//           children: [
-//             Row(
-//                 children: [
-//                   Container(width: 70, child: Text(text1, style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8))),
-//                   SizedBox(width: 5),
-//                   Expanded(child: ConstrainedBox(constraints: BoxConstraints(minHeight: 20),
-//                       child: Container(
-//                         padding: const EdgeInsets.all(3),
-//                         decoration: BoxDecoration(
-//                           borderRadius: 5,
-//                           border: BoxBorder(
-//                             top: true,
-//                             left: true,
-//                             right: true,
-//                             bottom: true,
-//                             width: 1,
-//                             color: PdfColors.grey,
-//                           ),
-//                         ),
-//                         child: Column(
-//                           mainAxisSize: MainAxisSize.min,
-//                           crossAxisAlignment: CrossAxisAlignment.start,
-//                           children: <Widget>[
-//                             Text(value1 == null ? '' : value1, style: TextStyle(fontSize: 8)),
-//                           ],
-//                         ),
-//                       ))),
-//                   SizedBox(width: 5),
-//                   Container(width: 70, child: Text(text2, style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8))),
-//                   SizedBox(width: 5),
-//                   Expanded(child: ConstrainedBox(constraints: BoxConstraints(minHeight: 20),
-//                       child: Container(
-//                         padding: const EdgeInsets.all(3),
-//                         decoration: BoxDecoration(
-//                           borderRadius: 5,
-//                           border: BoxBorder(
-//                             top: true,
-//                             left: true,
-//                             right: true,
-//                             bottom: true,
-//                             width: 1,
-//                             color: PdfColors.grey,
-//                           ),
-//                         ),
-//                         child: Column(
-//                           mainAxisSize: MainAxisSize.min,
-//                           crossAxisAlignment: CrossAxisAlignment.start,
-//                           children: <Widget>[
-//                             signature == null ? Text(value2 == null ? '' : value2, style: TextStyle(fontSize: 8)) : signature == null ? Text('') : Container(height: 20, child: FittedBox(alignment: Alignment.centerLeft, child: Image(PdfImage(doc,
-//                                 image: signature.data.buffer
-//                                     .asUint8List(),
-//                                 width: signature.width,
-//                                 height: signature.height)))),
-//                           ],
-//                         ),
-//                       ))),
-//                   SizedBox(width: 5),
-//                   Container(width: 70, child: Text(text3, style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8))),
-//                   SizedBox(width: 5),
-//                   Expanded(child: ConstrainedBox(constraints: BoxConstraints(minHeight: 20),
-//                       child: Container(
-//                         padding: const EdgeInsets.all(3),
-//                         decoration: BoxDecoration(
-//                           borderRadius: 5,
-//                           border: BoxBorder(
-//                             top: true,
-//                             left: true,
-//                             right: true,
-//                             bottom: true,
-//                             width: 1,
-//                             color: PdfColors.grey,
-//                           ),
-//                         ),
-//                         child: Column(
-//                           mainAxisSize: MainAxisSize.min,
-//                           crossAxisAlignment: CrossAxisAlignment.start,
-//                           children: <Widget>[
-//                             signature == null ? Text(value3 == null ? '' : value3, style: TextStyle(fontSize: 8)) : signature == null ? Text('') : Container(height: 20, child: FittedBox(alignment: Alignment.centerLeft, child: Image(PdfImage(doc,
-//                                 image: signature.data.buffer
-//                                     .asUint8List(),
-//                                 width: signature.width,
-//                                 height: signature.height)))),
-//                           ],
-//                         ),
-//                       ))),
-//                 ]
-//             ),
-//             Container(height: 4)
-//           ]
-//       );
-//     }
-//
-//
-//
-//     Widget sectionTitle(String text){
-//       return Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: [
-//             Text(text, style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 9, fontWeight: FontWeight.bold)),
-//             Container(height: 5)
-//           ]
-//       );
-//     }
-//
-//     Widget checkBoxTitle(String text1, String text2){
-//       return Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: [
-//             Row(children: [
-//               Text(text1, style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 9, fontWeight: FontWeight.bold)),
-//               Text(text2, style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
-//             ]),
-//             Container(height: 5)
-//           ]
-//       );
-//     }
-//
-//
-//     Widget drivingTimesRow(String value1, String value2, String value3, String value4){
-//       return Column(
-//           children: [
-//             Row(
-//                 children: [
-//                   Expanded(child: Expanded(child: ConstrainedBox(constraints: BoxConstraints(minHeight: 20),
-//                       child: Container(
-//                         padding: const EdgeInsets.all(5),
-//                         decoration: BoxDecoration(
-//                           borderRadius: 5,
-//                           border: BoxBorder(
-//                             top: true,
-//                             left: true,
-//                             right: true,
-//                             bottom: true,
-//                             width: 1,
-//                             color: PdfColors.grey,
-//                           ),
-//                         ),
-//                         child: Column(
-//                           mainAxisSize: MainAxisSize.min,
-//                           crossAxisAlignment: CrossAxisAlignment.start,
-//                           children: <Widget>[
-//                             Text(value1 == null ? '' : GlobalFunctions.decryptString(value1), style: TextStyle(fontSize: 8)),
-//                           ],
-//                         ),
-//                       )))),
-//                   Container(width: 2),
-//                   Expanded(child: Expanded(child: ConstrainedBox(constraints: BoxConstraints(minHeight: 20),
-//                       child: Container(
-//                         padding: const EdgeInsets.all(5),
-//                         decoration: BoxDecoration(
-//                           borderRadius: 5,
-//                           border: BoxBorder(
-//                             top: true,
-//                             left: true,
-//                             right: true,
-//                             bottom: true,
-//                             width: 1,
-//                             color: PdfColors.grey,
-//                           ),
-//                         ),
-//                         child: Column(
-//                           mainAxisSize: MainAxisSize.min,
-//                           crossAxisAlignment: CrossAxisAlignment.start,
-//                           children: <Widget>[
-//                             Text(value2 == null ? '' : GlobalFunctions.decryptString(value2), style: TextStyle(fontSize: 8)),
-//                           ],
-//                         ),
-//                       )))),
-//                   Container(width: 2),
-//                   Expanded(child: Expanded(child: ConstrainedBox(constraints: BoxConstraints(minHeight: 20),
-//                       child: Container(
-//                         padding: const EdgeInsets.all(5),
-//                         decoration: BoxDecoration(
-//                           borderRadius: 5,
-//                           border: BoxBorder(
-//                             top: true,
-//                             left: true,
-//                             right: true,
-//                             bottom: true,
-//                             width: 1,
-//                             color: PdfColors.grey,
-//                           ),
-//                         ),
-//                         child: Column(
-//                           mainAxisSize: MainAxisSize.min,
-//                           crossAxisAlignment: CrossAxisAlignment.start,
-//                           children: <Widget>[
-//                             Text(value3 == null ? '' : timeFormat.format(DateTime.parse(value3)), style: TextStyle(fontSize: 8)),
-//                           ],
-//                         ),
-//                       )))),
-//                   Container(width: 2),
-//                   Expanded(child: Expanded(child: ConstrainedBox(constraints: BoxConstraints(minHeight: 20),
-//                       child: Container(
-//                         padding: const EdgeInsets.all(5),
-//                         decoration: BoxDecoration(
-//                           borderRadius: 5,
-//                           border: BoxBorder(
-//                             top: true,
-//                             left: true,
-//                             right: true,
-//                             bottom: true,
-//                             width: 1,
-//                             color: PdfColors.grey,
-//                           ),
-//                         ),
-//                         child: Column(
-//                           mainAxisSize: MainAxisSize.min,
-//                           crossAxisAlignment: CrossAxisAlignment.start,
-//                           children: <Widget>[
-//                             Text(value4 == null ? '' : timeFormat.format(DateTime.parse(value4)), style: TextStyle(fontSize: 8)),
-//                           ],
-//                         ),
-//                       )))),
-//                 ]
-//             ),
-//             Container(height: 3)
-//           ]
-//       );
-//     }
-//
-//     Widget techniquePositionRow(String value1, String value2, String value3){
-//       return Column(
-//           children: [
-//             Row(
-//                 children: [
-//                   Expanded(child: Expanded(child: ConstrainedBox(constraints: BoxConstraints(minHeight: 20),
-//                       child: Container(
-//                         padding: const EdgeInsets.all(3),
-//                         decoration: BoxDecoration(
-//                           borderRadius: 5,
-//                           border: BoxBorder(
-//                             top: true,
-//                             left: true,
-//                             right: true,
-//                             bottom: true,
-//                             width: 1,
-//                             color: PdfColors.grey,
-//                           ),
-//                         ),
-//                         child: Column(
-//                           mainAxisSize: MainAxisSize.min,
-//                           crossAxisAlignment: CrossAxisAlignment.start,
-//                           children: <Widget>[
-//                             Text(value1 == null ? '' : GlobalFunctions.decryptString(value1), style: TextStyle(fontSize: 8)),
-//                           ],
-//                         ),
-//                       )))),
-//                   Container(width: 2),
-//                   Expanded(child: Expanded(child: ConstrainedBox(constraints: BoxConstraints(minHeight: 20),
-//                       child: Container(
-//                         padding: const EdgeInsets.all(3),
-//                         decoration: BoxDecoration(
-//                           borderRadius: 5,
-//                           border: BoxBorder(
-//                             top: true,
-//                             left: true,
-//                             right: true,
-//                             bottom: true,
-//                             width: 1,
-//                             color: PdfColors.grey,
-//                           ),
-//                         ),
-//                         child: Column(
-//                           mainAxisSize: MainAxisSize.min,
-//                           crossAxisAlignment: CrossAxisAlignment.start,
-//                           children: <Widget>[
-//                             Text(value2 == null ? '' : GlobalFunctions.decryptString(value2), style: TextStyle(fontSize: 8)),
-//                           ],
-//                         ),
-//                       )))),
-//                   Container(width: 2),
-//                   Expanded(child: Expanded(child: ConstrainedBox(constraints: BoxConstraints(minHeight: 20),
-//                       child: Container(
-//                         padding: const EdgeInsets.all(3),
-//                         decoration: BoxDecoration(
-//                           borderRadius: 5,
-//                           border: BoxBorder(
-//                             top: true,
-//                             left: true,
-//                             right: true,
-//                             bottom: true,
-//                             width: 1,
-//                             color: PdfColors.grey,
-//                           ),
-//                         ),
-//                         child: Column(
-//                           mainAxisSize: MainAxisSize.min,
-//                           crossAxisAlignment: CrossAxisAlignment.start,
-//                           children: <Widget>[
-//                             Text(value3 == null ? '' : GlobalFunctions.decryptString(value3), style: TextStyle(fontSize: 8)),
-//                           ],
-//                         ),
-//                       )))),
-//                 ]
-//             ),
-//             Container(height: 3)
-//           ]
-//       );
-//     }
-//
-//     Widget yesNoCheckboxes(String text, var value1, var value2) {
-//       return Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: [
-//             Text(text, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 8)),
-//             Container(height: 5),
-//             Row(
-//                 children: [
-//                   Text('Yes', style: TextStyle(fontSize: 8)),
-//                   Container(width: 5),
-//                   Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-//                       decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-//                         top: true,
-//                         left: true,
-//                         right: true,
-//                         bottom: true,
-//                         width: 1,
-//                         color: PdfColors.grey,
-//                       )),
-//                       child: Center(child: Text(value1 == null || value1 == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
-//                   Container(width: 10),
-//                   Text('No', style: TextStyle(fontSize: 8)),
-//                   Container(width: 5),
-//                   Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-//                       decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-//                         top: true,
-//                         left: true,
-//                         right: true,
-//                         bottom: true,
-//                         width: 1,
-//                         color: PdfColors.grey,
-//                       )),
-//                       child: Center(child: Text(value2 == null || value2 == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
-//                 ]
-//             ),
-//             Container(height: 5)
-//           ]);
-//     }
-//
-//
-//     Widget headingText(String value, [bool margin = false]){
-//       return margin ? Container(margin: EdgeInsets.all(2), child: Text(value, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 8))) : Text(value, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 8));
-//     }
-//
-//
-//
-//     Widget valueText(String value, [bool margin = false, TextOption option = TextOption.EncryptedText]){
-//
-//       if(option == TextOption.Date){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = dateFormat.format(DateTime.parse(value));
-//         }
-//       } else if(option == TextOption.DateTime){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = dateTimeFormat.format(DateTime.parse(value));
-//         }
-//       } else if(option == TextOption.PlainText){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = value;
-//         }
-//       } else if(option == TextOption.EncryptedText){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = GlobalFunctions.decryptString(value);
-//         }
-//       } else if(option == TextOption.Time){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = timeFormat.format(DateTime.parse(value));
-//         }
-//       } else if(option == TextOption.EncryptedDate){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = dateFormat.format(DateTime.parse(GlobalFunctions.decryptString(value)));
-//         }
-//       } else if(option == TextOption.EncryptedText){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = GlobalFunctions.decryptString(value);
-//         }
-//       }
-//
-//
-//
-//       return margin ? Container(margin: EdgeInsets.all(2), child: Text(value == null ? '' : value, style: TextStyle(fontSize: 8))) : Text(value == null ? '' : value, style: TextStyle(fontSize: 8));
-//     }
-//
-//     Widget tableCellContainer(Widget child, [double width = 250, bool margin = true]){
-//       return Container(
-//           padding: EdgeInsets.all(margin ? 2 : 0),
-//           width: width, child: child);
-//     }
-//
-//
-//     String textValue(String value, [TextOption option = TextOption.EncryptedText]){
-//
-//       if(option == TextOption.Date){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = dateFormat.format(DateTime.parse(value));
-//         }
-//       } else if(option == TextOption.DateTime){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = dateTimeFormat.format(DateTime.parse(value));
-//         }
-//       } else if(option == TextOption.PlainText){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = value;
-//         }
-//       } else if(option == TextOption.EncryptedText){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = GlobalFunctions.decryptString(value);
-//         }
-//       } else if(option == TextOption.Time){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = timeFormat.format(DateTime.parse(value));
-//         }
-//       } else if(option == TextOption.EncryptedDate){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = dateFormat.format(DateTime.parse(GlobalFunctions.decryptString(value)));
-//         }
-//       } else if(option == TextOption.EncryptedText){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = GlobalFunctions.decryptString(value);
-//         }
-//       }
-//
-//
-//
-//       return value;
-//     }
-//
-//     TableRow staffingRow(String date, String startTime, String endTime, String name, String rmnHca){
-//       return TableRow(
-//           children: [
-//             Container(
-//                 padding: EdgeInsets.all(2),
-//                 width: 50, child: Row(
-//                 mainAxisAlignment: MainAxisAlignment.start,
-//                 children: [
-//                   Text(date, style: TextStyle(fontSize: 8))
-//                 ])),
-//             Container(
-//                 padding: EdgeInsets.all(2),
-//                 width: 30, child: Row(
-//                 mainAxisAlignment: MainAxisAlignment.start,
-//                 children: [
-//                   Text(startTime, style: TextStyle(fontSize: 8))
-//                 ])),
-//             Container(
-//                 padding: EdgeInsets.all(2),
-//                 width: 30, child: Row(
-//                 mainAxisAlignment: MainAxisAlignment.start,
-//                 children: [
-//                   Text(endTime, style: TextStyle(fontSize: 8))
-//                 ])),
-//             Container(
-//                 padding: EdgeInsets.all(2),
-//                 width: 70, child: Row(
-//                 mainAxisAlignment: MainAxisAlignment.start,
-//                 children: [
-//                   Text(name, style: TextStyle(fontSize: 8))
-//                 ])),
-//             Container(
-//                 padding: EdgeInsets.all(2),
-//                 width: 50, child: Row(
-//                 mainAxisAlignment: MainAxisAlignment.start,
-//                 children: [
-//                   Text(rmnHca, style: TextStyle(fontSize: 8))
-//                 ]))
-//           ]
-//       );
-//     }
-//
-//
-//     try {
-//
-//       Document pdf;
-//       pdf = Document();
-//       PdfDocument pdfDoc = pdf.document;
-//       PdfImage pegasusLogo = await pdfImageFromImageProvider(pdf: pdfDoc, image: Material.AssetImage('assets/images/pegasusLogo.png'),);
-//
-//
-//       pdf.addPage(MultiPage(
-//           theme: Theme.withFont(base: ttf, bold: ttfBold),
-//           pageFormat: PdfPageFormat.a4,
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           margin: EdgeInsets.all(40),
-//           footer: (Context context) {
-//             return Container(
-//                 alignment: Alignment.centerRight,
-//                 margin: const EdgeInsets.only(top: 5),
-//                 child: Text('Transport Booking - Page ${context.pageNumber} of ${context.pagesCount}',
-//                     style: TextStyle(color: PdfColors.grey, fontSize: 8)));
-//           },
-//           build: (Context context) => <Widget>[
-//
-//
-//             Row(
-//                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//                 crossAxisAlignment: CrossAxisAlignment.start,
-//                 children: [
-//                   Row(children: [
-//                     sectionTitle('Reference'),
-//                     SizedBox(width: 10),
-//                     textField(TextOption.PlainText, selectedBookingForm[Strings.jobRef])
-//                   ]),
-//                   Container(height: 70, child: Image(pegasusLogo)),              ]
-//             ),
-//             Container(height: 5),
-//             Table(border: TableBorder(top: true, left: true, right: true, bottom: true),
-//                 children: [
-//                   TableRow(
-//                       children: [
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               headingText('Requested by:'),
-//                               valueText(selectedBookingForm[Strings.bfRequestedBy]),
-//                               SizedBox(height: 3),
-//                               headingText('Job Title:'),
-//                               valueText(selectedBookingForm[Strings.bfJobTitle]),
-//                               SizedBox(height: 3),
-//                               headingText('Contact Telephone Number:'),
-//                               valueText(selectedBookingForm[Strings.bfJobContact]),
-//                               SizedBox(height: 3),
-//                               headingText('Authorising Managers Name:'),
-//                               valueText(selectedBookingForm[Strings.bfJobAuthorisingManager]),
-//                               SizedBox(height: 3),
-//                               headingText('Date:'),
-//                               valueText(selectedBookingForm[Strings.bfJobDate], false, TextOption.Date),
-//                               SizedBox(height: 3),
-//                               headingText('Time:'),
-//                               valueText(selectedBookingForm[Strings.bfJobTime], false, TextOption.Time),
-//                               SizedBox(height: 3),
-//                             ]
-//                         )),
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               headingText('Invoice Details:'),
-//                               valueText(selectedBookingForm[Strings.bfInvoiceDetails]),
-//                               SizedBox(height: 3),
-//                               headingText('Cost Code:'),
-//                               valueText(selectedBookingForm[Strings.bfCostCode]),
-//                               SizedBox(height: 3),
-//                               headingText('Purchase Order no:'),
-//                               valueText(selectedBookingForm[Strings.bfPurchaseOrder]),
-//                             ]
-//                         )),
-//
-//                       ]
-//                   ),
-//                   TableRow(
-//                       children: [
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               headingText('Transport Coordinator Name:'),
-//                               valueText(selectedBookingForm[Strings.bfTransportCoordinator]),
-//                             ]
-//                         )),
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               headingText('Collection Date & Time:'),
-//                               valueText(selectedBookingForm[Strings.bfCollectionDateTime], false, TextOption.DateTime),
-//                             ]
-//                         )),
-//
-//                       ]
-//                   ),
-//                   TableRow(
-//                       children: [
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               headingText('Patient Collection Address:'),
-//                               valueText(selectedBookingForm[Strings.bfCollectionAddress]),
-//                               SizedBox(height: 3),
-//                               headingText('Postcode:'),
-//                               valueText(selectedBookingForm[Strings.bfCollectionPostcode]),
-//                             ]
-//                         )),
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               headingText('Patient Destination Address:'),
-//                               valueText(selectedBookingForm[Strings.bfDestinationAddress]),
-//                               SizedBox(height: 3),
-//                               headingText('Postcode:'),
-//                               valueText(selectedBookingForm[Strings.bfDestinationPostcode]),
-//                             ]
-//                         )),
-//
-//                       ]
-//                   ),
-//                   TableRow(
-//                       children: [
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               headingText('Tel:'),
-//                               valueText(selectedBookingForm[Strings.bfCollectionTel]),
-//                             ]
-//                         )),
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               headingText('Tel:'),
-//                               valueText(selectedBookingForm[Strings.bfDestinationTel]),
-//                             ]
-//                         )),
-//
-//                       ]
-//                   ),
-//                 ]
-//             ),
-//             Table(border: TableBorder(top: true, left: true, right: true, bottom: true),
-//                 children: [
-//                   TableRow(
-//                       children: [
-//                         Container(width: 500, color: PdfColors.grey,
-//                             child: Row(
-//                                 mainAxisAlignment: MainAxisAlignment.center,
-//                                 children: [
-//                                   Text('Patient Details', style: TextStyle(fontWeight: FontWeight.bold))
-//                                 ]
-//                             )),
-//                       ]
-//                   ),
-//                 ]
-//             ),
-//             Table(border: TableBorder(top: true, left: true, right: true, bottom: true),
-//                 children: [
-//                   TableRow(
-//                       children: [
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               headingText('Name:'),
-//                               valueText(selectedBookingForm[Strings.bfPatientName]),
-//                             ]
-//                         )),
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               headingText('Gender:'),
-//                               valueText(selectedBookingForm[Strings.bfGender]),
-//                             ]
-//                         )),
-//
-//                       ]
-//                   ),
-//                   TableRow(
-//                       children: [
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               headingText('Legal Status:'),
-//                               valueText(selectedBookingForm[Strings.bfLegalStatus]),
-//                             ]
-//                         )),
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               headingText('Ethnicity:'),
-//                               valueText(selectedBookingForm[Strings.bfEthnicity]),
-//                             ]
-//                         )),
-//
-//                       ]
-//                   ),
-//                   TableRow(
-//                       children: [
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               headingText('Date of birth:'),
-//                               valueText(selectedBookingForm[Strings.bfDateOfBirth], false, TextOption.EncryptedDate),
-//                             ]
-//                         )),
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               headingText('Covid Status:'),
-//                               valueText(selectedBookingForm[Strings.bfCovidStatus]),
-//                             ]
-//                         )),
-//
-//                       ]
-//                   ),
-//                   TableRow(
-//                       children: [
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               headingText('NHS Number:'),
-//                               valueText(selectedBookingForm[Strings.bfNhsNumber]),
-//                             ]
-//                         )),
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               headingText('RMN:'),
-//                               valueText(selectedBookingForm[Strings.bfRmn]),
-//                             ]
-//                         )),
-//
-//                       ]
-//                   ),
-//                   TableRow(
-//                       children: [
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               headingText('Current Presentation:'),
-//                               valueText(selectedBookingForm[Strings.bfCurrentPresentation]),
-//                             ]
-//                         )),
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               headingText("HCA's:", true),
-//                               valueText(selectedBookingForm[Strings.bfHca], true),
-//                               Container(height: 1, color: PdfColors.black),
-//                               headingText("1.", true),
-//                               valueText(selectedBookingForm[Strings.bfHca1], true),
-//                               headingText("2.", true),
-//                               valueText(selectedBookingForm[Strings.bfHca2], true),
-//                               headingText("3.", true),
-//                               valueText(selectedBookingForm[Strings.bfHca3], true),
-//                               headingText("4.", true),
-//                               valueText(selectedBookingForm[Strings.bfHca4], true),
-//                               headingText("5.", true),
-//                               valueText(selectedBookingForm[Strings.bfHca5], true),
-//                             ]
-//                         ), 250, false),
-//
-//                       ]
-//                   ),
-//                   TableRow(
-//                       children: [
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               yesNoCheckboxes('Specific Care Plan:', selectedBookingForm[Strings.bfSpecificCarePlanYes], selectedBookingForm[Strings.bfSpecificCarePlanNo]),
-//                               selectedBookingForm[Strings.bfSpecificCarePlanYes] != null && selectedBookingForm[Strings.bfSpecificCarePlanYes] == 1 ?
-//                               valueText(selectedBookingForm[Strings.bfSpecificCarePlan]): Container(),
-//                             ]
-//                         )),
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               yesNoCheckboxes('Patient warnings/markers:', selectedBookingForm[Strings.bfPatientWarningsYes], selectedBookingForm[Strings.bfPatientWarningsNo]),
-//                               selectedBookingForm[Strings.bfPatientWarningsYes] != null && selectedBookingForm[Strings.bfPatientWarningsYes] == 1 ?
-//                               valueText(selectedBookingForm[Strings.bfPatientWarnings]): Container(),
-//                             ]
-//                         )),
-//
-//                       ]
-//                   ),
-//                   TableRow(
-//                       children: [
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               headingText('Presenting Risks: (inc physical health, covid symptoms):'),
-//                               valueText(selectedBookingForm[Strings.bfPresentingRisks]),
-//                             ]
-//                         )),
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               headingText('Previous Risk History: (inc physical health, covid symptoms)'),
-//                               valueText(selectedBookingForm[Strings.bfPreviousRisks]),
-//                             ]
-//                         )),
-//
-//                       ]
-//                   ),
-//                   TableRow(
-//                       children: [
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               yesNoCheckboxes('Gender/Race/Sexual Behaviour concerns:', selectedBookingForm[Strings.bfGenderConcernsYes], selectedBookingForm[Strings.bfGenderConcernsNo]),
-//                               selectedBookingForm[Strings.bfGenderConcernsYes] != null && selectedBookingForm[Strings.bfGenderConcernsYes] == 1 ?
-//                               valueText(selectedBookingForm[Strings.bfGenderConcerns]): Container(),
-//                             ]
-//                         )),
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               yesNoCheckboxes('Safeguarding Concerns:', selectedBookingForm[Strings.bfSafeguardingConcernsYes], selectedBookingForm[Strings.bfSafeguardingConcernsNo]),
-//                               selectedBookingForm[Strings.bfSafeguardingConcernsYes] != null && selectedBookingForm[Strings.bfSafeguardingConcernsYes] == 1 ?
-//                               valueText(selectedBookingForm[Strings.bfSafeguardingConcerns]): Container(),
-//                             ]
-//                         )),
-//
-//                       ]
-//                   ),
-//                   TableRow(
-//                       children: [
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               headingText('Ambulance Registration:'),
-//                               valueText(selectedBookingForm[Strings.bfAmbulanceRegistration]),
-//                             ]
-//                         )),
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               headingText('Time Due at Base:'),
-//                               valueText(selectedBookingForm[Strings.bfTimeDue], false, TextOption.Time),
-//                             ]
-//                         )),
-//
-//                       ]
-//                   ),
-//                 ]
-//             ),
-//             Container(height: 10),
-//             Row(
-//               mainAxisAlignment: MainAxisAlignment.center,
-//               children: [
-//                 Text('•	Please ensure that all members of staff have had sufficient rest prior to this transfer', style: TextStyle(fontSize: 10))
-//               ]
-//             ),
-//
-//
-//
-//
-//           ]
-//
-//       ));
-//
-//       String formDate = selectedBookingForm[Strings.bfJobDate] == null ? '' : dateFormatDay.format(DateTime.parse(selectedBookingForm[Strings.bfJobDate]));
-//       String id = selectedBookingForm[Strings.documentId];
-//
-//
-//       if(kIsWeb){
-//
-//         if(option == ShareOption.Download){
-//           List<int> pdfList = pdf.save();
-//           Uint8List pdfInBytes = Uint8List.fromList(pdfList);
-//
-// //Create blob and link from bytes
-//           final blob = html.Blob([pdfInBytes], 'application/pdf');
-//           final url = html.Url.createObjectUrlFromBlob(blob);
-//           final anchor = html.document.createElement('a') as html.AnchorElement
-//             ..href = url
-//             ..style.display = 'none'
-//             ..download = 'transport_booking_${formDate}_$id.pdf';
-//           html.document.body.children.add(anchor);
-//           anchor.click();
-//         } else {
-//           if(option == ShareOption.Print) await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save());
-//         }
-//
-//
-//       } else {
-//
-//         Directory dir = await getApplicationDocumentsDirectory();
-//
-//         String pdfPath =
-//             '${dir.path}/pdfs';
-//         Directory(pdfPath).createSync();
-//
-//
-//
-//         final File file = File('$pdfPath/transport_booking_${formDate}_$id.pdf');
-//
-//         if(option == ShareOption.Email){
-//           file.writeAsBytesSync(pdf.save());
-//         }
-//
-//         ConnectivityResult connectivityResult = await Connectivity().checkConnectivity();
-//
-//         if(connectivityResult != ConnectivityResult.none) {
-//
-//           if(option == ShareOption.Share) Printing.sharePdf(bytes: pdf.save(),filename: 'transport_booking_${formDate}_$id.pdf');
-//           if(option == ShareOption.Print) await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save());
-//
-//           if(option == ShareOption.Email) {
-//             final smtpServer = gmail(emailUsername, emailPassword);
-//
-//             // Create our message.
-//             final mailmessage = new Message()
-//               ..from = new Address(emailUsername, 'Pegasus Medical')
-//               ..recipients = emailList
-//               ..subject = 'Completed Transport Booking'
-//               ..html = "<p1>Dear Sir/Madam,</p1>\n<p>Attached is a completed Transport Booking from ${user
-//                   .name}.</p>"
-//                   "<p>Regards,<br>$emailSender</p>"
-//                   "<p><small>$emailFooter</small></p>"
-//               ..attachments = [FileAttachment(file)];
-//
-//             await send(mailmessage, smtpServer);
-//           }
-//
-//         }
-//
-//       }
-//
-//       success = true;
-//
-//     } catch (e) {
-//
-//       print(e);
-//
-//     }
-//     return success;
-//   }
 
   Future<bool> sharePdf(ShareOption option, [List<String> emailList]) async {
 
@@ -3488,7 +1997,7 @@ class BookingFormModel extends ChangeNotifier {
                   SizedBox(width: 5),
                   small ? ConstrainedBox(constraints: BoxConstraints(minHeight: 20),
                       child: Container(
-                        width: 100,
+                        width: 158,
                         padding: const EdgeInsets.all(5),
                         decoration: BoxDecoration(
                           borderRadius: 5,
@@ -3802,8 +2311,9 @@ class BookingFormModel extends ChangeNotifier {
             doubleLineField('Name', selectedBookingForm[Strings.bfPatientName], 'Gender', selectedBookingForm[Strings.bfGender]),
             doubleLineField('Legal Status', selectedBookingForm[Strings.bfLegalStatus], 'Ethnicity', selectedBookingForm[Strings.bfEthnicity]),
             doubleLineField('Date of birth', selectedBookingForm[Strings.bfDateOfBirth], 'Covid Status', selectedBookingForm[Strings.bfCovidStatus], TextOption.EncryptedDate),
-            doubleLineField('NHS Number', selectedBookingForm[Strings.bfNhsNumber], 'RMN', selectedBookingForm[Strings.bfRmn]),
+            singleLineField('NHS Number', selectedBookingForm[Strings.bfNhsNumber], TextOption.EncryptedText, true),
             singleLineField('Current Presentation', selectedBookingForm[Strings.bfCurrentPresentation]),
+            doubleLineField("RMN", selectedBookingForm[Strings.bfRmn], '1.', selectedBookingForm[Strings.bfRmn1]),
             doubleLineField("HCA's:", selectedBookingForm[Strings.bfHca], '1.', selectedBookingForm[Strings.bfHca1]),
             doubleLineField('2.', selectedBookingForm[Strings.bfHca2], '3.', selectedBookingForm[Strings.bfHca3]),
             doubleLineField('4.', selectedBookingForm[Strings.bfHca4], '5.', selectedBookingForm[Strings.bfHca5]),
@@ -3917,10 +2427,6 @@ class BookingFormModel extends ChangeNotifier {
     }
     return success;
   }
-
-
-
-
 
 }
 

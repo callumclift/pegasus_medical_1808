@@ -1,7 +1,6 @@
 import 'package:pegasus_medical_1808/models/share_option.dart';
 import 'package:pegasus_medical_1808/services/navigation_service.dart';
 import 'package:pegasus_medical_1808/shared/global_config.dart';
-import 'package:pegasus_medical_1808/utils/database_helper.dart';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -10,7 +9,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../locator.dart';
 import '../shared/global_config.dart';
 import '../shared/global_functions.dart';
-import '../utils/database_helper.dart';
 import './authentication_model.dart';
 import '../shared/strings.dart';
 import 'package:intl/intl.dart';
@@ -36,63 +34,62 @@ import 'package:random_string/random_string.dart' as random_string;
 import 'package:universal_html/html.dart' as html;
 
 
-class IncidentReportModel extends ChangeNotifier {
+class PatientObservationModel extends ChangeNotifier {
 
-  DatabaseHelper _databaseHelper = DatabaseHelper();
   AuthenticationModel authenticationModel = AuthenticationModel();
   final NavigationService _navigationService = locator<NavigationService>();
-  IncidentReportModel(this.authenticationModel);
+  PatientObservationModel(this.authenticationModel);
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
-  List<Map<String, dynamic>> _incidentReports = [];
-  String _selIncidentReportId;
+  List<Map<String, dynamic>> _patientObservations = [];
+  String _selPatientObservationId;
   final dateFormatDay = DateFormat("dd-MM-yyyy");
 
-  List<Map<String, dynamic>> get allIncidentReports {
-    return List.from(_incidentReports);
+  List<Map<String, dynamic>> get allPatientObservations {
+    return List.from(_patientObservations);
   }
-  int get selectedIncidentReportIndex {
-    return _incidentReports.indexWhere((Map<String, dynamic> incidentReport) {
-      return incidentReport[Strings.documentId] == _selIncidentReportId;
+  int get selectedPatientObservationIndex {
+    return _patientObservations.indexWhere((Map<String, dynamic> patientObservation) {
+      return patientObservation[Strings.documentId] == _selPatientObservationId;
     });
   }
-  String get selectedIncidentReportId {
-    return _selIncidentReportId;
+  String get selectedPatientObservationId {
+    return _selPatientObservationId;
   }
 
-  Map<String, dynamic> get selectedIncidentReport {
-    if (_selIncidentReportId == null) {
+  Map<String, dynamic> get selectedPatientObservation {
+    if (_selPatientObservationId == null) {
       return null;
     }
-    return _incidentReports.firstWhere((Map<String, dynamic> incidentReport) {
-      return incidentReport[Strings.documentId] == _selIncidentReportId;
+    return _patientObservations.firstWhere((Map<String, dynamic> patientObservation) {
+      return patientObservation[Strings.documentId] == _selPatientObservationId;
     });
   }
-  void selectIncidentReport(String incidentReportId) {
-    _selIncidentReportId = incidentReportId;
-    if (incidentReportId != null) {
+  void selectPatientObservation(String patientObservationId) {
+    _selPatientObservationId = patientObservationId;
+    if (patientObservationId != null) {
       notifyListeners();
     }
   }
 
-  void clearIncidentReports(){
-    _incidentReports = [];
+  void clearPatientObservations(){
+    _patientObservations = [];
   }
 
 
   // Sembast database settings
-  static const String TEMPORARY_INCIDENT_REPORTS_STORE_NAME = 'temporary_incident_reports';
-  final _temporaryIncidentReportsStore = Db.intMapStoreFactory.store(TEMPORARY_INCIDENT_REPORTS_STORE_NAME);
+  static const String TEMPORARY_PATIENT_OBSERVATIONS_STORE_NAME = 'temporary_patient_observations';
+  final _temporaryPatientObservationsStore = Db.intMapStoreFactory.store(TEMPORARY_PATIENT_OBSERVATIONS_STORE_NAME);
 
-  static const String INCIDENT_REPORTS_STORE_NAME = 'incident_reports';
-  final _incidentReportsStore = Db.intMapStoreFactory.store(INCIDENT_REPORTS_STORE_NAME);
+  static const String PATIENT_OBSERVATIONS_STORE_NAME = 'patient_observation_timesheets';
+  final _patientObservationsStore = Db.intMapStoreFactory.store(PATIENT_OBSERVATIONS_STORE_NAME);
 
-  static const String EDITED_INCIDENT_REPORTS_STORE_NAME = 'edited_incident_reports';
-  final _editedIncidentReportsStore = Db.intMapStoreFactory.store(EDITED_INCIDENT_REPORTS_STORE_NAME);
+  static const String EDITED_PATIENT_OBSERVATIONS_STORE_NAME = 'edited_patient_observations';
+  final _editedPatientObservationsStore = Db.intMapStoreFactory.store(EDITED_PATIENT_OBSERVATIONS_STORE_NAME);
 
-  static const String SAVED_INCIDENT_REPORTS_STORE_NAME = 'saved_incident_reports';
-  final _savedIncidentReportsStore = Db.intMapStoreFactory.store(SAVED_INCIDENT_REPORTS_STORE_NAME);
+  static const String SAVED_PATIENT_OBSERVATIONS_STORE_NAME = 'saved_patient_observations';
+  final _savedPatientObservationsStore = Db.intMapStoreFactory.store(SAVED_PATIENT_OBSERVATIONS_STORE_NAME);
 
   // Private getter to shorten the amount of code needed to get the
   // singleton instance of an opened database.
@@ -104,14 +101,14 @@ class IncidentReportModel extends ChangeNotifier {
     final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
         [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, '1')]
     ));
-    List records = await _temporaryIncidentReportsStore.find(
+    List records = await _temporaryPatientObservationsStore.find(
       await _db,
       finder: finder,
     );
     if(records.length == 0){
       // Generate a random ID based on the date and a random string for virtual zero chance of duplicates
       int _id = DateTime.now().millisecondsSinceEpoch + int.parse(random_string.randomNumeric(2));
-      await _temporaryIncidentReportsStore.record(_id).put(await _db,
+      await _temporaryPatientObservationsStore.record(_id).put(await _db,
           {Strings.uid : user.uid, Strings.formVersion: 1, Strings.jobId : '1'});
     }
   }
@@ -122,9 +119,9 @@ class IncidentReportModel extends ChangeNotifier {
 
     if(edit){
       final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
-          [Db.Filter.equals(Strings.documentId, selectedIncidentReport[Strings.documentId]), Db.Filter.equals(Strings.jobId, selectedJobId)]
+          [Db.Filter.equals(Strings.documentId, selectedPatientObservation[Strings.documentId]), Db.Filter.equals(Strings.jobId, selectedJobId)]
       ));
-      records = await _editedIncidentReportsStore.find(
+      records = await _editedPatientObservationsStore.find(
         await _db,
         finder: finder,
       );
@@ -132,7 +129,7 @@ class IncidentReportModel extends ChangeNotifier {
       final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
           [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.localId, savedId)]
       ));
-      records = await _savedIncidentReportsStore.find(
+      records = await _savedPatientObservationsStore.find(
         await _db,
         finder: finder,
       );
@@ -140,7 +137,7 @@ class IncidentReportModel extends ChangeNotifier {
       final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
           [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, selectedJobId)]
       ));
-      records = await _temporaryIncidentReportsStore.find(
+      records = await _temporaryPatientObservationsStore.find(
         await _db,
         finder: finder,
       );
@@ -156,7 +153,7 @@ class IncidentReportModel extends ChangeNotifier {
         [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.serverUploaded, 0)]
     ));
 
-    List records = await _incidentReportsStore.find(
+    List records = await _patientObservationsStore.find(
       await _db,
       finder: finder,
     );
@@ -171,7 +168,7 @@ class IncidentReportModel extends ChangeNotifier {
         [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.serverUploaded, 0)]
     ));
 
-    List records = await _incidentReportsStore.find(
+    List records = await _patientObservationsStore.find(
       await _db,
       finder: finder,
     );
@@ -184,7 +181,7 @@ class IncidentReportModel extends ChangeNotifier {
         [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.localId, localId)]
     ));
 
-    await _incidentReportsStore.delete(
+    await _patientObservationsStore.delete(
       await _db,
       finder: finder,
     );
@@ -192,7 +189,7 @@ class IncidentReportModel extends ChangeNotifier {
 
   Future <List<dynamic>> getSavedRecords() async{
     final Db.Finder finder = Db.Finder(filter: Db.Filter.equals(Strings.uid, user.uid));
-    List records = await _savedIncidentReportsStore.find(
+    List records = await _savedPatientObservationsStore.find(
       await _db,
       finder: finder,
     );
@@ -208,15 +205,15 @@ class IncidentReportModel extends ChangeNotifier {
     if(edit){
 
       final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
-          [Db.Filter.equals(Strings.documentId, selectedIncidentReport[Strings.documentId]), Db.Filter.equals(Strings.jobId, selectedJobId)]
+          [Db.Filter.equals(Strings.documentId, selectedPatientObservation[Strings.documentId]), Db.Filter.equals(Strings.jobId, selectedJobId)]
       ));
-      records = await _editedIncidentReportsStore.find(
+      records = await _editedPatientObservationsStore.find(
         await _db,
         finder: finder,
       );
     } else if(saved){
       final Db.Finder finder = Db.Finder(filter: Db.Filter.equals(Strings.localId, savedId));
-      records = await _savedIncidentReportsStore.find(
+      records = await _savedPatientObservationsStore.find(
         await _db,
         finder: finder,
       );
@@ -226,7 +223,7 @@ class IncidentReportModel extends ChangeNotifier {
       final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
           [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, selectedJobId)]
       ));
-      records = await _temporaryIncidentReportsStore.find(
+      records = await _temporaryPatientObservationsStore.find(
         await _db,
         finder: finder,
       );
@@ -245,44 +242,45 @@ class IncidentReportModel extends ChangeNotifier {
       final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
           [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, selectedJobId)]
       ));
-      await _editedIncidentReportsStore.update(await _db, {field: value},
+      await _editedPatientObservationsStore.update(await _db, {field: value},
           finder: finder);
     } else if(saved){
       final Db.Finder finder = Db.Finder(filter: Db.Filter.equals(Strings.localId, savedId));
-      await _savedIncidentReportsStore.update(await _db, {field: value},
+      await _savedPatientObservationsStore.update(await _db, {field: value},
           finder: finder);
     } else {
       final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
           [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, selectedJobId)]
       ));
-      await _temporaryIncidentReportsStore.update(await _db, {field: value},
+      await _temporaryPatientObservationsStore.update(await _db, {field: value},
           finder: finder);
+
     }
 
   }
 
   void deleteEditedRecord() async {
-    await _editedIncidentReportsStore.delete(await _db);
+    await _editedPatientObservationsStore.delete(await _db);
   }
 
   Future<void> setUpEditedRecord() async{
 
-    Map<String, dynamic> editedReport = editedIncidentReport(selectedIncidentReport);
+    Map<String, dynamic> editedReport = editedPatientObservation(selectedPatientObservation);
     Map<String, dynamic> localData = Map.from(editedReport);
-    await _editedIncidentReportsStore.delete(await _db);
+    await _editedPatientObservationsStore.delete(await _db);
     int _id = DateTime.now().millisecondsSinceEpoch + int.parse(random_string.randomNumeric(2));
-    await _editedIncidentReportsStore.record(_id).put(await _db,
+    await _editedPatientObservationsStore.record(_id).put(await _db,
         localData);
 
   }
 
   Future<void> deleteAllRows() async {
-    await _incidentReportsStore.delete(await _db);
+    await _patientObservationsStore.delete(await _db);
   }
 
   Future<bool> saveForLater(String jobId, bool saved, int savedId) async {
 
-    GlobalFunctions.showLoadingDialog('Saving Incident Report...');
+    GlobalFunctions.showLoadingDialog('Saving Patient Observation Timesheet...');
     String message = '';
     bool success = false;
     int id;
@@ -295,7 +293,7 @@ class IncidentReportModel extends ChangeNotifier {
 
 
 
-    Map<String, dynamic> incidentReport = await getTemporaryRecord(false, '1', saved, savedId);
+    Map<String, dynamic> patientObservation = await getTemporaryRecord(false, '1', saved, savedId);
 
     Map<String, dynamic> localData = {
       Strings.localId: id,
@@ -303,22 +301,23 @@ class IncidentReportModel extends ChangeNotifier {
       Strings.uid: user.uid,
       Strings.jobId: '1',
       Strings.formVersion: '1',
-      Strings.jobRef: incidentReport[Strings.jobRef],
-      Strings.incidentDate: incidentReport[Strings.incidentDate],
-      Strings.incidentTime: incidentReport[Strings.incidentTime],
-      Strings.incidentDetails: incidentReport[Strings.incidentDetails],
-      Strings.incidentLocation: incidentReport[Strings.incidentLocation],
-      Strings.incidentAction: incidentReport[Strings.incidentAction],
-      Strings.incidentStaffInvolved: incidentReport[Strings.incidentStaffInvolved],
-      Strings.incidentSignature: incidentReport[Strings.incidentSignature],
-      Strings.incidentSignatureDate: incidentReport[Strings.incidentSignatureDate],
-      Strings.incidentPrintName: incidentReport[Strings.incidentPrintName],
+      Strings.jobRef: patientObservation[Strings.jobRef],
+      Strings.patientObservationDate: patientObservation[Strings.patientObservationDate],
+      Strings.patientObservationHospital: patientObservation[Strings.patientObservationHospital],
+      Strings.patientObservationWard: patientObservation[Strings.patientObservationWard],
+      Strings.patientObservationStartTime: patientObservation[Strings.patientObservationStartTime],
+      Strings.patientObservationFinishTime: patientObservation[Strings.patientObservationFinishTime],
+      Strings.patientObservationTotalHours: patientObservation[Strings.patientObservationTotalHours],
+      Strings.patientObservationName: patientObservation[Strings.patientObservationName],
+      Strings.patientObservationPosition: patientObservation[Strings.patientObservationPosition],
+      Strings.patientObservationAuthorisedDate: patientObservation[Strings.patientObservationAuthorisedDate],
+      Strings.patientObservationSignature: patientObservation[Strings.patientObservationSignature],
     };
 
-    await _savedIncidentReportsStore.record(id).put(await _db,
+    await _savedPatientObservationsStore.record(id).put(await _db,
         localData);
 
-    message = 'Incident Report saved to device';
+    message = 'Patient Observation Timesheet saved to device';
     success = true;
 
     if(success) resetTemporaryRecord(jobId, false, 0);
@@ -328,8 +327,8 @@ class IncidentReportModel extends ChangeNotifier {
   }
 
   Future<void> deleteSavedRecord(int id) async {
-    await _savedIncidentReportsStore.record(id).delete(await _db);
-    _incidentReports.removeWhere((element) => element[Strings.localId] == id);
+    await _savedPatientObservationsStore.record(id).delete(await _db);
+    _patientObservations.removeWhere((element) => element[Strings.localId] == id);
     notifyListeners();
   }
 
@@ -350,7 +349,7 @@ class IncidentReportModel extends ChangeNotifier {
           _fetchedRecordList.add(record.value);
         }
 
-        _incidentReports = List.from(_fetchedRecordList.reversed);
+        _patientObservations = List.from(_fetchedRecordList.reversed);
       } else {
         message = 'No saved records available';
       }
@@ -362,7 +361,7 @@ class IncidentReportModel extends ChangeNotifier {
     }
     _isLoading = false;
     notifyListeners();
-    _selIncidentReportId = null;
+    _selPatientObservationId = null;
     if(message != '') GlobalFunctions.showToast(message);
 
   }
@@ -379,35 +378,36 @@ class IncidentReportModel extends ChangeNotifier {
       ));
     }
 
-      await _temporaryIncidentReportsStore.update(await _db, {
-        Strings.formVersion: 1,
-        Strings.jobRef: null,
-        Strings.incidentDate: null,
-        Strings.incidentTime: null,
-        Strings.incidentDetails: null,
-        Strings.incidentLocation: null,
-        Strings.incidentAction: null,
-        Strings.incidentStaffInvolved: null,
-        Strings.incidentSignature: null,
-        Strings.incidentSignaturePoints: null,
-        Strings.incidentSignatureDate: null,
-        Strings.incidentPrintName: null,
-      },
-          finder: finder);
-      notifyListeners();
+    await _temporaryPatientObservationsStore.update(await _db, {
+      Strings.formVersion: 1,
+      Strings.jobRef: null,
+      Strings.patientObservationDate: null,
+      Strings.patientObservationHospital: null,
+      Strings.patientObservationWard: null,
+      Strings.patientObservationStartTime: null,
+      Strings.patientObservationFinishTime: null,
+      Strings.patientObservationTotalHours: null,
+      Strings.patientObservationName: null,
+      Strings.patientObservationPosition: null,
+      Strings.patientObservationAuthorisedDate: null,
+      Strings.patientObservationSignature: null,
+      Strings.patientObservationSignaturePoints: null,
+    },
+        finder: finder);
+    notifyListeners();
   }
 
 
 
-  Future<bool> submitIncidentReport(String jobId, bool edit, bool saved, int savedId) async {
+  Future<bool> submitPatientObservation(String jobId, bool edit, bool saved, int savedId) async {
 
-    GlobalFunctions.showLoadingDialog('Submitting Incident Report...');
+    GlobalFunctions.showLoadingDialog('Submitting Patient Observation Timesheet...');
     String message = '';
     bool success = false;
     List<String> storageUrlList = [];
     int id = DateTime.now().millisecondsSinceEpoch + int.parse(random_string.randomNumeric(2));
     //Sembast
-    Map<String, dynamic> incidentReport = await getTemporaryRecord(false, jobId, saved, savedId);
+    Map<String, dynamic> patientObservation = await getTemporaryRecord(false, jobId, saved, savedId);
 
 
 
@@ -417,25 +417,26 @@ class IncidentReportModel extends ChangeNotifier {
       Strings.uid: user.uid,
       Strings.jobId: '1',
       Strings.formVersion: '1',
-      Strings.jobRef: incidentReport[Strings.jobRef],
-      Strings.incidentDate: incidentReport[Strings.incidentDate],
-      Strings.incidentTime: incidentReport[Strings.incidentTime],
-      Strings.incidentDetails: incidentReport[Strings.incidentDetails],
-      Strings.incidentLocation: incidentReport[Strings.incidentLocation],
-      Strings.incidentAction: incidentReport[Strings.incidentAction],
-      Strings.incidentStaffInvolved: incidentReport[Strings.incidentStaffInvolved],
-      Strings.incidentSignature: incidentReport[Strings.incidentSignature],
-      Strings.incidentSignatureDate: incidentReport[Strings.incidentSignatureDate],
-      Strings.incidentPrintName: incidentReport[Strings.incidentPrintName],
+      Strings.jobRef: patientObservation[Strings.jobRef],
+      Strings.patientObservationDate: patientObservation[Strings.patientObservationDate],
+      Strings.patientObservationHospital: patientObservation[Strings.patientObservationHospital],
+      Strings.patientObservationWard: patientObservation[Strings.patientObservationWard],
+      Strings.patientObservationStartTime: patientObservation[Strings.patientObservationStartTime],
+      Strings.patientObservationFinishTime: patientObservation[Strings.patientObservationFinishTime],
+      Strings.patientObservationTotalHours: patientObservation[Strings.patientObservationTotalHours],
+      Strings.patientObservationName: patientObservation[Strings.patientObservationName],
+      Strings.patientObservationPosition: patientObservation[Strings.patientObservationPosition],
+      Strings.patientObservationAuthorisedDate: patientObservation[Strings.patientObservationAuthorisedDate],
+      Strings.patientObservationSignature: patientObservation[Strings.patientObservationSignature],
       Strings.pendingTime: DateTime.now().toIso8601String(),
       Strings.serverUploaded: 0,
     };
 
     //Sembast
-    await _incidentReportsStore.record(id).put(await _db,
+    await _patientObservationsStore.record(id).put(await _db,
         localData);
 
-    message = 'Incident Report has successfully been added to local database';
+    message = 'Patient Observation Timesheet has successfully been added to local database';
 
     bool hasDataConnection = await GlobalFunctions.hasDataConnection();
 
@@ -453,21 +454,22 @@ class IncidentReportModel extends ChangeNotifier {
         try {
 
           DocumentReference ref =
-          await FirebaseFirestore.instance.collection('incident_reports').add({
+          await FirebaseFirestore.instance.collection('patient_observation_timesheets').add({
             Strings.uid: user.uid,
             Strings.jobId: '1',
             Strings.formVersion: '1',
-            Strings.jobRef: GlobalFunctions.databaseValueString(incidentReport[Strings.jobRef]),
-            Strings.jobRefLowercase: GlobalFunctions.databaseValueString(incidentReport[Strings.jobRef]).toLowerCase(),
-            Strings.incidentDate: incidentReport[Strings.incidentDate] == null ? null : DateTime.parse(incidentReport[Strings.incidentDate]),
-            Strings.incidentTime: incidentReport[Strings.incidentTime],
-            Strings.incidentDetails: incidentReport[Strings.incidentDetails],
-            Strings.incidentLocation: incidentReport[Strings.incidentLocation],
-            Strings.incidentAction: incidentReport[Strings.incidentAction],
-            Strings.incidentStaffInvolved: incidentReport[Strings.incidentStaffInvolved],
-            Strings.incidentSignature: null,
-            Strings.incidentSignatureDate: incidentReport[Strings.incidentSignatureDate],
-            Strings.incidentPrintName: incidentReport[Strings.incidentPrintName],
+            Strings.jobRef: GlobalFunctions.databaseValueString(patientObservation[Strings.jobRef]),
+            Strings.jobRefLowercase: GlobalFunctions.databaseValueString(patientObservation[Strings.jobRef]).toLowerCase(),
+            Strings.patientObservationDate: patientObservation[Strings.patientObservationDate] == null ? null : DateTime.parse(patientObservation[Strings.patientObservationDate]),
+            Strings.patientObservationHospital: patientObservation[Strings.patientObservationHospital],
+            Strings.patientObservationWard: patientObservation[Strings.patientObservationWard],
+            Strings.patientObservationStartTime: patientObservation[Strings.patientObservationStartTime],
+            Strings.patientObservationFinishTime: patientObservation[Strings.patientObservationFinishTime],
+            Strings.patientObservationTotalHours: patientObservation[Strings.patientObservationTotalHours],
+            Strings.patientObservationName: patientObservation[Strings.patientObservationName],
+            Strings.patientObservationPosition: patientObservation[Strings.patientObservationPosition],
+            Strings.patientObservationAuthorisedDate: patientObservation[Strings.patientObservationAuthorisedDate] == null ? null : DateTime.parse(patientObservation[Strings.patientObservationAuthorisedDate]),
+            Strings.patientObservationSignature: null,
             Strings.timestamp: FieldValue.serverTimestamp(),
             Strings.serverUploaded: 1,
           });
@@ -475,67 +477,63 @@ class IncidentReportModel extends ChangeNotifier {
           DocumentSnapshot snap = await ref.get();
 
           //Signatures
-          String incidentSignatureUrl;
-          bool incidentSignatureSuccess = true;
+          String patientObservationSignatureUrl;
+          bool patientObservationSignatureSuccess = true;
 
-          if(incidentReport[Strings.incidentSignature] != null){
-            incidentSignatureSuccess = false;
+          if(patientObservation[Strings.patientObservationSignature] != null){
+            patientObservationSignatureSuccess = false;
 
             Reference storageRef =
-            FirebaseStorage.instance.ref().child('incidentReportImages/' + snap.id + '/incidentSignature.jpg');
+            FirebaseStorage.instance.ref().child('patientObservationImages/' + snap.id + '/patientObservationSignature.jpg');
 
             if(kIsWeb){
-              storageRef = FirebaseStorage.instance.ref().child(firebaseStorageBucket + '/incidentReportImages/' + snap.id + '/incidentSignature.jpg');
+              storageRef = FirebaseStorage.instance.ref().child(firebaseStorageBucket + '/patientObservationImages/' + snap.id + '/patientObservationSignature.jpg');
             }
 
-            final UploadTask uploadTask = storageRef.putData(Uint8List.fromList(incidentReport[Strings.incidentSignature].toList().cast<int>()));
+            final UploadTask uploadTask = storageRef.putData(Uint8List.fromList(patientObservation[Strings.patientObservationSignature].toList().cast<int>()));
             final TaskSnapshot downloadUrl = (await uploadTask);
-            incidentSignatureUrl = (await downloadUrl.ref.getDownloadURL());
-            if(incidentSignatureUrl != null){
-              incidentSignatureSuccess = true;
-              storageUrlList.add('incidentReportImages/' + snap.id + '/incidentSignature.jpg');
+            patientObservationSignatureUrl = (await downloadUrl.ref.getDownloadURL());
+            if(patientObservationSignatureUrl != null){
+              patientObservationSignatureSuccess = true;
+              storageUrlList.add('patientObservationImages/' + snap.id + '/patientObservationSignature.jpg');
             }
 
           }
 
-          if(incidentSignatureSuccess){
+          if(patientObservationSignatureSuccess){
 
-            await FirebaseFirestore.instance.collection('incident_reports').doc(snap.id).update({
-              Strings.incidentSignature: incidentSignatureUrl == null ? null : incidentSignatureUrl,
+            await FirebaseFirestore.instance.collection('patient_observation_timesheets').doc(snap.id).update({
+              Strings.patientObservationSignature: patientObservationSignatureUrl == null ? null : patientObservationSignatureUrl,
             }).timeout(Duration(seconds: 60));
 
 
             //Sembast
-            await _incidentReportsStore.record(id).delete(await _db);
+            await _patientObservationsStore.record(id).delete(await _db);
             if(saved){
               deleteSavedRecord(savedId);
             }
-            message = 'Incident Report uploaded successfully';
+            message = 'Patient Observation Timesheet uploaded successfully';
             success = true;
 
 
           } else {
-            await FirebaseFirestore.instance.collection('incident_reports').doc(snap.id).delete();
+            await FirebaseFirestore.instance.collection('patient_observation_timesheets').doc(snap.id).delete();
           }
 
         } on TimeoutException catch (_) {
           // A timeout occurred.
-          message = 'Network Timeout communicating with the server, unable to upload Incident Report';
-
-          await GlobalFunctions.checkAddFirebaseStorageRow(storageUrlList, _databaseHelper);
+          message = 'Network Timeout communicating with the server, unable to upload Patient Observation Timesheet';
 
         } catch (e) {
           print(e);
           message = e.toString();
-          await GlobalFunctions.checkAddFirebaseStorageRow(storageUrlList, _databaseHelper);
-
           print(e);
         }
       }
 
     } else {
 
-      message = 'No data connection, Incident Report has been saved locally, please upload when you have a valid connection';
+      message = 'No data connection, Patient Observation Timesheet has been saved locally, please upload when you have a valid connection';
       success = true;
 
     }
@@ -555,14 +553,14 @@ class IncidentReportModel extends ChangeNotifier {
     return success;
   }
 
-  Future<bool> editIncidentReport(String jobId, [bool edit = false]) async {
+  Future<bool> editPatientObservation(String jobId, [bool edit = false]) async {
 
-    GlobalFunctions.showLoadingDialog('Editing Incident Report...');
+    GlobalFunctions.showLoadingDialog('Editing Patient Observation Timesheet...');
     String message = '';
     bool success = false;
     List<String> storageUrlList = [];
 
-    Map<String, dynamic> incidentReport = await getTemporaryRecord(true, jobId, false, 0);
+    Map<String, dynamic> patientObservation = await getTemporaryRecord(true, jobId, false, 0);
     bool hasDataConnection = await GlobalFunctions.hasDataConnection();
 
 
@@ -578,45 +576,42 @@ class IncidentReportModel extends ChangeNotifier {
 
         try {
 
-          await FirebaseFirestore.instance.collection('incident_reports').doc(incidentReport[Strings.documentId]).update({
+          await FirebaseFirestore.instance.collection('patient_observation_timesheets').doc(patientObservation[Strings.documentId]).update({
             Strings.jobId: '1',
             Strings.formVersion: '1',
-            Strings.jobRef: GlobalFunctions.databaseValueString(incidentReport[Strings.jobRef]),
-            Strings.jobRefLowercase: GlobalFunctions.databaseValueString(incidentReport[Strings.jobRef]).toLowerCase(),
-            Strings.incidentDate: incidentReport[Strings.incidentDate] == null ? null : DateTime.parse(incidentReport[Strings.incidentDate]),
-            Strings.incidentTime: incidentReport[Strings.incidentTime],
-            Strings.incidentDetails: incidentReport[Strings.incidentDetails],
-            Strings.incidentLocation: incidentReport[Strings.incidentLocation],
-            Strings.incidentAction: incidentReport[Strings.incidentAction],
-            Strings.incidentStaffInvolved: incidentReport[Strings.incidentStaffInvolved],
-            Strings.incidentSignatureDate: incidentReport[Strings.incidentSignatureDate],
-            Strings.incidentPrintName: incidentReport[Strings.incidentPrintName],
-            Strings.serverUploaded: 1,
+            Strings.jobRef: GlobalFunctions.databaseValueString(patientObservation[Strings.jobRef]),
+            Strings.jobRefLowercase: GlobalFunctions.databaseValueString(patientObservation[Strings.jobRef]).toLowerCase(),
+            Strings.patientObservationDate: patientObservation[Strings.patientObservationDate] == null ? null : DateTime.parse(patientObservation[Strings.patientObservationDate]),
+            Strings.patientObservationHospital: patientObservation[Strings.patientObservationHospital],
+            Strings.patientObservationWard: patientObservation[Strings.patientObservationWard],
+            Strings.patientObservationStartTime: patientObservation[Strings.patientObservationStartTime],
+            Strings.patientObservationFinishTime: patientObservation[Strings.patientObservationFinishTime],
+            Strings.patientObservationTotalHours: patientObservation[Strings.patientObservationTotalHours],
+            Strings.patientObservationName: patientObservation[Strings.patientObservationName],
+            Strings.patientObservationPosition: patientObservation[Strings.patientObservationPosition],
+            Strings.patientObservationAuthorisedDate: patientObservation[Strings.patientObservationAuthorisedDate] == null ? null : DateTime.parse(patientObservation[Strings.patientObservationAuthorisedDate]),
+            Strings.serverUploaded: 1
           });
 
           //Sembast
 
           final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
-              [Db.Filter.equals(Strings.documentId, selectedIncidentReport[Strings.documentId]), Db.Filter.equals(Strings.jobId, jobId)]
+              [Db.Filter.equals(Strings.documentId, selectedPatientObservation[Strings.documentId]), Db.Filter.equals(Strings.jobId, jobId)]
           ));
 
-          await _editedIncidentReportsStore.delete(await _db,
+          await _editedPatientObservationsStore.delete(await _db,
               finder: finder);
-          message = 'Incident Report uploaded successfully';
+          message = 'Patient Observation Timesheet uploaded successfully';
           success = true;
-          getIncidentReports();
+          getPatientObservations();
 
         } on TimeoutException catch (_) {
           // A timeout occurred.
-          message = 'Network Timeout communicating with the server, unable to edit Incident Report';
-
-          await GlobalFunctions.checkAddFirebaseStorageRow(storageUrlList, _databaseHelper);
+          message = 'Network Timeout communicating with the server, unable to edit Patient Observation Timesheet';
 
         } catch (e) {
           print(e);
           message = e.toString();
-          await GlobalFunctions.checkAddFirebaseStorageRow(storageUrlList, _databaseHelper);
-
           print(e);
         }
       }
@@ -631,7 +626,6 @@ class IncidentReportModel extends ChangeNotifier {
     if(success){
       _navigationService.goBack();
       _navigationService.goBack();
-      //deleteEditedIncidentReport();
       deleteEditedRecord();
     }
     GlobalFunctions.showToast(message);
@@ -641,14 +635,13 @@ class IncidentReportModel extends ChangeNotifier {
   }
 
 
-  Future<void> getIncidentReports() async{
+  Future<void> getPatientObservations() async{
 
     _isLoading = true;
     notifyListeners();
     String message = '';
 
-    List<Map<String, dynamic>> _fetchedIncidentReportList = [];
-    DatabaseHelper databaseHelper = DatabaseHelper();
+    List<Map<String, dynamic>> _fetchedPatientObservationList = [];
 
     try {
 
@@ -656,8 +649,8 @@ class IncidentReportModel extends ChangeNotifier {
 
       if(!hasDataConnection){
 
-        GlobalFunctions.showToast('No data connection, unable to fetch Incident Reports');
-        _incidentReports = [];
+        GlobalFunctions.showToast('No data connection, unable to fetch Patient Observation Timesheets');
+        _patientObservations = [];
       } else {
 
 
@@ -673,13 +666,13 @@ class IncidentReportModel extends ChangeNotifier {
 
           if(user.role == 'Super User'){
             try{
-              snapshot = await FirebaseFirestore.instance.collection('incident_reports').orderBy('timestamp', descending: true).limit(10).get().timeout(Duration(seconds: 90));
+              snapshot = await FirebaseFirestore.instance.collection('patient_observation_timesheets').orderBy('timestamp', descending: true).limit(10).get().timeout(Duration(seconds: 90));
             } catch(e){
               print(e);
             }
           } else {
             try{
-              snapshot = await FirebaseFirestore.instance.collection('incident_reports').where(
+              snapshot = await FirebaseFirestore.instance.collection('patient_observation_timesheets').where(
                   'uid', isEqualTo: user.uid).orderBy('timestamp', descending: true).limit(10).get().timeout(Duration(seconds: 90));
             } catch(e){
               print(e);
@@ -690,34 +683,34 @@ class IncidentReportModel extends ChangeNotifier {
           Map<String, dynamic> snapshotData = {};
 
           if(snapshot.docs.length < 1){
-            message = 'No Incident Reports found';
+            message = 'No Patient Observation Timesheets found';
           } else {
             for (DocumentSnapshot snap in snapshot.docs) {
 
               snapshotData = snap.data();
 
-              Uint8List incidentSignature;
+              Uint8List patientObservationSignature;
 
-              if (snapshotData[Strings.incidentSignature] != null) {
+              if (snapshotData[Strings.patientObservationSignature] != null) {
                 Reference storageRef =
-                FirebaseStorage.instance.ref().child('incidentReportImages/' + snap.id + '/incidentSignature.jpg');
+                FirebaseStorage.instance.ref().child('patientObservationImages/' + snap.id + '/patientObservationSignature.jpg');
 
                 if(kIsWeb){
-                  storageRef = FirebaseStorage.instance.ref().child(firebaseStorageBucket + '/incidentReportImages/' + snap.id + '/incidentSignature.jpg');
+                  storageRef = FirebaseStorage.instance.ref().child(firebaseStorageBucket + '/patientObservationImages/' + snap.id + '/patientObservationSignature.jpg');
 
                 }
 
-                incidentSignature = await storageRef.getData(dataLimit);
+                patientObservationSignature = await storageRef.getData(dataLimit);
               }
 
 
-              final Map<String, dynamic> incidentReport = onlineIncidentReport(snapshotData, snap.id, incidentSignature);
+              final Map<String, dynamic> patientObservation = onlinePatientObservation(snapshotData, snap.id, patientObservationSignature);
 
-              _fetchedIncidentReportList.add(incidentReport);
+              _fetchedPatientObservationList.add(patientObservation);
 
             }
 
-            _incidentReports = _fetchedIncidentReportList;
+            _patientObservations = _fetchedPatientObservationList;
           }
 
 
@@ -728,7 +721,7 @@ class IncidentReportModel extends ChangeNotifier {
 
     } on TimeoutException catch (_) {
       // A timeout occurred.
-      message = 'Network Timeout communicating with the server, unable to fetch latest Incident Reports';
+      message = 'Network Timeout communicating with the server, unable to fetch latest Patient Observation Timesheets';
     } catch(e){
       print(e);
       message = 'Something went wrong. Please try again';
@@ -737,17 +730,16 @@ class IncidentReportModel extends ChangeNotifier {
 
     _isLoading = false;
     notifyListeners();
-    _selIncidentReportId = null;
+    _selPatientObservationId = null;
     if(message != '') GlobalFunctions.showToast(message);
 
   }
 
-  Future<void> getMoreIncidentReports() async{
+  Future<void> getMorePatientObservations() async{
 
     String message = '';
 
-    List<Map<String, dynamic>> _fetchedIncidentReportList = [];
-    DatabaseHelper databaseHelper = DatabaseHelper();
+    List<Map<String, dynamic>> _fetchedPatientObservationList = [];
 
     try {
 
@@ -755,7 +747,7 @@ class IncidentReportModel extends ChangeNotifier {
 
       if(!hasDataConnection){
 
-        GlobalFunctions.showToast('No data connection, unable to fetch Incident Reports');
+        GlobalFunctions.showToast('No data connection, unable to fetch Patient Observation Timesheets');
 
       } else {
 
@@ -769,12 +761,12 @@ class IncidentReportModel extends ChangeNotifier {
 
 
           QuerySnapshot snapshot;
-          int currentLength = _incidentReports.length;
-          DateTime latestDate = DateTime.parse(_incidentReports[currentLength - 1][Strings.timestamp]);
+          int currentLength = _patientObservations.length;
+          DateTime latestDate = DateTime.parse(_patientObservations[currentLength - 1][Strings.timestamp]);
 
           if(user.role == 'Super User'){
             try {
-              snapshot = await FirebaseFirestore.instance.collection('incident_reports').orderBy(
+              snapshot = await FirebaseFirestore.instance.collection('patient_observation_timesheets').orderBy(
                   'timestamp', descending: true).startAfter(
                   [Timestamp.fromDate(latestDate)]).limit(10)
                   .get()
@@ -785,7 +777,7 @@ class IncidentReportModel extends ChangeNotifier {
 
           } else {
             try {
-              snapshot = await FirebaseFirestore.instance.collection('incident_reports').where(
+              snapshot = await FirebaseFirestore.instance.collection('patient_observation_timesheets').where(
                   'uid', isEqualTo: user.uid).orderBy(
                   'timestamp', descending: true).startAfter(
                   [Timestamp.fromDate(latestDate)]).limit(10)
@@ -800,31 +792,31 @@ class IncidentReportModel extends ChangeNotifier {
           Map<String, dynamic> snapshotData = {};
 
           if(snapshot.docs.length < 1){
-            message = 'No more Incident Reports found';
+            message = 'No more Patient Observation Timesheets found';
           } else {
             for (DocumentSnapshot snap in snapshot.docs) {
 
               snapshotData = snap.data();
 
-              Uint8List incidentSignature;
+              Uint8List patientObservationSignature;
 
-              if (snapshotData[Strings.incidentSignature] != null) {
+              if (snapshotData[Strings.patientObservationSignature] != null) {
                 Reference storageRef =
-                FirebaseStorage.instance.ref().child('incidentReportImages/' + snap.id + '/incidentSignature.jpg');
+                FirebaseStorage.instance.ref().child('patientObservationImages/' + snap.id + '/patientObservationSignature.jpg');
 
                 if(kIsWeb){
-                  storageRef = FirebaseStorage.instance.ref().child(firebaseStorageBucket + '/incidentReportImages/' + snap.id + '/incidentSignature.jpg');
+                  storageRef = FirebaseStorage.instance.ref().child(firebaseStorageBucket + '/patientObservationImages/' + snap.id + '/patientObservationSignature.jpg');
                 }
-                incidentSignature = await storageRef.getData(dataLimit);
+                patientObservationSignature = await storageRef.getData(dataLimit);
               }
 
-              final Map<String, dynamic> incidentReport = onlineIncidentReport(snapshotData, snap.id, incidentSignature);
+              final Map<String, dynamic> patientObservation = onlinePatientObservation(snapshotData, snap.id, patientObservationSignature);
 
-              _fetchedIncidentReportList.add(incidentReport);
+              _fetchedPatientObservationList.add(patientObservation);
 
             }
 
-            _incidentReports.addAll(_fetchedIncidentReportList);
+            _patientObservations.addAll(_fetchedPatientObservationList);
           }
 
 
@@ -835,7 +827,7 @@ class IncidentReportModel extends ChangeNotifier {
 
     } on TimeoutException catch (_) {
       // A timeout occurred.
-      message = 'Network Timeout communicating with the server, unable to fetch latest Incident Reports';
+      message = 'Network Timeout communicating with the server, unable to fetch latest Patient Observation Timesheets';
     } catch(e){
       print(e);
       message = 'Something went wrong. Please try again';
@@ -844,19 +836,19 @@ class IncidentReportModel extends ChangeNotifier {
 
     _isLoading = false;
     notifyListeners();
-    _selIncidentReportId = null;
+    _selPatientObservationId = null;
     if(message != '') GlobalFunctions.showToast(message);
 
   }
 
-  Future<bool> searchIncidentReports(DateTime dateFrom, DateTime dateTo, String jobRef, String selectedUser) async{
+  Future<bool> searchPatientObservations(DateTime dateFrom, DateTime dateTo, String jobRef, String selectedUser) async{
 
     _isLoading = true;
     notifyListeners();
     bool success = false;
     String message = '';
     GlobalFunctions.showLoadingDialog('Searching Forms');
-    List<Map<String, dynamic>> _fetchedIncidentReportList = [];
+    List<Map<String, dynamic>> _fetchedPatientObservationList = [];
 
     try {
 
@@ -864,7 +856,7 @@ class IncidentReportModel extends ChangeNotifier {
 
       if(!hasDataConnection){
 
-        message = 'No Data Connection, unable to search Incident Reports';
+        message = 'No Data Connection, unable to search Patient Observation Timesheets';
 
       } else {
 
@@ -892,7 +884,7 @@ class IncidentReportModel extends ChangeNotifier {
                 if(selectedUser != null){
                   try{
                     snapshot =
-                    await FirebaseFirestore.instance.collection('incident_reports')
+                    await FirebaseFirestore.instance.collection('patient_observation_timesheets')
                         .where(Strings.uid, isEqualTo: selectedUser).orderBy('timestamp', descending: true)
                         .startAt([dateTo]).endAt([dateFrom]).get()
                         .timeout(Duration(seconds: 90));
@@ -902,7 +894,7 @@ class IncidentReportModel extends ChangeNotifier {
                 } else {
                   try{
                     snapshot =
-                    await FirebaseFirestore.instance.collection('incident_reports').orderBy('timestamp', descending: true)
+                    await FirebaseFirestore.instance.collection('patient_observation_timesheets').orderBy('timestamp', descending: true)
                         .startAt([dateTo]).endAt([dateFrom]).get()
                         .timeout(Duration(seconds: 90));
                   } catch(e){
@@ -916,7 +908,7 @@ class IncidentReportModel extends ChangeNotifier {
                 if(selectedUser != null){
                   try{
                     snapshot =
-                    await FirebaseFirestore.instance.collection('incident_reports').where(Strings.uid, isEqualTo: selectedUser).
+                    await FirebaseFirestore.instance.collection('patient_observation_timesheets').where(Strings.uid, isEqualTo: selectedUser).
                     where(Strings.jobRefLowercase, isEqualTo: jobRef.toLowerCase()).orderBy('timestamp', descending: true)
                         .startAt([dateTo]).endAt([dateFrom]).get()
                         .timeout(Duration(seconds: 90));
@@ -926,7 +918,7 @@ class IncidentReportModel extends ChangeNotifier {
                 } else {
                   try{
                     snapshot =
-                    await FirebaseFirestore.instance.collection('incident_reports')
+                    await FirebaseFirestore.instance.collection('patient_observation_timesheets')
                         .where(Strings.jobRefLowercase, isEqualTo: jobRef.toLowerCase()).orderBy('timestamp', descending: true)
                         .startAt([dateTo]).endAt([dateFrom]).get()
                         .timeout(Duration(seconds: 90));
@@ -948,7 +940,7 @@ class IncidentReportModel extends ChangeNotifier {
                 if(selectedUser != null){
                   try{
                     snapshot =
-                    await FirebaseFirestore.instance.collection('incident_reports')
+                    await FirebaseFirestore.instance.collection('patient_observation_timesheets')
                         .where(Strings.uid, isEqualTo: selectedUser).orderBy('timestamp', descending: true)
                         .get()
                         .timeout(Duration(seconds: 90));
@@ -958,7 +950,7 @@ class IncidentReportModel extends ChangeNotifier {
                 } else {
                   try{
                     snapshot =
-                    await FirebaseFirestore.instance.collection('incident_reports').orderBy('timestamp', descending: true)
+                    await FirebaseFirestore.instance.collection('patient_observation_timesheets').orderBy('timestamp', descending: true)
                         .get()
                         .timeout(Duration(seconds: 90));
                   } catch(e){
@@ -974,7 +966,7 @@ class IncidentReportModel extends ChangeNotifier {
                 if(selectedUser != null){
                   try{
                     snapshot =
-                    await FirebaseFirestore.instance.collection('incident_reports')
+                    await FirebaseFirestore.instance.collection('patient_observation_timesheets')
                         .where(Strings.jobRefLowercase, isEqualTo: jobRef.toLowerCase())
                         .where(Strings.uid, isEqualTo: selectedUser).orderBy('timestamp', descending: true)
                         .get()
@@ -985,7 +977,7 @@ class IncidentReportModel extends ChangeNotifier {
                 } else {
                   try{
                     snapshot =
-                    await FirebaseFirestore.instance.collection('incident_reports')
+                    await FirebaseFirestore.instance.collection('patient_observation_timesheets')
                         .where(Strings.jobRefLowercase, isEqualTo: jobRef.toLowerCase())
                         .orderBy('timestamp', descending: true)
                         .get()
@@ -1011,7 +1003,7 @@ class IncidentReportModel extends ChangeNotifier {
 
                 try{
                   snapshot =
-                  await FirebaseFirestore.instance.collection('incident_reports')
+                  await FirebaseFirestore.instance.collection('patient_observation_timesheets')
                       .where(Strings.uid, isEqualTo: user.uid).orderBy('timestamp', descending: true)
                       .startAt([dateTo]).endAt([dateFrom]).get()
                       .timeout(Duration(seconds: 90));
@@ -1025,7 +1017,7 @@ class IncidentReportModel extends ChangeNotifier {
 
                 try{
                   snapshot =
-                  await FirebaseFirestore.instance.collection('incident_reports')
+                  await FirebaseFirestore.instance.collection('patient_observation_timesheets')
                       .where(Strings.jobRefLowercase, isEqualTo: jobRef.toLowerCase())
                       .where(Strings.uid, isEqualTo: user.uid).orderBy('timestamp', descending: true)
                       .startAt([dateTo]).endAt([dateFrom]).get()
@@ -1043,7 +1035,7 @@ class IncidentReportModel extends ChangeNotifier {
 
                 try{
                   snapshot =
-                  await FirebaseFirestore.instance.collection('incident_reports')
+                  await FirebaseFirestore.instance.collection('patient_observation_timesheets')
                       .where(Strings.uid, isEqualTo: user.uid).orderBy('timestamp', descending: true)
                       .get()
                       .timeout(Duration(seconds: 90));
@@ -1056,7 +1048,7 @@ class IncidentReportModel extends ChangeNotifier {
 
                 try{
                   snapshot =
-                  await FirebaseFirestore.instance.collection('incident_reports')
+                  await FirebaseFirestore.instance.collection('patient_observation_timesheets')
                       .where(Strings.jobRefLowercase, isEqualTo: jobRef.toLowerCase())
                       .where(Strings.uid, isEqualTo: user.uid).orderBy('timestamp', descending: true)
                       .get()
@@ -1076,31 +1068,31 @@ class IncidentReportModel extends ChangeNotifier {
           Map<String, dynamic> snapshotData = {};
 
           if(snapshot.docs.length < 1){
-            message = 'No Incident Reports found';
+            message = 'No Patient Observation Timesheets found';
           } else {
             for (DocumentSnapshot snap in snapshot.docs) {
 
               snapshotData = snap.data();
 
-              Uint8List incidentSignature;
+              Uint8List patientObservationSignature;
 
-              if (snapshotData[Strings.incidentSignature] != null) {
+              if (snapshotData[Strings.patientObservationSignature] != null) {
                 Reference storageRef =
-                FirebaseStorage.instance.ref().child('incidentReportImages/' + snap.id + '/incidentSignature.jpg');
+                FirebaseStorage.instance.ref().child('patientObservationImages/' + snap.id + '/patientObservationSignature.jpg');
 
                 if(kIsWeb){
-                  storageRef = FirebaseStorage.instance.ref().child(firebaseStorageBucket + '/incidentReportImages/' + snap.id + '/incidentSignature.jpg');
+                  storageRef = FirebaseStorage.instance.ref().child(firebaseStorageBucket + '/patientObservationImages/' + snap.id + '/patientObservationSignature.jpg');
                 }
-                incidentSignature = await storageRef.getData(dataLimit);
+                patientObservationSignature = await storageRef.getData(dataLimit);
               }
 
-              final Map<String, dynamic> incidentReport = onlineIncidentReport(snapshotData, snap.id, incidentSignature);
+              final Map<String, dynamic> patientObservation = onlinePatientObservation(snapshotData, snap.id, patientObservationSignature);
 
-              _fetchedIncidentReportList.add(incidentReport);
+              _fetchedPatientObservationList.add(patientObservation);
 
             }
 
-            _incidentReports = _fetchedIncidentReportList;
+            _patientObservations = _fetchedPatientObservationList;
             success = true;
           }
 
@@ -1112,7 +1104,7 @@ class IncidentReportModel extends ChangeNotifier {
 
     } on TimeoutException catch (_) {
       // A timeout occurred.
-      message = 'Network Timeout communicating with the server, unable to search Incident Reports';
+      message = 'Network Timeout communicating with the server, unable to search Patient Observation Timesheets';
     } catch(e){
       print(e);
       message = 'Something went wrong. Please try again';
@@ -1121,7 +1113,7 @@ class IncidentReportModel extends ChangeNotifier {
 
     _isLoading = false;
     notifyListeners();
-    _selIncidentReportId = null;
+    _selPatientObservationId = null;
     GlobalFunctions.dismissLoadingDialog();
     if(message != '') GlobalFunctions.showToast(message);
     return success;
@@ -1129,14 +1121,14 @@ class IncidentReportModel extends ChangeNotifier {
   }
 
 
-  Future<bool> searchMoreIncidentReports(DateTime dateFrom, DateTime dateTo) async{
+  Future<bool> searchMorePatientObservations(DateTime dateFrom, DateTime dateTo) async{
 
     _isLoading = true;
     notifyListeners();
     bool success = false;
     String message = '';
     GlobalFunctions.showLoadingDialog('Searching Forms');
-    List<Map<String, dynamic>> _fetchedIncidentReportList = [];
+    List<Map<String, dynamic>> _fetchedPatientObservationList = [];
 
     try {
 
@@ -1144,7 +1136,7 @@ class IncidentReportModel extends ChangeNotifier {
 
       if(!hasDataConnection){
 
-        message = 'No Data Connection, unable to search Incident Reports';
+        message = 'No Data Connection, unable to search Patient Observation Timesheets';
 
       } else {
 
@@ -1158,13 +1150,13 @@ class IncidentReportModel extends ChangeNotifier {
 
 
           QuerySnapshot snapshot;
-          int currentLength = _incidentReports.length;
-          DateTime latestDate = DateTime.parse(_incidentReports[currentLength - 1]['timestamp']);
+          int currentLength = _patientObservations.length;
+          DateTime latestDate = DateTime.parse(_patientObservations[currentLength - 1]['timestamp']);
 
           if(user.role == 'Super User'){
             try{
               snapshot =
-              await FirebaseFirestore.instance.collection('incident_reports').orderBy('timestamp', descending: true)
+              await FirebaseFirestore.instance.collection('patient_observation_timesheets').orderBy('timestamp', descending: true)
                   .startAfter([Timestamp.fromDate(latestDate)]).endAt([dateFrom]).limit(10).get()
                   .timeout(Duration(seconds: 90));
             } catch(e){
@@ -1175,7 +1167,7 @@ class IncidentReportModel extends ChangeNotifier {
 
             try{
               snapshot =
-              await FirebaseFirestore.instance.collection('incident_reports').where('uid', isEqualTo: user.uid).orderBy('timestamp', descending: true)
+              await FirebaseFirestore.instance.collection('patient_observation_timesheets').where('uid', isEqualTo: user.uid).orderBy('timestamp', descending: true)
                   .startAfter([Timestamp.fromDate(latestDate)]).endAt([dateFrom]).limit(10).get()
                   .timeout(Duration(seconds: 90));
             } catch(e){
@@ -1187,31 +1179,31 @@ class IncidentReportModel extends ChangeNotifier {
           Map<String, dynamic> snapshotData = {};
 
           if(snapshot.docs.length < 1){
-            message = 'No Incident Reports found';
+            message = 'No Patient Observation Timesheets found';
           } else {
             for (DocumentSnapshot snap in snapshot.docs) {
 
               snapshotData = snap.data();
 
-              Uint8List incidentSignature;
+              Uint8List patientObservationSignature;
 
-              if (snapshotData[Strings.incidentSignature] != null) {
+              if (snapshotData[Strings.patientObservationSignature] != null) {
                 Reference storageRef =
-                FirebaseStorage.instance.ref().child('incidentReportImages/' + snap.id + '/incidentSignature.jpg');
+                FirebaseStorage.instance.ref().child('patientObservationImages/' + snap.id + '/patientObservationSignature.jpg');
 
                 if(kIsWeb){
-                  storageRef = FirebaseStorage.instance.ref().child(firebaseStorageBucket + '/incidentReportImages/' + snap.id + '/incidentSignature.jpg');
+                  storageRef = FirebaseStorage.instance.ref().child(firebaseStorageBucket + '/patientObservationImages/' + snap.id + '/patientObservationSignature.jpg');
                 }
-                incidentSignature = await storageRef.getData(dataLimit);
+                patientObservationSignature = await storageRef.getData(dataLimit);
               }
 
-              final Map<String, dynamic> incidentReport = onlineIncidentReport(snapshotData, snap.id, incidentSignature);
+              final Map<String, dynamic> patientObservation = onlinePatientObservation(snapshotData, snap.id, patientObservationSignature);
 
-              _fetchedIncidentReportList.add(incidentReport);
+              _fetchedPatientObservationList.add(patientObservation);
 
             }
 
-            _incidentReports.addAll(_fetchedIncidentReportList);
+            _patientObservations.addAll(_fetchedPatientObservationList);
             success = true;
           }
 
@@ -1223,7 +1215,7 @@ class IncidentReportModel extends ChangeNotifier {
 
     } on TimeoutException catch (_) {
       // A timeout occurred.
-      message = 'Network Timeout communicating with the server, unable to search Incident Reports';
+      message = 'Network Timeout communicating with the server, unable to search Patient Observation Timesheets';
     } catch(e){
       print(e);
       message = 'Something went wrong. Please try again';
@@ -1232,7 +1224,7 @@ class IncidentReportModel extends ChangeNotifier {
 
     _isLoading = false;
     notifyListeners();
-    _selIncidentReportId = null;
+    _selPatientObservationId = null;
     GlobalFunctions.dismissLoadingDialog();
     if(message != '') GlobalFunctions.showToast(message);
     return success;
@@ -1240,47 +1232,52 @@ class IncidentReportModel extends ChangeNotifier {
   }
 
 
-  Map<String, dynamic> localIncidentReport(Map<String, dynamic> localRecord){
+  Map<String, dynamic> localPatientObservation(Map<String, dynamic> localRecord){
     return {
       Strings.documentId: GlobalFunctions.databaseValueString(localRecord[Strings.documentId]),
       Strings.uid: GlobalFunctions.databaseValueString(localRecord[Strings.uid]),
       Strings.jobId: localRecord[Strings.jobId],
       Strings.formVersion: localRecord[Strings.formVersion],
       Strings.jobRef: localRecord[Strings.jobRef],
-      Strings.incidentDate: localRecord[Strings.incidentDate],
-      Strings.incidentTime: localRecord[Strings.incidentTime],
-      Strings.incidentDetails: localRecord[Strings.incidentDetails],
-      Strings.incidentLocation: localRecord[Strings.incidentLocation],
-      Strings.incidentAction: localRecord[Strings.incidentAction],
-      Strings.incidentStaffInvolved: localRecord[Strings.incidentStaffInvolved],
-      Strings.incidentSignature: localRecord[Strings.incidentSignature],
-      Strings.incidentSignaturePoints: localRecord[Strings.incidentSignaturePoints],
-      Strings.incidentSignatureDate: localRecord[Strings.incidentSignatureDate],
-      Strings.incidentPrintName: localRecord[Strings.incidentPrintName],
+      Strings.patientObservationDate: localRecord[Strings.patientObservationDate],
+      Strings.patientObservationHospital: localRecord[Strings.patientObservationHospital],
+      Strings.patientObservationWard: localRecord[Strings.patientObservationWard],
+      Strings.patientObservationStartTime: localRecord[Strings.patientObservationStartTime],
+      Strings.patientObservationFinishTime: localRecord[Strings.patientObservationFinishTime],
+      Strings.patientObservationTotalHours: localRecord[Strings.patientObservationTotalHours],
+      Strings.patientObservationName: localRecord[Strings.patientObservationName],
+      Strings.patientObservationPosition: localRecord[Strings.patientObservationPosition],
+      Strings.patientObservationAuthorisedDate: localRecord[Strings.patientObservationAuthorisedDate],
+      Strings.patientObservationSignature: localRecord[Strings.patientObservationSignature],
+      Strings.patientObservationSignaturePoints: localRecord[Strings.patientObservationSignaturePoints],
       Strings.serverUploaded: localRecord[Strings.serverUploaded],
       Strings.timestamp: localRecord[Strings.timestamp] == null ? null : localRecord[Strings.timestamp]
     };
   }
 
-  Map<String, dynamic> onlineIncidentReport(Map<String, dynamic> localRecord, String docId, Uint8List incidentSignature){
+  Map<String, dynamic> onlinePatientObservation(Map<String, dynamic> localRecord, String docId, Uint8List patientObservationSignature){
     return {
       Strings.documentId: docId,
       Strings.uid: GlobalFunctions.databaseValueString(localRecord[Strings.uid]),
       Strings.jobId: localRecord[Strings.jobId],
       Strings.formVersion: localRecord[Strings.formVersion],
       Strings.jobRef: localRecord[Strings.jobRef],
-      Strings.incidentDate: localRecord[Strings.incidentDate] == null ? null : DateTime
+      Strings.patientObservationDate: localRecord[Strings.patientObservationDate] == null ? null : DateTime
           .fromMillisecondsSinceEpoch(
-          localRecord[Strings.incidentDate].millisecondsSinceEpoch)
+          localRecord[Strings.patientObservationDate].millisecondsSinceEpoch)
           .toIso8601String(),
-      Strings.incidentTime: localRecord[Strings.incidentTime],
-      Strings.incidentDetails: localRecord[Strings.incidentDetails],
-      Strings.incidentLocation: localRecord[Strings.incidentLocation],
-      Strings.incidentAction: localRecord[Strings.incidentAction],
-      Strings.incidentStaffInvolved: localRecord[Strings.incidentStaffInvolved],
-      Strings.incidentSignature: incidentSignature,
-      Strings.incidentSignatureDate: localRecord[Strings.incidentSignatureDate],
-      Strings.incidentPrintName: localRecord[Strings.incidentPrintName],
+      Strings.patientObservationHospital: localRecord[Strings.patientObservationHospital],
+      Strings.patientObservationWard: localRecord[Strings.patientObservationWard],
+      Strings.patientObservationStartTime: localRecord[Strings.patientObservationStartTime],
+      Strings.patientObservationFinishTime: localRecord[Strings.patientObservationFinishTime],
+      Strings.patientObservationTotalHours: localRecord[Strings.patientObservationTotalHours],
+      Strings.patientObservationName: localRecord[Strings.patientObservationName],
+      Strings.patientObservationPosition: localRecord[Strings.patientObservationPosition],
+      Strings.patientObservationAuthorisedDate: localRecord[Strings.patientObservationAuthorisedDate] == null ? null : DateTime
+          .fromMillisecondsSinceEpoch(
+          localRecord[Strings.patientObservationAuthorisedDate].millisecondsSinceEpoch)
+          .toIso8601String(),
+      Strings.patientObservationSignature: patientObservationSignature,
       Strings.serverUploaded: localRecord[Strings.serverUploaded],
       Strings.timestamp: localRecord[Strings.timestamp] == null ? null : DateTime
           .fromMillisecondsSinceEpoch(
@@ -1289,23 +1286,24 @@ class IncidentReportModel extends ChangeNotifier {
     };
   }
 
-  Map<String, dynamic> editedIncidentReport(Map<String, dynamic> localRecord){
+  Map<String, dynamic> editedPatientObservation(Map<String, dynamic> localRecord){
     return {
       Strings.documentId: GlobalFunctions.databaseValueString(localRecord[Strings.documentId]),
       Strings.uid: GlobalFunctions.databaseValueString(localRecord[Strings.uid]),
       Strings.jobId: localRecord[Strings.jobId],
       Strings.formVersion: localRecord[Strings.formVersion],
       Strings.jobRef: localRecord[Strings.jobRef],
-      Strings.incidentDate: localRecord[Strings.incidentDate],
-      Strings.incidentTime: localRecord[Strings.incidentTime],
-      Strings.incidentDetails: localRecord[Strings.incidentDetails],
-      Strings.incidentLocation: localRecord[Strings.incidentLocation],
-      Strings.incidentAction: localRecord[Strings.incidentAction],
-      Strings.incidentStaffInvolved: localRecord[Strings.incidentStaffInvolved],
-      Strings.incidentSignature: localRecord[Strings.incidentSignature],
-      Strings.incidentSignaturePoints: localRecord[Strings.incidentSignaturePoints],
-      Strings.incidentSignatureDate: localRecord[Strings.incidentSignatureDate],
-      Strings.incidentPrintName: localRecord[Strings.incidentPrintName],
+      Strings.patientObservationDate: localRecord[Strings.patientObservationDate],
+      Strings.patientObservationHospital: localRecord[Strings.patientObservationHospital],
+      Strings.patientObservationWard: localRecord[Strings.patientObservationWard],
+      Strings.patientObservationStartTime: localRecord[Strings.patientObservationStartTime],
+      Strings.patientObservationFinishTime: localRecord[Strings.patientObservationFinishTime],
+      Strings.patientObservationTotalHours: localRecord[Strings.patientObservationTotalHours],
+      Strings.patientObservationName: localRecord[Strings.patientObservationName],
+      Strings.patientObservationPosition: localRecord[Strings.patientObservationPosition],
+      Strings.patientObservationAuthorisedDate: localRecord[Strings.patientObservationAuthorisedDate],
+      Strings.patientObservationSignature: localRecord[Strings.patientObservationSignature],
+      Strings.patientObservationSignaturePoints: localRecord[Strings.patientObservationSignaturePoints],
       Strings.serverUploaded: localRecord[Strings.serverUploaded],
       Strings.timestamp: localRecord[Strings.timestamp]
     };
@@ -1313,7 +1311,7 @@ class IncidentReportModel extends ChangeNotifier {
 
 
 
-  Future<Map<String, dynamic>> uploadPendingIncidentReports() async {
+  Future<Map<String, dynamic>> uploadPendingPatientObservations() async {
     _isLoading = true;
     String message = 'Something went wrong!';
     bool success = false;
@@ -1321,22 +1319,13 @@ class IncidentReportModel extends ChangeNotifier {
 
     try {
 
-      List<dynamic> incidentReportRecords = await getPendingRecords();
+      List<dynamic> patientObservationRecords = await getPendingRecords();
 
-      List<Map<String, dynamic>> incidentReports = [];
+      List<Map<String, dynamic>> patientObservations = [];
 
-      for(var incidentReportRecord in incidentReportRecords){
-        incidentReports.add(incidentReportRecord.value);
+      for(var patientObservationRecord in patientObservationRecords){
+        patientObservations.add(patientObservationRecord.value);
       }
-
-
-      // List<Map<String, dynamic>> incidentReports =
-      // await _databaseHelper.getAllWhereAndWhere(
-      //     Strings.incidentReportTable,
-      //     Strings.serverUploaded,
-      //     0,
-      //     Strings.uid,
-      //     user.uid);
 
 
       bool isTokenExpired = GlobalFunctions.isTokenExpired();
@@ -1347,33 +1336,27 @@ class IncidentReportModel extends ChangeNotifier {
 
       if (authenticated) {
 
-        for (Map<String, dynamic> incidentReport in incidentReports) {
+        for (Map<String, dynamic> patientObservation in patientObservations) {
 
           success = false;
 
-
-
-
-          await GlobalFunctions.checkFirebaseStorageFail(_databaseHelper);
-
-
-
           DocumentReference ref =
-          await FirebaseFirestore.instance.collection('incident_reports').add({
+          await FirebaseFirestore.instance.collection('patient_observation_timesheets').add({
             Strings.uid: user.uid,
             Strings.jobId: '1',
             Strings.formVersion: '1',
-            Strings.jobRef: GlobalFunctions.databaseValueString(incidentReport[Strings.jobRef]),
-            Strings.jobRefLowercase: GlobalFunctions.databaseValueString(incidentReport[Strings.jobRef]).toLowerCase(),
-            Strings.incidentDate: incidentReport[Strings.incidentDate] == null ? null : DateTime.parse(incidentReport[Strings.incidentDate]),
-            Strings.incidentTime: incidentReport[Strings.incidentTime],
-            Strings.incidentDetails: incidentReport[Strings.incidentDetails],
-            Strings.incidentLocation: incidentReport[Strings.incidentLocation],
-            Strings.incidentAction: incidentReport[Strings.incidentAction],
-            Strings.incidentStaffInvolved: incidentReport[Strings.incidentStaffInvolved],
-            Strings.incidentSignature: null,
-            Strings.incidentSignatureDate: incidentReport[Strings.incidentSignatureDate],
-            Strings.incidentPrintName: incidentReport[Strings.incidentPrintName],
+            Strings.jobRef: GlobalFunctions.databaseValueString(patientObservation[Strings.jobRef]),
+            Strings.jobRefLowercase: GlobalFunctions.databaseValueString(patientObservation[Strings.jobRef]).toLowerCase(),
+            Strings.patientObservationDate: patientObservation[Strings.patientObservationDate] == null ? null : DateTime.parse(patientObservation[Strings.patientObservationDate]),
+            Strings.patientObservationHospital: patientObservation[Strings.patientObservationHospital],
+            Strings.patientObservationWard: patientObservation[Strings.patientObservationWard],
+            Strings.patientObservationStartTime: patientObservation[Strings.patientObservationStartTime],
+            Strings.patientObservationFinishTime: patientObservation[Strings.patientObservationFinishTime],
+            Strings.patientObservationTotalHours: patientObservation[Strings.patientObservationTotalHours],
+            Strings.patientObservationName: patientObservation[Strings.patientObservationName],
+            Strings.patientObservationPosition: patientObservation[Strings.patientObservationPosition],
+            Strings.patientObservationAuthorisedDate: patientObservation[Strings.patientObservationAuthorisedDate] == null ? null : DateTime.parse(patientObservation[Strings.patientObservationAuthorisedDate]),
+            Strings.patientObservationSignature: null,
             Strings.timestamp: FieldValue.serverTimestamp(),
             Strings.serverUploaded: 1,
           });
@@ -1381,58 +1364,41 @@ class IncidentReportModel extends ChangeNotifier {
           DocumentSnapshot snap = await ref.get();
 
           //Signatures
-          String incidentSignatureUrl;
-          bool incidentSignatureSuccess = true;
+          String patientObservationSignatureUrl;
+          bool patientObservationSignatureSuccess = true;
 
-          if(incidentReport[Strings.incidentSignature] != null){
-            incidentSignatureSuccess = false;
+          if(patientObservation[Strings.patientObservationSignature] != null){
+            patientObservationSignatureSuccess = false;
 
             Reference storageRef =
-            FirebaseStorage.instance.ref().child('incidentReportImages/' + snap.id + '/incidentSignature.jpg');
+            FirebaseStorage.instance.ref().child('patientObservationImages/' + snap.id + '/patientObservationSignature.jpg');
 
             if(kIsWeb){
-              storageRef = FirebaseStorage.instance.ref().child(firebaseStorageBucket + '/incidentReportImages/' + snap.id + '/incidentSignature.jpg');
+              storageRef = FirebaseStorage.instance.ref().child(firebaseStorageBucket + '/patientObservationImages/' + snap.id + '/patientObservationSignature.jpg');
             }
-            final UploadTask uploadTask = storageRef.putData(Uint8List.fromList(incidentReport[Strings.incidentSignature].toList().cast<int>()));
+            final UploadTask uploadTask = storageRef.putData(Uint8List.fromList(patientObservation[Strings.patientObservationSignature].toList().cast<int>()));
             final TaskSnapshot downloadUrl = (await uploadTask);
-            incidentSignatureUrl = (await downloadUrl.ref.getDownloadURL());
-            if(incidentSignatureUrl != null){
-              incidentSignatureSuccess = true;
-              storageUrlList.add('incidentReportImages/' + snap.id + '/incidentSignature.jpg');
+            patientObservationSignatureUrl = (await downloadUrl.ref.getDownloadURL());
+            if(patientObservationSignatureUrl != null){
+              patientObservationSignatureSuccess = true;
+              storageUrlList.add('patientObservationImages/' + snap.id + '/patientObservationSignature.jpg');
             }
 
           }
 
 
-          if(incidentSignatureSuccess){
+          if(patientObservationSignatureSuccess){
 
-            await FirebaseFirestore.instance.collection('incident_reports').doc(snap.id).update({
-              Strings.incidentSignature: incidentSignatureUrl == null ? null : incidentSignatureUrl,
+            await FirebaseFirestore.instance.collection('patient_observation_timesheets').doc(snap.id).update({
+              Strings.patientObservationSignature: patientObservationSignatureUrl == null ? null : patientObservationSignatureUrl,
             }).timeout(Duration(seconds: 60));
 
-            await deletePendingRecord(incidentReport[Strings.localId]);
+            await deletePendingRecord(patientObservation[Strings.localId]);
             success = true;
 
 
-            // Map<String, dynamic> localData = {
-            //   Strings.documentId: snap.id,
-            //   Strings.serverUploaded: 1,
-            //   'timestamp': DateTime.fromMillisecondsSinceEpoch(snap.data()[Strings.timestamp].millisecondsSinceEpoch).toIso8601String()
-            // };
-            //
-            // int queryResult = await _databaseHelper.updateRow(
-            //     Strings.incidentReportTable,
-            //     localData,
-            //     Strings.localId,
-            //     incidentReport[Strings.localId]);
-            //
-            // if (queryResult != 0) {
-            //   success = true;
-            // }
-
-
           } else {
-            await FirebaseFirestore.instance.collection('incident_reports').doc(snap.id).delete();
+            await FirebaseFirestore.instance.collection('patient_observation_timesheets').doc(snap.id).delete();
           }
 
         }
@@ -1444,10 +1410,7 @@ class IncidentReportModel extends ChangeNotifier {
       // A timeout occurred.
       message =
       'Network Timeout communicating with the server, unable to upload Data';
-      await GlobalFunctions.checkAddFirebaseStorageRow(storageUrlList, _databaseHelper);
-
     } catch (e) {
-      await GlobalFunctions.checkAddFirebaseStorageRow(storageUrlList, _databaseHelper);
 
       print(e);
     }
@@ -1459,31 +1422,18 @@ class IncidentReportModel extends ChangeNotifier {
   }
 
 
-  Future<void> setUpEditedIncidentReport() async{
+  Future<void> setUpEditedPatientObservation() async{
 
-    Map<String, dynamic> editedReport = editedIncidentReport(selectedIncidentReport);
+    Map<String, dynamic> editedReport = editedPatientObservation(selectedPatientObservation);
     Map<String, dynamic> localData = Map.from(editedReport);
-    await _databaseHelper.deleteAllRows(Strings.editedIncidentReportTable);
-    await _databaseHelper.add(Strings.editedIncidentReportTable, localData);
-
-
-    await _editedIncidentReportsStore.delete(await _db);
+    await _editedPatientObservationsStore.delete(await _db);
     int _id = DateTime.now().millisecondsSinceEpoch + int.parse(random_string.randomNumeric(2));
-    await _editedIncidentReportsStore.record(_id).put(await _db,
+    await _editedPatientObservationsStore.record(_id).put(await _db,
         localData);
 
 
 
 
-  }
-
-  Future<void> deleteEditedIncidentReport() async{
-    await _databaseHelper.deleteAllRows(Strings.editedIncidentReportTable);
-  }
-
-  void resetTemporaryIncidentReport(String chosenJobId) {
-    _databaseHelper.resetTemporaryIncidentReport(user.uid, chosenJobId);
-    notifyListeners();
   }
 
 
@@ -1657,7 +1607,7 @@ class IncidentReportModel extends ChangeNotifier {
                   SizedBox(width: 5),
                   small ? ConstrainedBox(constraints: BoxConstraints(minHeight: 20),
                       child: Container(
-                        width: 100,
+                        width: 158,
                         padding: const EdgeInsets.all(3),
                         decoration: BoxDecoration(
                           borderRadius: 5,
@@ -1860,12 +1810,12 @@ class IncidentReportModel extends ChangeNotifier {
       Document pdf;
       pdf = Document();
       PdfDocument pdfDoc = pdf.document;
-      FlutterImage.Image incidentSignatureImage;
+      FlutterImage.Image patientObservationSignatureImage;
       PdfImage pegasusLogo = await pdfImageFromImageProvider(pdf: pdfDoc, image: Material.AssetImage('assets/images/pegasusLogo.png'),);
 
-      if (selectedIncidentReport[Strings.incidentSignature] != null) {
-        Uint8List decryptedSignature = await GlobalFunctions.decryptSignature(selectedIncidentReport[Strings.incidentSignature]);
-        incidentSignatureImage = FlutterImage.decodeImage(decryptedSignature);
+      if (selectedPatientObservation[Strings.patientObservationSignature] != null) {
+        Uint8List decryptedSignature = await GlobalFunctions.decryptSignature(selectedPatientObservation[Strings.patientObservationSignature]);
+        patientObservationSignatureImage = FlutterImage.decodeImage(decryptedSignature);
       }
 
 
@@ -1878,7 +1828,7 @@ class IncidentReportModel extends ChangeNotifier {
             return Container(
                 alignment: Alignment.centerRight,
                 margin: const EdgeInsets.only(top: 5),
-                child: Text('Incident Report Form - Page ${context.pageNumber} of ${context.pagesCount}',
+                child: Text('Patient Observation Timesheet - Page ${context.pageNumber} of ${context.pagesCount}',
                     style: TextStyle(color: PdfColors.grey, fontSize: 8)));
           },
           build: (Context context) => <Widget>[
@@ -1895,7 +1845,7 @@ class IncidentReportModel extends ChangeNotifier {
                         Row(children: [
                           sectionTitle('Job Ref'),
                           SizedBox(width: 10),
-                          textField(TextOption.PlainText, selectedIncidentReport[Strings.jobRef]),
+                          textField(TextOption.PlainText, selectedPatientObservation[Strings.jobRef]),
                         ]),
                       ]
                   ),
@@ -1905,28 +1855,21 @@ class IncidentReportModel extends ChangeNotifier {
                 ]
             ),
             Container(height: 20),
-            Center(child: Text('INCIDENT REPORT FORM', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontWeight: FontWeight.bold))),
+            Center(child: Text('PATIENT OBSERVATION TIMESHEET', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontWeight: FontWeight.bold))),
             Container(height: 20),
-            doubleLineField('Date', selectedIncidentReport[Strings.incidentDate], 'Time', selectedIncidentReport[Strings.incidentTime], TextOption.Date, TextOption.Time),
+            singleLineField('Date', selectedPatientObservation[Strings.patientObservationDate], TextOption.Date, true),
             Container(height: 10),
-            Text('Incident Details', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 10, fontWeight: FontWeight.bold)),
+            doubleLineField('Hospital', selectedPatientObservation[Strings.patientObservationHospital], 'Ward', selectedPatientObservation[Strings.patientObservationWard]),
+            Container(height: 10),
+            doubleLineField('Start Time', selectedPatientObservation[Strings.patientObservationStartTime], 'Finish Time', selectedPatientObservation[Strings.patientObservationFinishTime], TextOption.Time, TextOption.Time),
+            Container(height: 10),
+            singleLineField('Total Hours', selectedPatientObservation[Strings.patientObservationTotalHours], TextOption.PlainText, true),
+            Container(height: 10),
+            Text('Authorised By', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 10, fontWeight: FontWeight.bold)),
             Container(height: 5),
-            textField(TextOption.EncryptedText, selectedIncidentReport[Strings.incidentDetails], 700, 580, 580),
+            doubleLineField('Name', selectedPatientObservation[Strings.patientObservationName], 'Position', selectedPatientObservation[Strings.patientObservationPosition]),
             Container(height: 10),
-            Text('Incident Location', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 10, fontWeight: FontWeight.bold)),
-            Container(height: 5),
-            textField(TextOption.EncryptedText, selectedIncidentReport[Strings.incidentLocation], 700, 50, 50),
-            Container(height: 10),
-            Text('What action did you take?', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 10, fontWeight: FontWeight.bold)),
-            Container(height: 5),
-            textField(TextOption.EncryptedText, selectedIncidentReport[Strings.incidentAction], 700, 360, 360),
-            Container(height: 10),
-            Text('Staff involved', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 10, fontWeight: FontWeight.bold)),
-            Container(height: 5),
-            textField(TextOption.EncryptedText, selectedIncidentReport[Strings.incidentStaffInvolved], 700, 150, 150),
-            Container(height: 10),
-            doubleLineField('Signed', 'signature', 'Date', selectedIncidentReport[Strings.incidentSignatureDate], TextOption.PlainText, TextOption.Date, incidentSignatureImage, pdfDoc),
-            singleLineField('Print Name', selectedIncidentReport[Strings.incidentPrintName], TextOption.EncryptedText, true),
+            doubleLineField('Signed', 'signature', 'Date', selectedPatientObservation[Strings.patientObservationAuthorisedDate], TextOption.PlainText, TextOption.Date, patientObservationSignatureImage, pdfDoc),
 
           ]
 
@@ -1934,8 +1877,8 @@ class IncidentReportModel extends ChangeNotifier {
 
 
 
-      String formDate = selectedIncidentReport[Strings.incidentDate] == null ? '' : dateFormatDay.format(DateTime.parse(selectedIncidentReport[Strings.incidentDate]));
-      String id = selectedIncidentReport[Strings.documentId];
+      String formDate = selectedPatientObservation[Strings.patientObservationDate] == null ? '' : dateFormatDay.format(DateTime.parse(selectedPatientObservation[Strings.patientObservationDate]));
+      String id = selectedPatientObservation[Strings.documentId];
 
 
 
@@ -1952,7 +1895,7 @@ class IncidentReportModel extends ChangeNotifier {
           final anchor = html.document.createElement('a') as html.AnchorElement
             ..href = url
             ..style.display = 'none'
-            ..download = 'incident_report_form_${formDate}_$id.pdf';
+            ..download = 'patient_observation_timesheet_${formDate}_$id.pdf';
           html.document.body.children.add(anchor);
           anchor.click();
         } else {
@@ -1969,7 +1912,7 @@ class IncidentReportModel extends ChangeNotifier {
 
 
 
-        final File file = File('$pdfPath/incident_report_form_${formDate}_$id.pdf');
+        final File file = File('$pdfPath/patient_observation_timesheet_${formDate}_$id.pdf');
 
         if(option == ShareOption.Email){
           file.writeAsBytesSync(pdf.save());
@@ -1979,7 +1922,7 @@ class IncidentReportModel extends ChangeNotifier {
 
         if(connectivityResult != ConnectivityResult.none) {
 
-          if(option == ShareOption.Share) Printing.sharePdf(bytes: pdf.save(),filename: 'incident_report_form_${formDate}_$id.pdf');
+          if(option == ShareOption.Share) Printing.sharePdf(bytes: pdf.save(),filename: 'patient_observation_timesheet_${formDate}_$id.pdf');
           if(option == ShareOption.Print) await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save());
 
           if(option == ShareOption.Email) {
@@ -1989,8 +1932,8 @@ class IncidentReportModel extends ChangeNotifier {
             final mailmessage = new Message()
               ..from = new Address(emailUsername, 'Pegasus Medical')
               ..recipients = emailList
-              ..subject = 'Completed Incident Report Form'
-              ..html = "<p1>Dear Sir/Madam,</p1>\n<p>Attached is a completed Incident Report Form from ${user
+              ..subject = 'Completed Patient Observation Timesheet'
+              ..html = "<p1>Dear Sir/Madam,</p1>\n<p>Attached is a completed Patient Observation Timesheet from ${user
                   .name}.</p>"
                   "<p>Regards,<br>$emailSender</p>"
                   "<p><small>$emailFooter</small></p>"
@@ -1998,7 +1941,7 @@ class IncidentReportModel extends ChangeNotifier {
 
             await send(mailmessage, smtpServer);
           }
-      }
+        }
 
       }
 

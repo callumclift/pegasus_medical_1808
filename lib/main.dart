@@ -1,14 +1,11 @@
-import 'dart:io' show Platform;
 import 'package:firebase_analytics/observer.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:overlay_support/overlay_support.dart';
+import 'package:pegasus_medical_1808/models/patient_observation_model.dart';
 import 'package:pegasus_medical_1808/pages/login_page/change_password_page.dart';
 import 'package:pegasus_medical_1808/pages/login_page/terms_conditions_page.dart';
-import 'package:pegasus_medical_1808/pages/messaging/messaging.dart';
-import 'package:pegasus_medical_1808/pages/transfer_report/transfer_report_overall.dart';
+import 'package:pegasus_medical_1808/pages/chat/messaging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -36,9 +33,6 @@ import 'package:url_strategy/url_strategy.dart';
 import 'package:firebase_auth/firebase_auth.dart' as FirebaseAuth;
 
 
-
-
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   sharedPreferences = await SharedPreferences.getInstance();
@@ -53,7 +47,6 @@ void main() async {
   );
 
   Firebase.initializeApp(options: firebaseOptions);
-
   setPathUrlStrategy();
   runApp(MyApp());
 }
@@ -85,7 +78,6 @@ class _MyAppState extends State<MyApp> {
   void didChangeDependencies() {
     // TODO: implement didChangeDependencies
     super.didChangeDependencies();
-    print('didChangeDependancies');
   }
 
   @override
@@ -106,26 +98,14 @@ class _MyAppState extends State<MyApp> {
 
     OneSignal.shared.setNotificationReceivedHandler((OSNotification notification) {
       // will be called whenever a notification is received
-      print('value of on messages');
-      print(onMessages);
       if(showLocalNotification && onMessages == false){
         GlobalFunctions.showLocalNotification(notification.payload.body);
-      } else if(showLocalNotification && onMessages == true) {
-        // use navigation service instead
-        // Navigator.pushReplacement(
-        //   context,
-        //   PageRouteBuilder(
-        //     pageBuilder: (context, animation1, animation2) => MessagesPage(),
-        //     transitionDuration: Duration(seconds: 0),
-        //   ),
-        // );
       }
       showLocalNotification = true;
     });
 
     OneSignal.shared.setNotificationOpenedHandler((OSNotificationOpenedResult result) {
       // will be called whenever a notification is opened/button pressed.
-      print('opened');
       showLocalNotification = false;
       notificationReceived = true;
         locator<NavigationService>().navigateToReplacement(MessagesRoute);
@@ -204,6 +184,9 @@ class _MyAppState extends State<MyApp> {
         ),
         ChangeNotifierProxyProvider<AuthenticationModel, BookingFormModel>(
           update: (context, authenticationModel, bookingFormModel) => BookingFormModel(authenticationModel),
+        ),
+        ChangeNotifierProxyProvider<AuthenticationModel, PatientObservationModel>(
+          update: (context, authenticationModel, patientObservationModel) => PatientObservationModel(authenticationModel),
         ),
         ChangeNotifierProxyProvider<AuthenticationModel, ChatModel>(
           update: (context, authenticationModel, chatModel) => ChatModel(authenticationModel),

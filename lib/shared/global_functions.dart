@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:io' show Directory, File, FileSystemEntity, Platform;
+import 'dart:io' show Directory, File, Platform;
 import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pegasus_medical_1808/utils/database_helper.dart';
@@ -9,7 +9,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:random_string/random_string.dart';
 import 'package:encrypt/encrypt.dart' as Encrypt;
 import 'package:bot_toast/bot_toast.dart';
@@ -179,11 +178,6 @@ class GlobalFunctions {
   }
 
 
-
-
-
-
-  
   static void showLoadingDialog(String message){
 
     BotToast.showAnimationWidget(
@@ -389,31 +383,6 @@ class GlobalFunctions {
       }
     }
 
-  // static checkFirebaseStorageFail(DatabaseHelper databaseHelper) async {
-  //   final int existingFirebaseStorageRow = await databaseHelper
-  //       .checkFirebaseStorageRowExists(user.uid);
-  //
-  //   if (existingFirebaseStorageRow != 0) {
-  //     List<Map<String, dynamic>> storageRows = [];
-  //
-  //     storageRows = await databaseHelper.getRowsWhere(
-  //         Strings.firebaseStorageUrlTable, Strings.uid, user.uid);
-  //
-  //     if (storageRows.length > 0) {
-  //       Map<String, dynamic> row = storageRows[0];
-  //
-  //       List<dynamic> urlList = await jsonDecode(row['url_list']);
-  //
-  //       for (String url in urlList) {
-  //         await FirebaseStorage.instance.ref().child(url).delete();
-  //       }
-  //
-  //       databaseHelper.deleteFirebaseRow(
-  //           Strings.firebaseStorageUrlTable, user.uid);
-  //     }
-  //   }
-  // }
-
   static Future<Db.Database> get _db async => await AppDatabase.instance.database;
 
   static checkAddFirebaseStorageRow(List<String> storageUrlList,
@@ -463,10 +432,7 @@ class GlobalFunctions {
     Directory dir = Directory(dirPath);
 
     if (dir.existsSync()) {
-      print('it clearly exists');
       dir.deleteSync(recursive: true);
-    } else {
-      print('doe not exist');
     }
   }
 
@@ -615,15 +581,9 @@ class GlobalFunctions {
         heading: title,
       );
 
-
       try{
-        Map<String, dynamic> response = await OneSignal.shared.postNotification(notification);
-
-        print('this is the response:');
-
-        print(response);
+        await OneSignal.shared.postNotification(notification);
       } catch(e){
-        print('this is the error');
         print(e);
       }
 

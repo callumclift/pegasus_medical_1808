@@ -28,8 +28,6 @@ class _TermsConditionsPageState extends State<TermsConditionsPage> {
   Widget build(BuildContext context) {
     final double deviceWidth = MediaQuery.of(context).size.width;
     final double deviceHeight = MediaQuery.of(context).size.width;
-    final double targetWidth = deviceWidth > 768.0 ? 600.0 : deviceWidth * 0.95;
-    final double targetPadding = deviceWidth - targetWidth;
 
     // TODO: implement build
     return Scaffold(
@@ -116,8 +114,6 @@ class _TermsConditionsPageState extends State<TermsConditionsPage> {
                         Text('If you would like to contact us to understand more about this Agreement or wish to contact us concerning any matter relating to it, you may send an email to pm1808app@gmail.com', style: TextStyle(color: bluePurple)),
                         SizedBox(height: 10,),
                         Text('This document was last updated on May 14, 2021', style: TextStyle(color: bluePurple)),
-
-
                       ],
                     ),),
                   SizedBox(height: 10,),
@@ -131,8 +127,7 @@ class _TermsConditionsPageState extends State<TermsConditionsPage> {
                 ],
                 ));
           },
-
-        )
+        ),
     );
   }
 }

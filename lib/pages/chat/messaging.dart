@@ -13,10 +13,7 @@ import 'package:pegasus_medical_1808/widgets/app_bar_gradient.dart';
 import 'package:pegasus_medical_1808/widgets/side_drawer.dart';
 import '../../shared/global_config.dart';
 import 'package:provider/provider.dart';
-import 'package:after_layout/after_layout.dart';
 import 'package:intl/intl.dart';
-
-import 'chat_screen.dart';
 
 
 class MessagesPage extends StatefulWidget {

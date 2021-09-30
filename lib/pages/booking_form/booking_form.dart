@@ -1,5 +1,3 @@
-import 'dart:convert';
-import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -8,10 +6,8 @@ import 'package:pegasus_medical_1808/models/booking_form_model.dart';
 import 'package:pegasus_medical_1808/shared/global_config.dart';
 import 'package:pegasus_medical_1808/shared/global_functions.dart';
 import 'package:pegasus_medical_1808/shared/strings.dart';
-import 'package:pegasus_medical_1808/utils/database_helper.dart';
 import 'package:pegasus_medical_1808/widgets/app_bar_gradient.dart';
 import 'package:pegasus_medical_1808/widgets/dropdown_form_field.dart';
-import 'package:pegasus_medical_1808/widgets/gradient_button.dart';
 import 'package:pegasus_medical_1808/widgets/side_drawer.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -22,12 +18,19 @@ class BookingForm extends StatefulWidget {
   final String jobId;
   final bool fillDetails;
   final bool edit;
+  final bool saved;
+  final int savedId;
 
   BookingForm(
-      [this.fromJob = false,
+      [
+        this.fromJob = false,
         this.jobId = '1',
         this.fillDetails = false,
-        this.edit = false]);
+        this.edit = false,
+        this.saved = false,
+        this.savedId = 0
+      ]
+  );
 
   @override
   _BookingFormState createState() => _BookingFormState();
@@ -36,13 +39,11 @@ class BookingForm extends StatefulWidget {
 class _BookingFormState extends State<BookingForm> {
 
   bool _loadingTemporary = false;
-  //DatabaseHelper _databaseHelper = DatabaseHelper();
   BookingFormModel bookingFormModel;
   final dateFormat = DateFormat("dd/MM/yyyy");
   final dateTimeFormat = DateFormat("dd/MM/yyyy HH:mm");
   final timeFormat = DateFormat("HH:mm");
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-
   final TextEditingController jobRef = TextEditingController();
   final TextEditingController bfRequestedBy = TextEditingController();
   final TextEditingController bfJobTitle = TextEditingController();
@@ -68,6 +69,7 @@ class _BookingFormState extends State<BookingForm> {
   final TextEditingController bfGender = TextEditingController();
   final TextEditingController bfEthnicity = TextEditingController();
   final TextEditingController bfCovidStatus = TextEditingController();
+  final TextEditingController bfRmn1 = TextEditingController();
   final TextEditingController bfHca1 = TextEditingController();
   final TextEditingController bfHca2 = TextEditingController();
   final TextEditingController bfHca3 = TextEditingController();
@@ -114,7 +116,6 @@ class _BookingFormState extends State<BookingForm> {
 
   @override
   void initState() {
-    // TODO: implement initState
     _loadingTemporary = true;
     bookingFormModel = Provider.of<BookingFormModel>(context, listen: false);
     _setUpTextControllerListeners();
@@ -149,6 +150,7 @@ class _BookingFormState extends State<BookingForm> {
     bfGender.dispose();
     bfEthnicity.dispose();
     bfCovidStatus.dispose();
+    bfRmn1.dispose();
     bfHca1.dispose();
     bfHca2.dispose();
     bfHca3.dispose();
@@ -196,13 +198,7 @@ class _BookingFormState extends State<BookingForm> {
         controllerText = newString;
       }
 
-      //Sembast
-      bookingFormModel.updateTemporaryRecord(widget.edit, value, encrypt ? GlobalFunctions.encryptString(controllerText) : GlobalFunctions.databaseValueString(controllerText), widget.jobId);
-
-      // _databaseHelper.updateTemporaryBookingFormField(widget.edit, {
-      //   value:
-      //   encrypt ? GlobalFunctions.encryptString(controllerText) : GlobalFunctions.databaseValueString(controllerText)
-      // }, user.uid, widget.jobId);
+      bookingFormModel.updateTemporaryRecord(widget.edit, value, encrypt ? GlobalFunctions.encryptString(controllerText) : GlobalFunctions.databaseValueString(controllerText), widget.jobId, widget.saved, widget.savedId);
     });
   }
 
@@ -229,6 +225,7 @@ class _BookingFormState extends State<BookingForm> {
     _addListener(bfGender, Strings.bfGender);
     _addListener(bfEthnicity, Strings.bfEthnicity);
     _addListener(bfCovidStatus, Strings.bfCovidStatus);
+    _addListener(bfRmn1, Strings.bfRmn1);
     _addListener(bfHca1, Strings.bfHca1);
     _addListener(bfHca2, Strings.bfHca2);
     _addListener(bfHca3, Strings.bfHca3);
@@ -245,16 +242,14 @@ class _BookingFormState extends State<BookingForm> {
   }
 
   _getTemporaryBookingForm() async {
-
-    //Sembast
     if (mounted) {
 
     await bookingFormModel.setupTemporaryRecord();
 
-    bool hasRecord = await bookingFormModel.checkRecordExists(widget.edit, widget.jobId);
+    bool hasRecord = await bookingFormModel.checkRecordExists(widget.edit, widget.jobId, widget.saved, widget.savedId);
 
     if(hasRecord){
-      Map<String, dynamic> bookingForm = await bookingFormModel.getTemporaryRecord(widget.edit, widget.jobId);
+      Map<String, dynamic> bookingForm = await bookingFormModel.getTemporaryRecord(widget.edit, widget.jobId, widget.saved, widget.savedId);
 
       if (bookingForm[Strings.jobRef] != null) {
           jobRef.text = GlobalFunctions.databaseValueString(
@@ -296,7 +291,8 @@ class _BookingFormState extends State<BookingForm> {
         if (bookingForm[Strings.bfRmn] != null) {
           bfRmn = GlobalFunctions.decryptString(bookingForm[Strings.bfRmn]);
         }
-        if (bookingForm[Strings.bfHca] != null) {
+      GlobalFunctions.getTemporaryValue(bookingForm, bfRmn1, Strings.bfRmn1);
+      if (bookingForm[Strings.bfHca] != null) {
           bfHca = GlobalFunctions.decryptString(bookingForm[Strings.bfHca]);
         }
         GlobalFunctions.getTemporaryValue(bookingForm, bfHca1, Strings.bfHca1);
@@ -376,7 +372,7 @@ class _BookingFormState extends State<BookingForm> {
           });
         }
       } else {
-        if (mounted) {
+      if (mounted) {
           setState(() {
             _loadingTemporary = false;
           });
@@ -384,146 +380,6 @@ class _BookingFormState extends State<BookingForm> {
       }
     }
 
-
-
-
-
-
-    // if (mounted) {
-    //   int result = await _databaseHelper.checkTemporaryBookingFormExists(widget.edit,
-    //       user.uid, widget.jobId);
-    //   if (result != 0) {
-    //     Map<String, dynamic> bookingForm = await _databaseHelper
-    //         .getTemporaryBookingForm(widget.edit, user.uid, widget.jobId);
-    //
-    //
-    //     if (bookingForm[Strings.jobRef] != null) {
-    //       jobRef.text = GlobalFunctions.databaseValueString(
-    //           bookingForm[Strings.jobRef]);
-    //     } else {
-    //       jobRef.text = '';
-    //     }
-    //
-    //     GlobalFunctions.getTemporaryValue(bookingForm, bfRequestedBy, Strings.bfRequestedBy);
-    //     GlobalFunctions.getTemporaryValue(bookingForm, bfJobTitle, Strings.bfJobTitle);
-    //     GlobalFunctions.getTemporaryValue(bookingForm, bfJobContact, Strings.bfJobContact);
-    //     GlobalFunctions.getTemporaryValue(bookingForm, bfJobAuthorisingManager, Strings.bfJobAuthorisingManager);
-    //     if (bookingForm[Strings.bfJobDate] != null) {
-    //       bfJobDate.text =
-    //           dateFormat.format(DateTime.parse(bookingForm[Strings.bfJobDate]));
-    //     } else {
-    //       bfJobDate.text = '';
-    //     }
-    //     GlobalFunctions.getTemporaryValueTime(bookingForm, bfJobTime, Strings.bfJobTime);
-    //     GlobalFunctions.getTemporaryValue(bookingForm, bfTransportCoordinator, Strings.bfTransportCoordinator);
-    //     GlobalFunctions.getTemporaryValue(bookingForm, bfCollectionAddress, Strings.bfCollectionAddress);
-    //     GlobalFunctions.getTemporaryValue(bookingForm, bfCollectionPostcode, Strings.bfCollectionPostcode);
-    //     GlobalFunctions.getTemporaryValue(bookingForm, bfCollectionTel, Strings.bfCollectionTel);
-    //     GlobalFunctions.getTemporaryValue(bookingForm, bfDestinationAddress, Strings.bfDestinationAddress);
-    //     GlobalFunctions.getTemporaryValue(bookingForm, bfDestinationPostcode, Strings.bfDestinationPostcode);
-    //     GlobalFunctions.getTemporaryValue(bookingForm, bfDestinationTel, Strings.bfDestinationTel);
-    //     GlobalFunctions.getTemporaryValue(bookingForm, bfInvoiceDetails, Strings.bfInvoiceDetails);
-    //     GlobalFunctions.getTemporaryValue(bookingForm, bfCostCode, Strings.bfCostCode);
-    //     GlobalFunctions.getTemporaryValue(bookingForm, bfPurchaseOrder, Strings.bfPurchaseOrder);
-    //     GlobalFunctions.getTemporaryValueDateTime(bookingForm, bfCollectionDateTime, Strings.bfCollectionDateTime);
-    //
-    //     GlobalFunctions.getTemporaryValue(bookingForm, bfPatientName, Strings.bfPatientName);
-    //     GlobalFunctions.getTemporaryValue(bookingForm, bfLegalStatus, Strings.bfLegalStatus);
-    //     GlobalFunctions.getTemporaryValueDate(bookingForm, bfDateOfBirth, Strings.bfDateOfBirth, true);
-    //     GlobalFunctions.getTemporaryValue(bookingForm, bfNhsNumber, Strings.bfNhsNumber);
-    //     GlobalFunctions.getTemporaryValue(bookingForm, bfGender, Strings.bfGender);
-    //     GlobalFunctions.getTemporaryValue(bookingForm, bfEthnicity, Strings.bfEthnicity);
-    //     GlobalFunctions.getTemporaryValue(bookingForm, bfCovidStatus, Strings.bfCovidStatus);
-    //     if (bookingForm[Strings.bfRmn] != null) {
-    //       bfRmn = GlobalFunctions.decryptString(bookingForm[Strings.bfRmn]);
-    //     }
-    //     if (bookingForm[Strings.bfHca] != null) {
-    //       bfHca = GlobalFunctions.decryptString(bookingForm[Strings.bfHca]);
-    //     }
-    //     GlobalFunctions.getTemporaryValue(bookingForm, bfHca1, Strings.bfHca1);
-    //     GlobalFunctions.getTemporaryValue(bookingForm, bfHca2, Strings.bfHca2);
-    //     GlobalFunctions.getTemporaryValue(bookingForm, bfHca3, Strings.bfHca3);
-    //     GlobalFunctions.getTemporaryValue(bookingForm, bfHca4, Strings.bfHca4);
-    //     GlobalFunctions.getTemporaryValue(bookingForm, bfHca5, Strings.bfHca5);
-    //     GlobalFunctions.getTemporaryValue(bookingForm, bfCurrentPresentation, Strings.bfCurrentPresentation);
-    //     if (bookingForm[Strings.bfSpecificCarePlanYes] != null) {
-    //       if (mounted) {
-    //         setState(() {
-    //           bfSpecificCarePlanYes = GlobalFunctions.tinyIntToBool(bookingForm[Strings.bfSpecificCarePlanYes]);
-    //         });
-    //       }
-    //     }
-    //     if (bookingForm[Strings.bfSpecificCarePlanNo] != null) {
-    //       if (mounted) {
-    //         setState(() {
-    //           bfSpecificCarePlanNo = GlobalFunctions.tinyIntToBool(bookingForm[Strings.bfSpecificCarePlanNo]);
-    //         });
-    //       }
-    //     }
-    //     GlobalFunctions.getTemporaryValue(bookingForm, bfSpecificCarePlan, Strings.bfSpecificCarePlan);
-    //     if (bookingForm[Strings.bfPatientWarningsYes] != null) {
-    //       if (mounted) {
-    //         setState(() {
-    //           bfPatientWarningsYes = GlobalFunctions.tinyIntToBool(bookingForm[Strings.bfPatientWarningsYes]);
-    //         });
-    //       }
-    //     }
-    //     if (bookingForm[Strings.bfPatientWarningsNo] != null) {
-    //       if (mounted) {
-    //         setState(() {
-    //           bfPatientWarningsNo = GlobalFunctions.tinyIntToBool(bookingForm[Strings.bfPatientWarningsNo]);
-    //         });
-    //       }
-    //     }
-    //     GlobalFunctions.getTemporaryValue(bookingForm, bfPatientWarnings, Strings.bfPatientWarnings);
-    //     GlobalFunctions.getTemporaryValue(bookingForm, bfPresentingRisks, Strings.bfPresentingRisks);
-    //     GlobalFunctions.getTemporaryValue(bookingForm, bfPreviousRisks, Strings.bfPreviousRisks);
-    //     if (bookingForm[Strings.bfGenderConcernsYes] != null) {
-    //       if (mounted) {
-    //         setState(() {
-    //           bfGenderConcernsYes = GlobalFunctions.tinyIntToBool(bookingForm[Strings.bfGenderConcernsYes]);
-    //         });
-    //       }
-    //     }
-    //     if (bookingForm[Strings.bfGenderConcernsNo] != null) {
-    //       if (mounted) {
-    //         setState(() {
-    //           bfGenderConcernsNo = GlobalFunctions.tinyIntToBool(bookingForm[Strings.bfGenderConcernsNo]);
-    //         });
-    //       }
-    //     }
-    //     GlobalFunctions.getTemporaryValue(bookingForm, bfGenderConcerns, Strings.bfGenderConcerns);
-    //     if (bookingForm[Strings.bfSafeguardingConcernsYes] != null) {
-    //       if (mounted) {
-    //         setState(() {
-    //           bfSafeguardingConcernsYes = GlobalFunctions.tinyIntToBool(bookingForm[Strings.bfSafeguardingConcernsYes]);
-    //         });
-    //       }
-    //     }
-    //     if (bookingForm[Strings.bfSafeguardingConcernsNo] != null) {
-    //       if (mounted) {
-    //         setState(() {
-    //           bfSafeguardingConcernsNo = GlobalFunctions.tinyIntToBool(bookingForm[Strings.bfSafeguardingConcernsNo]);
-    //         });
-    //       }
-    //     }
-    //     GlobalFunctions.getTemporaryValue(bookingForm, bfSafeguardingConcerns, Strings.bfSafeguardingConcerns);
-    //     GlobalFunctions.getTemporaryValueTime(bookingForm, bfTimeDue, Strings.bfTimeDue);
-    //     GlobalFunctions.getTemporaryValue(bookingForm, bfAmbulanceRegistration, Strings.bfAmbulanceRegistration);
-    //
-    //     if (mounted) {
-    //       setState(() {
-    //         _loadingTemporary = false;
-    //       });
-    //     }
-    //   } else {
-    //     if (mounted) {
-    //       setState(() {
-    //         _loadingTemporary = false;
-    //       });
-    //     }
-    //   }
-    // }
   }
 
 
@@ -620,11 +476,7 @@ class _BookingFormState extends State<BookingForm> {
                 onPressed: () {
                   setState(() {
                     controller.clear();
-                    bookingFormModel.updateTemporaryRecord(widget.edit, value, null, widget.jobId);
-
-                    // _databaseHelper.updateTemporaryBookingFormField(widget.edit,
-                    //     {value : null}, user.uid, widget.jobId);
-
+                    bookingFormModel.updateTemporaryRecord(widget.edit, value, null, widget.jobId, widget.saved, widget.savedId);
                   });
                 }),
             IconButton(
@@ -654,16 +506,9 @@ class _BookingFormState extends State<BookingForm> {
                       setState(() {
                         controller.text = dateTime;
                         if(encrypt){
-                          bookingFormModel.updateTemporaryRecord(widget.edit, value, GlobalFunctions.encryptString(DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String()), widget.jobId);
-
-                          // _databaseHelper.updateTemporaryBookingFormField(widget.edit,
-                          //     {value : GlobalFunctions.encryptString(DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String())}, user.uid, widget.jobId);
+                          bookingFormModel.updateTemporaryRecord(widget.edit, value, GlobalFunctions.encryptString(DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String()), widget.jobId, widget.saved, widget.savedId);
                         } else {
-
-                          bookingFormModel.updateTemporaryRecord(widget.edit, value, DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String(), widget.jobId);
-
-                          // _databaseHelper.updateTemporaryBookingFormField(widget.edit,
-                          //     {value : DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String()}, user.uid, widget.jobId);
+                          bookingFormModel.updateTemporaryRecord(widget.edit, value, DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String(), widget.jobId, widget.saved, widget.savedId);
                         }
 
 
@@ -720,10 +565,7 @@ class _BookingFormState extends State<BookingForm> {
                 onPressed: () {
                   setState(() {
                     controller.clear();
-                    bookingFormModel.updateTemporaryRecord(widget.edit, value, null, widget.jobId);
-
-                    // _databaseHelper.updateTemporaryBookingFormField(widget.edit,
-                    //     {value : null}, user.uid, widget.jobId);
+                    bookingFormModel.updateTemporaryRecord(widget.edit, value, null, widget.jobId, widget.saved, widget.savedId);
                   });
                 }),
             IconButton(
@@ -754,15 +596,9 @@ class _BookingFormState extends State<BookingForm> {
                       setState(() {
                         controller.text = dateTime;
                         if(encrypt){
-                          bookingFormModel.updateTemporaryRecord(widget.edit, value, GlobalFunctions.encryptString(DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String()), widget.jobId);
-
-                          // _databaseHelper.updateTemporaryBookingFormField(widget.edit,
-                          //     {value : GlobalFunctions.encryptString(DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String())}, user.uid, widget.jobId);
+                          bookingFormModel.updateTemporaryRecord(widget.edit, value, GlobalFunctions.encryptString(DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String()), widget.jobId, widget.saved, widget.savedId);
                         } else {
-                          bookingFormModel.updateTemporaryRecord(widget.edit, value, DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String(), widget.jobId);
-
-                          // _databaseHelper.updateTemporaryBookingFormField(widget.edit,
-                          //     {value : DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String()}, user.uid, widget.jobId);
+                          bookingFormModel.updateTemporaryRecord(widget.edit, value, DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String(), widget.jobId, widget.saved, widget.savedId);
                         }
                       });
                     }
@@ -817,11 +653,7 @@ class _BookingFormState extends State<BookingForm> {
                 onPressed: () {
                   setState(() {
                     bfCollectionDateTime.clear();
-                    bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfCollectionDateTime, null, widget.jobId);
-
-                    // _databaseHelper.updateTemporaryBookingFormField(widget.edit,
-                    //     {Strings.bfCollectionDateTime : null}, user.uid, widget.jobId);
-
+                    bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfCollectionDateTime, null, widget.jobId, widget.saved, widget.savedId);
                   });
                 }),
             IconButton(
@@ -856,9 +688,7 @@ class _BookingFormState extends State<BookingForm> {
                       setState(() {
                         bfCollectionDateTime.text = dateTime;
                       });
-                      bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfCollectionDateTime, DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String(), widget.jobId);
-                      // await _databaseHelper.updateTemporaryBookingFormField(widget.edit,
-                      //     {Strings.bfCollectionDateTime : DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String()}, user.uid, widget.jobId);
+                      bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfCollectionDateTime, DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String(), widget.jobId, widget.saved, widget.savedId);
                     }
                   }
 
@@ -890,10 +720,10 @@ class _BookingFormState extends State<BookingForm> {
                 value: bfSpecificCarePlanYes,
                 onChanged: (bool value) => setState(() {
                   bfSpecificCarePlanYes = value;
-                  bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfSpecificCarePlanYes, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+                  bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfSpecificCarePlanYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
                   if (bfSpecificCarePlanNo == true){
                     bfSpecificCarePlanNo = false;
-                    bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfSpecificCarePlanNo, null, widget.jobId);
+                    bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfSpecificCarePlanNo, null, widget.jobId, widget.saved, widget.savedId);
                   }
                 })),
             Text(
@@ -904,10 +734,10 @@ class _BookingFormState extends State<BookingForm> {
                 value: bfSpecificCarePlanNo,
                 onChanged: (bool value) => setState(() {
                   bfSpecificCarePlanNo = value;
-                  bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfSpecificCarePlanNo, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+                  bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfSpecificCarePlanNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
                   if (bfSpecificCarePlanYes == true){
                     bfSpecificCarePlanYes = false;
-                    bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfSpecificCarePlanYes, null, widget.jobId);
+                    bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfSpecificCarePlanYes, null, widget.jobId, widget.saved, widget.savedId);
                   }
                 }))
           ],
@@ -938,10 +768,10 @@ class _BookingFormState extends State<BookingForm> {
                 value: bfPatientWarningsYes,
                 onChanged: (bool value) => setState(() {
                   bfPatientWarningsYes = value;
-                  bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfPatientWarningsYes, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+                  bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfPatientWarningsYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
                   if (bfPatientWarningsNo == true){
                     bfPatientWarningsNo = false;
-                    bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfPatientWarningsNo, null, widget.jobId);
+                    bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfPatientWarningsNo, null, widget.jobId, widget.saved, widget.savedId);
                   }
                 })),
             Text(
@@ -952,10 +782,10 @@ class _BookingFormState extends State<BookingForm> {
                 value: bfPatientWarningsNo,
                 onChanged: (bool value) => setState(() {
                   bfPatientWarningsNo = value;
-                  bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfPatientWarningsNo, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+                  bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfPatientWarningsNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
                   if (bfPatientWarningsYes == true){
                     bfPatientWarningsYes = false;
-                    bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfPatientWarningsYes, null, widget.jobId);
+                    bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfPatientWarningsYes, null, widget.jobId, widget.saved, widget.savedId);
                   }
                 }))
           ],
@@ -994,10 +824,10 @@ class _BookingFormState extends State<BookingForm> {
                 value: bfGenderConcernsYes,
                 onChanged: (bool value) => setState(() {
                   bfGenderConcernsYes = value;
-                  bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfGenderConcernsYes, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+                  bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfGenderConcernsYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
                   if (bfGenderConcernsNo == true){
                     bfGenderConcernsNo = false;
-                    bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfGenderConcernsNo, null, widget.jobId);
+                    bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfGenderConcernsNo, null, widget.jobId, widget.saved, widget.savedId);
                   }
                 })),
             Text(
@@ -1008,10 +838,10 @@ class _BookingFormState extends State<BookingForm> {
                 value: bfGenderConcernsNo,
                 onChanged: (bool value) => setState(() {
                   bfGenderConcernsNo = value;
-                  bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfGenderConcernsNo, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+                  bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfGenderConcernsNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
                   if (bfGenderConcernsYes == true){
                     bfGenderConcernsYes = false;
-                    bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfGenderConcernsYes, null, widget.jobId);
+                    bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfGenderConcernsYes, null, widget.jobId, widget.saved, widget.savedId);
                   }
                 }))
           ],
@@ -1050,10 +880,10 @@ class _BookingFormState extends State<BookingForm> {
                 value: bfSafeguardingConcernsYes,
                 onChanged: (bool value) => setState(() {
                   bfSafeguardingConcernsYes = value;
-                  bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfSafeguardingConcernsYes, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+                  bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfSafeguardingConcernsYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
                   if (bfSafeguardingConcernsNo == true){
                     bfSafeguardingConcernsNo = false;
-                    bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfSafeguardingConcernsNo, null, widget.jobId);
+                    bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfSafeguardingConcernsNo, null, widget.jobId, widget.saved, widget.savedId);
                   }
                 })),
             Text(
@@ -1064,10 +894,10 @@ class _BookingFormState extends State<BookingForm> {
                 value: bfSafeguardingConcernsNo,
                 onChanged: (bool value) => setState(() {
                   bfSafeguardingConcernsNo = value;
-                  bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfSafeguardingConcernsNo, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+                  bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfSafeguardingConcernsNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
                   if (bfSafeguardingConcernsYes == true){
                     bfSafeguardingConcernsYes = false;
-                    bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfSafeguardingConcernsYes, null, widget.jobId);
+                    bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfSafeguardingConcernsYes, null, widget.jobId, widget.saved, widget.savedId);
                   }
                 }))
           ],
@@ -1089,9 +919,9 @@ class _BookingFormState extends State<BookingForm> {
           onChanged: (val) => setState(() {
             bfRmn = val;
             if(val == 'Select One'){
-              bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfRmn, null, widget.jobId);
+              bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfRmn, null, widget.jobId, widget.saved, widget.savedId);
             } else {
-              bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfRmn, GlobalFunctions.encryptString(val), widget.jobId);
+              bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfRmn, GlobalFunctions.encryptString(val), widget.jobId, widget.saved, widget.savedId);
             }
 
             FocusScope.of(context).unfocus();
@@ -1115,9 +945,9 @@ class _BookingFormState extends State<BookingForm> {
           onChanged: (val) => setState(() {
             bfHca = val;
             if(val == 'Select One'){
-              bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfHca, null, widget.jobId);
+              bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfHca, null, widget.jobId, widget.saved, widget.savedId);
             } else {
-              bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfHca, GlobalFunctions.encryptString(val), widget.jobId);
+              bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfHca, GlobalFunctions.encryptString(val), widget.jobId, widget.saved, widget.savedId);
             }
 
             FocusScope.of(context).unfocus();
@@ -1163,8 +993,7 @@ class _BookingFormState extends State<BookingForm> {
               ),
               TextButton(
                 onPressed: () {
-                  context.read<BookingFormModel>().resetTemporaryRecord(widget.jobId);
-                  //context.read<BookingFormModel>().resetTemporaryBookingForm(widget.jobId);
+                  context.read<BookingFormModel>().resetTemporaryRecord(widget.jobId, widget.saved, widget.savedId);
                   FocusScope.of(context).requestFocus(new FocusNode());
                   setState(() {
                     jobRef.clear();
@@ -1193,6 +1022,7 @@ class _BookingFormState extends State<BookingForm> {
                     bfEthnicity.clear();
                     bfCovidStatus.clear();
                     bfRmn = 'Select One';
+                    bfRmn1.clear();
                     bfHca = 'Select One';
                     bfHca1.clear();
                     bfHca2.clear();
@@ -1229,12 +1059,129 @@ class _BookingFormState extends State<BookingForm> {
         });
   }
 
+  void _saveForLater() async {
+    FocusScope.of(context).unfocus();
+
+    bool submitForm = await showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.all(Radius.circular(32.0))),
+            contentPadding: EdgeInsets.fromLTRB(10, 10, 10, 0),
+            titlePadding: EdgeInsets.all(0),
+            title: Container(
+              padding: EdgeInsets.only(top: 10, bottom: 10),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [purpleDesign, purpleDesign]),
+                borderRadius: BorderRadius.only(topLeft: Radius.circular(32),
+                    topRight: Radius.circular(32)),
+              ),
+              child: Center(child: Text("Save for later", style: TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.bold),),),
+            ),
+            content: Text(
+                'This form will be moved to your saved list, do you wish to proceed?'),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () {
+                  FocusScope.of(context).requestFocus(new FocusNode());
+                  Navigator.of(context).pop(false);
+                },
+                child: Text(
+                  'No',
+                  style: TextStyle(
+                      color: blueDesign, fontWeight: FontWeight.bold),
+                ),
+              ),
+              TextButton(
+                onPressed: () async {
+                  Navigator.of(context).pop(true);
+                },
+                child: Text(
+                  'Yes',
+                  style: TextStyle(
+                      color: blueDesign, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          );
+        });
+
+
+    if (submitForm) {
+      bool success = await context.read<BookingFormModel>().saveForLater(
+          widget.jobId, widget.saved, widget.savedId);
+      FocusScope.of(context).requestFocus(new FocusNode());
+
+
+      if (success) {
+        setState(() {
+          jobRef.clear();
+          bfRequestedBy.clear();
+          bfJobTitle.clear();
+          bfJobContact.clear();
+          bfJobAuthorisingManager.clear();
+          bfJobDate.clear();
+          bfJobTime.clear();
+          bfTransportCoordinator.clear();
+          bfCollectionAddress.clear();
+          bfCollectionPostcode.clear();
+          bfCollectionTel.clear();
+          bfDestinationAddress.clear();
+          bfDestinationPostcode.clear();
+          bfDestinationTel.clear();
+          bfInvoiceDetails.clear();
+          bfCostCode.clear();
+          bfPurchaseOrder.clear();
+          bfCollectionDateTime.clear();
+          bfPatientName.clear();
+          bfLegalStatus.clear();
+          bfDateOfBirth.clear();
+          bfNhsNumber.clear();
+          bfGender.clear();
+          bfEthnicity.clear();
+          bfCovidStatus.clear();
+          bfRmn = 'Select One';
+          bfRmn1.clear();
+          bfHca = 'Select One';
+          bfHca1.clear();
+          bfHca2.clear();
+          bfHca3.clear();
+          bfHca4.clear();
+          bfHca5.clear();
+          bfCurrentPresentation.clear();
+          bfSpecificCarePlanYes = false;
+          bfSpecificCarePlanNo = false;
+          bfSpecificCarePlan.clear();
+          bfPatientWarningsYes = false;
+          bfPatientWarningsNo = false;
+          bfPatientWarnings.clear();
+          bfPresentingRisks.clear();
+          bfPreviousRisks.clear();
+          bfGenderConcernsYes = false;
+          bfGenderConcernsNo = false;
+          bfGenderConcerns.clear();
+          bfSafeguardingConcernsYes = false;
+          bfSafeguardingConcernsNo = false;
+          bfSafeguardingConcerns.clear();
+          bfTimeDue.clear();
+          bfAmbulanceRegistration.clear();
+          FocusScope.of(context).requestFocus(new FocusNode());
+        });
+      }
+    }
+  }
+
   void _submitForm() async {
 
     FocusScope.of(context).unfocus();
 
 
-    bool continueSubmit = await bookingFormModel.validateBookingForm(widget.jobId, widget.edit);
+    bool continueSubmit = await bookingFormModel.validateBookingForm(widget.jobId, widget.edit, widget.saved, widget.savedId);
 
 
     if (!continueSubmit) {
@@ -1386,20 +1333,9 @@ class _BookingFormState extends State<BookingForm> {
                                 user == null ? Container() : ListTile(
                                   onTap: () async {
 
-                                    await bookingFormModel.updateTemporaryRecord(widget.edit, Strings.assignedUserId, snapshot.data.docs[index].id, widget.jobId);
-
-                                    // await _databaseHelper.updateTemporaryBookingFormField(widget.edit,
-                                    //     {Strings.assignedUserId : snapshot.data.docs[index].id}, user.uid, widget.jobId);
-
-                                    await bookingFormModel.updateTemporaryRecord(widget.edit, Strings.assignedUserName, snapshot.data.docs[index].data()[Strings.name], widget.jobId);
-
-
-                                    // await _databaseHelper.updateTemporaryBookingFormField(widget.edit,
-                                    //     {Strings.assignedUserName : snapshot.data.docs[index].data()[Strings.name]}, user.uid, widget.jobId);
-
+                                    await bookingFormModel.updateTemporaryRecord(widget.edit, Strings.assignedUserId, snapshot.data.docs[index].id, widget.jobId, widget.saved, widget.savedId);
+                                    await bookingFormModel.updateTemporaryRecord(widget.edit, Strings.assignedUserName, snapshot.data.docs[index].data()[Strings.name], widget.jobId, widget.saved, widget.savedId);
                                     Navigator.of(context).pop(true);
-
-
                                   },
                                   leading: Icon(Icons.person, color: bluePurple,),
                                   title: Text(snapshot.data.docs[index].data()[Strings.name]),
@@ -1448,7 +1384,7 @@ class _BookingFormState extends State<BookingForm> {
             FocusScope.of(context).requestFocus(new FocusNode());
 
           } else {
-            success = await context.read<BookingFormModel>().submitBookingForm(widget.jobId);
+            success = await context.read<BookingFormModel>().submitBookingForm(widget.jobId, widget.edit, widget.saved, widget.savedId);
             FocusScope.of(context).requestFocus(new FocusNode());
           }
 
@@ -1480,6 +1416,7 @@ class _BookingFormState extends State<BookingForm> {
               bfEthnicity.clear();
               bfCovidStatus.clear();
               bfRmn = 'Select One';
+              bfRmn1.clear();
               bfHca = 'Select One';
               bfHca1.clear();
               bfHca2.clear();
@@ -1508,22 +1445,6 @@ class _BookingFormState extends State<BookingForm> {
           }
 
         }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
       }
     }
   }
@@ -1579,6 +1500,10 @@ class _BookingFormState extends State<BookingForm> {
                   _textFormField('Covid Status', bfCovidStatus, 1, true),
                   _textFormField('Current Presentation', bfCurrentPresentation, 3, true, TextInputType.multiline),
                   _buildRmnDrop(),
+                  bfRmn == '1' ? Column(children: [
+                    _textFormField('1.', bfRmn1),
+
+                  ],) : Container(),
                   _buildHcaDrop(),
                   bfHca == '1' ? Column(children: [
                     _textFormField('1.', bfHca1),
@@ -1646,14 +1571,15 @@ class _BookingFormState extends State<BookingForm> {
   Widget build(BuildContext context) {
     // TODO: implement build
     return Scaffold(
-      drawer: widget.edit ? null : SideDrawer(),
+      drawer: widget.edit || widget.saved ? null : SideDrawer(),
       appBar: AppBar(
         flexibleSpace: AppBarGradient(),
         title: FittedBox(fit:BoxFit.fitWidth,
             child: Text('Transport Booking', style: TextStyle(fontWeight: FontWeight.bold),)),
         actions: <Widget>[
-          widget.edit ? Container() : IconButton(icon: Icon(Icons.refresh), onPressed: _resetForm),
-          IconButton(icon: Icon(Icons.send), onPressed: _submitForm)
+          widget.edit || widget.saved ? Container() : IconButton(icon: Icon(Icons.refresh), onPressed: _resetForm),
+          widget.saved || widget.edit ? Container() : IconButton(icon: Icon(Icons.watch_later_outlined), onPressed: _saveForLater),
+          IconButton(icon: Icon(Icons.send), onPressed: _submitForm),
         ],
       ),
       body: _loadingTemporary

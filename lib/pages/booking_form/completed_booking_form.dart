@@ -436,6 +436,7 @@ class _CompletedBookingFormState extends State<CompletedBookingForm> {
                 _textFormField('Covid Status', GlobalFunctions.decryptString(bookingFormModel.selectedBookingForm[Strings.bfCovidStatus])),
                 _textFormField('Current Presentation', GlobalFunctions.decryptString(bookingFormModel.selectedBookingForm[Strings.bfCurrentPresentation])),
                 _textFormField('RMN', GlobalFunctions.decryptString(bookingFormModel.selectedBookingForm[Strings.bfRmn])),
+                bookingFormModel.selectedBookingForm[Strings.bfRmn1] != null && bookingFormModel.selectedBookingForm[Strings.bfRmn1] != '' ? _textFormField('1.', GlobalFunctions.decryptString(bookingFormModel.selectedBookingForm[Strings.bfRmn1])) : Container(),
                 _textFormField("HCA's", GlobalFunctions.decryptString(bookingFormModel.selectedBookingForm[Strings.bfHca])),
                 bookingFormModel.selectedBookingForm[Strings.bfHca1] != null && bookingFormModel.selectedBookingForm[Strings.bfHca1] != '' ? _textFormField('1.', GlobalFunctions.decryptString(bookingFormModel.selectedBookingForm[Strings.bfHca1])) : Container(),
                 bookingFormModel.selectedBookingForm[Strings.bfHca2] != null && bookingFormModel.selectedBookingForm[Strings.bfHca2] != '' ? _textFormField('2.', GlobalFunctions.decryptString(bookingFormModel.selectedBookingForm[Strings.bfHca2])) : Container(),

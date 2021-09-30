@@ -4,7 +4,6 @@ import 'package:pegasus_medical_1808/shared/global_config.dart';
 import 'package:pegasus_medical_1808/utils/database_helper.dart';
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../locator.dart';
@@ -91,15 +90,24 @@ class ObservationBookingModel extends ChangeNotifier {
   static const String EDITED_OBSERVATION_BOOKINGS_STORE_NAME = 'edited_observation_bookings';
   final _editedObservationBookingsStore = Db.intMapStoreFactory.store(EDITED_OBSERVATION_BOOKINGS_STORE_NAME);
 
+  static const String SAVED_OBSERVATION_BOOKINGS_STORE_NAME = 'saved_observation_bookings';
+  final _savedObservationBookingsStore = Db.intMapStoreFactory.store(SAVED_OBSERVATION_BOOKINGS_STORE_NAME);
+
   // Private getter to shorten the amount of code needed to get the
   // singleton instance of an opened database.
   Future<Db.Database> get _db async => await AppDatabase.instance.database;
 
 
   Future<void> setupTemporaryRecord() async {
-    int count = await _temporaryObservationBookingsStore.count(await _db);
 
-    if(count == 0){
+    final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
+        [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, '1')]
+    ));
+    List records = await _temporaryObservationBookingsStore.find(
+      await _db,
+      finder: finder,
+    );
+    if(records.length == 0){
       // Generate a random ID based on the date and a random string for virtual zero chance of duplicates
       int _id = DateTime.now().millisecondsSinceEpoch + int.parse(random_string.randomNumeric(2));
       await _temporaryObservationBookingsStore.record(_id).put(await _db,
@@ -107,26 +115,35 @@ class ObservationBookingModel extends ChangeNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> getTemporaryRecord(bool edit, String selectedJobId) async{
-
-    final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
-        [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, selectedJobId)]
-    ));
+  Future<Map<String, dynamic>> getTemporaryRecord(bool edit, String selectedJobId, bool saved, int savedId) async{
 
     List records;
 
     if(edit){
+      final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
+          [Db.Filter.equals(Strings.documentId, selectedObservationBooking[Strings.documentId]), Db.Filter.equals(Strings.jobId, selectedJobId)]
+      ));
       records = await _editedObservationBookingsStore.find(
         await _db,
         finder: finder,
       );
+    } else if(saved) {
+      final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
+          [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.localId, savedId)]
+      ));
+      records = await _savedObservationBookingsStore.find(
+        await _db,
+        finder: finder,
+      );
     } else {
+      final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
+          [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, selectedJobId)]
+      ));
       records = await _temporaryObservationBookingsStore.find(
         await _db,
         finder: finder,
       );
     }
-
 
     return records[0].value;
 
@@ -172,23 +189,42 @@ class ObservationBookingModel extends ChangeNotifier {
     );
   }
 
-  Future<bool> checkRecordExists(bool edit, String selectedJobId) async{
+  Future <List<dynamic>> getSavedRecords() async{
+    final Db.Finder finder = Db.Finder(filter: Db.Filter.equals(Strings.uid, user.uid));
+    List records = await _savedObservationBookingsStore.find(
+      await _db,
+      finder: finder,
+    );
+    return records;
+  }
+
+  Future<bool> checkRecordExists(bool edit, String selectedJobId, bool saved, int savedId) async{
 
     bool hasRecord = false;
-
-    final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
-        [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, selectedJobId)]
-    ));
-
     List records;
 
 
     if(edit){
+
+      final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
+          [Db.Filter.equals(Strings.documentId, selectedObservationBooking[Strings.documentId]), Db.Filter.equals(Strings.jobId, selectedJobId)]
+      ));
       records = await _editedObservationBookingsStore.find(
         await _db,
         finder: finder,
       );
+    } else if(saved){
+      final Db.Finder finder = Db.Finder(filter: Db.Filter.equals(Strings.localId, savedId));
+      records = await _savedObservationBookingsStore.find(
+        await _db,
+        finder: finder,
+      );
+
     } else {
+
+      final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
+          [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, selectedJobId)]
+      ));
       records = await _temporaryObservationBookingsStore.find(
         await _db,
         finder: finder,
@@ -202,17 +238,22 @@ class ObservationBookingModel extends ChangeNotifier {
 
   }
 
-  Future<void> updateTemporaryRecord(bool edit, String field, var value, String selectedJobId) async {
-
-    final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
-        [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, selectedJobId)]
-    ));
-
+  Future<void> updateTemporaryRecord(bool edit, String field, var value, String selectedJobId, bool saved, int savedId) async {
 
     if(edit){
+      final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
+          [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, selectedJobId)]
+      ));
       await _editedObservationBookingsStore.update(await _db, {field: value},
           finder: finder);
+    } else if(saved){
+      final Db.Finder finder = Db.Finder(filter: Db.Filter.equals(Strings.localId, savedId));
+      await _savedObservationBookingsStore.update(await _db, {field: value},
+          finder: finder);
     } else {
+      final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
+          [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, selectedJobId)]
+      ));
       await _temporaryObservationBookingsStore.update(await _db, {field: value},
           finder: finder);
     }
@@ -238,12 +279,247 @@ class ObservationBookingModel extends ChangeNotifier {
     await _observationBookingsStore.delete(await _db);
   }
 
+  Future<bool> saveForLater(String jobId, bool saved, int savedId) async {
 
-  void resetTemporaryRecord(String chosenJobId) async {
+    GlobalFunctions.showLoadingDialog('Saving Observation Booking...');
+    String message = '';
+    bool success = false;
+    int id;
 
-    final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
-        [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, chosenJobId)]
-    ));
+    if(saved){
+      id = savedId;
+    } else {
+      id = DateTime.now().millisecondsSinceEpoch + int.parse(random_string.randomNumeric(2));
+    }
+
+
+
+    Map<String, dynamic> observationBooking = await getTemporaryRecord(false, '1', saved, savedId);
+
+    Map<String, dynamic> localData = {
+      Strings.localId: id,
+      Strings.documentId: null,
+      Strings.uid: user.uid,
+      Strings.jobId: '1',
+      Strings.formVersion: '1',
+      Strings.jobRef: observationBooking[Strings.jobRef],
+      Strings.obRequestedBy: observationBooking[Strings.obRequestedBy],
+      Strings.obJobTitle: observationBooking[Strings.obJobTitle],
+      Strings.obJobContact: observationBooking[Strings.obJobContact],
+      Strings.obJobAuthorisingManager: observationBooking[Strings.obJobAuthorisingManager],
+      Strings.obJobDate: observationBooking[Strings.obJobDate],
+      Strings.obJobTime: observationBooking[Strings.obJobTime],
+      Strings.obBookingCoordinator: observationBooking[Strings.obBookingCoordinator],
+      Strings.obPatientLocation: observationBooking[Strings.obPatientLocation],
+      Strings.obPostcode: observationBooking[Strings.obPostcode],
+      Strings.obLocationTel: observationBooking[Strings.obLocationTel],
+      Strings.obInvoiceDetails: observationBooking[Strings.obInvoiceDetails],
+      Strings.obCostCode: observationBooking[Strings.obCostCode],
+      Strings.obPurchaseOrder: observationBooking[Strings.obPurchaseOrder],
+      Strings.obStartDateTime: observationBooking[Strings.obStartDateTime],
+      Strings.obMhaAssessmentYes: observationBooking[Strings.obMhaAssessmentYes],
+      Strings.obMhaAssessmentNo: observationBooking[Strings.obMhaAssessmentNo],
+      Strings.obBedIdentifiedYes: observationBooking[Strings.obBedIdentifiedYes],
+      Strings.obBedIdentifiedNo: observationBooking[Strings.obBedIdentifiedNo],
+      Strings.obWrapDocumentationYes: observationBooking[Strings.obWrapDocumentationYes],
+      Strings.obWrapDocumentationNo: observationBooking[Strings.obWrapDocumentationNo],
+      Strings.obShiftRequired: observationBooking[Strings.obShiftRequired],
+      Strings.obPatientName: observationBooking[Strings.obPatientName],
+      Strings.obLegalStatus: observationBooking[Strings.obLegalStatus],
+      Strings.obDateOfBirth: observationBooking[Strings.obDateOfBirth],
+      Strings.obNhsNumber: observationBooking[Strings.obNhsNumber],
+      Strings.obGender: observationBooking[Strings.obGender],
+      Strings.obEthnicity: observationBooking[Strings.obEthnicity],
+      Strings.obCovidStatus: observationBooking[Strings.obCovidStatus],
+      Strings.obRmn: observationBooking[Strings.obRmn],
+      Strings.obHca: observationBooking[Strings.obHca],
+      Strings.obHca1: observationBooking[Strings.obHca1],
+      Strings.obHca2: observationBooking[Strings.obHca2],
+      Strings.obHca3: observationBooking[Strings.obHca3],
+      Strings.obHca4: observationBooking[Strings.obHca4],
+      Strings.obHca5: observationBooking[Strings.obHca5],
+      Strings.obCurrentPresentation: observationBooking[Strings.obCurrentPresentation],
+      Strings.obSpecificCarePlanYes: observationBooking[Strings.obSpecificCarePlanYes],
+      Strings.obSpecificCarePlanNo: observationBooking[Strings.obSpecificCarePlanNo],
+      Strings.obSpecificCarePlan: observationBooking[Strings.obSpecificCarePlan],
+      Strings.obPatientWarningsYes: observationBooking[Strings.obPatientWarningsYes],
+      Strings.obPatientWarningsNo: observationBooking[Strings.obPatientWarningsNo],
+      Strings.obPatientWarnings: observationBooking[Strings.obPatientWarnings],
+      Strings.obPresentingRisks: observationBooking[Strings.obPresentingRisks],
+      Strings.obPreviousRisks: observationBooking[Strings.obPreviousRisks],
+      Strings.obGenderConcernsYes: observationBooking[Strings.obGenderConcernsYes],
+      Strings.obGenderConcernsNo: observationBooking[Strings.obGenderConcernsNo],
+      Strings.obGenderConcerns: observationBooking[Strings.obGenderConcerns],
+      Strings.obSafeguardingConcernsYes: observationBooking[Strings.obSafeguardingConcernsYes],
+      Strings.obSafeguardingConcernsNo: observationBooking[Strings.obSafeguardingConcernsNo],
+      Strings.obSafeguardingConcerns: observationBooking[Strings.obSafeguardingConcerns],
+      Strings.obTimeDue: observationBooking[Strings.obTimeDue],
+      Strings.obStaffDate1: observationBooking[Strings.obStaffDate1],
+      Strings.obStaffDate2: observationBooking[Strings.obStaffDate2],
+      Strings.obStaffDate3: observationBooking[Strings.obStaffDate3],
+      Strings.obStaffDate4: observationBooking[Strings.obStaffDate4],
+      Strings.obStaffDate5: observationBooking[Strings.obStaffDate5],
+      Strings.obStaffDate6: observationBooking[Strings.obStaffDate6],
+      Strings.obStaffDate7: observationBooking[Strings.obStaffDate7],
+      Strings.obStaffDate8: observationBooking[Strings.obStaffDate8],
+      Strings.obStaffDate9: observationBooking[Strings.obStaffDate9],
+      Strings.obStaffDate10: observationBooking[Strings.obStaffDate10],
+      Strings.obStaffDate11: observationBooking[Strings.obStaffDate11],
+      Strings.obStaffDate12: observationBooking[Strings.obStaffDate12],
+      Strings.obStaffDate13: observationBooking[Strings.obStaffDate13],
+      Strings.obStaffDate14: observationBooking[Strings.obStaffDate14],
+      Strings.obStaffDate15: observationBooking[Strings.obStaffDate15],
+      Strings.obStaffDate16: observationBooking[Strings.obStaffDate16],
+      Strings.obStaffDate17: observationBooking[Strings.obStaffDate17],
+      Strings.obStaffDate18: observationBooking[Strings.obStaffDate18],
+      Strings.obStaffDate19: observationBooking[Strings.obStaffDate19],
+      Strings.obStaffDate20: observationBooking[Strings.obStaffDate20],
+      Strings.obStaffStartTime1: observationBooking[Strings.obStaffStartTime1],
+      Strings.obStaffStartTime2: observationBooking[Strings.obStaffStartTime2],
+      Strings.obStaffStartTime3: observationBooking[Strings.obStaffStartTime3],
+      Strings.obStaffStartTime4: observationBooking[Strings.obStaffStartTime4],
+      Strings.obStaffStartTime5: observationBooking[Strings.obStaffStartTime5],
+      Strings.obStaffStartTime6: observationBooking[Strings.obStaffStartTime6],
+      Strings.obStaffStartTime7: observationBooking[Strings.obStaffStartTime7],
+      Strings.obStaffStartTime8: observationBooking[Strings.obStaffStartTime8],
+      Strings.obStaffStartTime9: observationBooking[Strings.obStaffStartTime9],
+      Strings.obStaffStartTime10: observationBooking[Strings.obStaffStartTime10],
+      Strings.obStaffStartTime11: observationBooking[Strings.obStaffStartTime11],
+      Strings.obStaffStartTime12: observationBooking[Strings.obStaffStartTime12],
+      Strings.obStaffStartTime13: observationBooking[Strings.obStaffStartTime13],
+      Strings.obStaffStartTime14: observationBooking[Strings.obStaffStartTime14],
+      Strings.obStaffStartTime15: observationBooking[Strings.obStaffStartTime15],
+      Strings.obStaffStartTime16: observationBooking[Strings.obStaffStartTime16],
+      Strings.obStaffStartTime17: observationBooking[Strings.obStaffStartTime17],
+      Strings.obStaffStartTime18: observationBooking[Strings.obStaffStartTime18],
+      Strings.obStaffStartTime19: observationBooking[Strings.obStaffStartTime19],
+      Strings.obStaffStartTime20: observationBooking[Strings.obStaffStartTime20],
+      Strings.obStaffEndTime1: observationBooking[Strings.obStaffEndTime1],
+      Strings.obStaffEndTime2: observationBooking[Strings.obStaffEndTime2],
+      Strings.obStaffEndTime3: observationBooking[Strings.obStaffEndTime3],
+      Strings.obStaffEndTime4: observationBooking[Strings.obStaffEndTime4],
+      Strings.obStaffEndTime5: observationBooking[Strings.obStaffEndTime5],
+      Strings.obStaffEndTime6: observationBooking[Strings.obStaffEndTime6],
+      Strings.obStaffEndTime7: observationBooking[Strings.obStaffEndTime7],
+      Strings.obStaffEndTime8: observationBooking[Strings.obStaffEndTime8],
+      Strings.obStaffEndTime9: observationBooking[Strings.obStaffEndTime9],
+      Strings.obStaffEndTime10: observationBooking[Strings.obStaffEndTime10],
+      Strings.obStaffEndTime11: observationBooking[Strings.obStaffEndTime11],
+      Strings.obStaffEndTime12: observationBooking[Strings.obStaffEndTime12],
+      Strings.obStaffEndTime13: observationBooking[Strings.obStaffEndTime13],
+      Strings.obStaffEndTime14: observationBooking[Strings.obStaffEndTime14],
+      Strings.obStaffEndTime15: observationBooking[Strings.obStaffEndTime15],
+      Strings.obStaffEndTime16: observationBooking[Strings.obStaffEndTime16],
+      Strings.obStaffEndTime17: observationBooking[Strings.obStaffEndTime17],
+      Strings.obStaffEndTime18: observationBooking[Strings.obStaffEndTime18],
+      Strings.obStaffEndTime19: observationBooking[Strings.obStaffEndTime19],
+      Strings.obStaffEndTime20: observationBooking[Strings.obStaffEndTime20],
+      Strings.obStaffName1: observationBooking[Strings.obStaffName1],
+      Strings.obStaffName2: observationBooking[Strings.obStaffName2],
+      Strings.obStaffName3: observationBooking[Strings.obStaffName3],
+      Strings.obStaffName4: observationBooking[Strings.obStaffName4],
+      Strings.obStaffName5: observationBooking[Strings.obStaffName5],
+      Strings.obStaffName6: observationBooking[Strings.obStaffName6],
+      Strings.obStaffName7: observationBooking[Strings.obStaffName7],
+      Strings.obStaffName8: observationBooking[Strings.obStaffName8],
+      Strings.obStaffName9: observationBooking[Strings.obStaffName9],
+      Strings.obStaffName10: observationBooking[Strings.obStaffName10],
+      Strings.obStaffName11: observationBooking[Strings.obStaffName11],
+      Strings.obStaffName12: observationBooking[Strings.obStaffName12],
+      Strings.obStaffName13: observationBooking[Strings.obStaffName13],
+      Strings.obStaffName14: observationBooking[Strings.obStaffName14],
+      Strings.obStaffName15: observationBooking[Strings.obStaffName15],
+      Strings.obStaffName16: observationBooking[Strings.obStaffName16],
+      Strings.obStaffName17: observationBooking[Strings.obStaffName17],
+      Strings.obStaffName18: observationBooking[Strings.obStaffName18],
+      Strings.obStaffName19: observationBooking[Strings.obStaffName19],
+      Strings.obStaffName20: observationBooking[Strings.obStaffName20],
+      Strings.obStaffRmn1: observationBooking[Strings.obStaffRmn1],
+      Strings.obStaffRmn2: observationBooking[Strings.obStaffRmn2],
+      Strings.obStaffRmn3: observationBooking[Strings.obStaffRmn3],
+      Strings.obStaffRmn4: observationBooking[Strings.obStaffRmn4],
+      Strings.obStaffRmn5: observationBooking[Strings.obStaffRmn5],
+      Strings.obStaffRmn6: observationBooking[Strings.obStaffRmn6],
+      Strings.obStaffRmn7: observationBooking[Strings.obStaffRmn7],
+      Strings.obStaffRmn8: observationBooking[Strings.obStaffRmn8],
+      Strings.obStaffRmn9: observationBooking[Strings.obStaffRmn9],
+      Strings.obStaffRmn10: observationBooking[Strings.obStaffRmn10],
+      Strings.obStaffRmn11: observationBooking[Strings.obStaffRmn11],
+      Strings.obStaffRmn12: observationBooking[Strings.obStaffRmn12],
+      Strings.obStaffRmn13: observationBooking[Strings.obStaffRmn13],
+      Strings.obStaffRmn14: observationBooking[Strings.obStaffRmn14],
+      Strings.obStaffRmn15: observationBooking[Strings.obStaffRmn15],
+      Strings.obStaffRmn16: observationBooking[Strings.obStaffRmn16],
+      Strings.obStaffRmn17: observationBooking[Strings.obStaffRmn17],
+      Strings.obStaffRmn18: observationBooking[Strings.obStaffRmn18],
+      Strings.obStaffRmn19: observationBooking[Strings.obStaffRmn19],
+      Strings.obStaffRmn20: observationBooking[Strings.obStaffRmn20],
+      Strings.obUsefulDetails: observationBooking[Strings.obUsefulDetails],
+    };
+
+    await _savedObservationBookingsStore.record(id).put(await _db,
+        localData);
+
+    message = 'Observation Booking saved to device';
+    success = true;
+
+    if(success) resetTemporaryRecord(jobId, false, 0);
+    GlobalFunctions.dismissLoadingDialog();
+    GlobalFunctions.showToast(message);
+    return success;
+  }
+
+  Future<void> deleteSavedRecord(int id) async {
+    await _savedObservationBookingsStore.record(id).delete(await _db);
+    _observationBookings.removeWhere((element) => element[Strings.localId] == id);
+    notifyListeners();
+  }
+
+  Future<void> getSavedRecordsList() async{
+
+    _isLoading = true;
+    notifyListeners();
+    String message = '';
+
+    List<Map<String, dynamic>> _fetchedRecordList = [];
+
+    try {
+
+      List<dynamic> records = await getSavedRecords();
+
+      if(records.length > 0){
+        for(var record in records){
+          _fetchedRecordList.add(record.value);
+        }
+
+        _observationBookings = List.from(_fetchedRecordList.reversed);
+      } else {
+        message = 'No saved records available';
+      }
+
+    } catch(e){
+      print(e);
+      message = 'Something went wrong. Please try again';
+
+    }
+    _isLoading = false;
+    notifyListeners();
+    _selObservationBookingId = null;
+    if(message != '') GlobalFunctions.showToast(message);
+
+  }
+
+  void resetTemporaryRecord(String chosenJobId, bool saved, int savedId) async {
+
+    Db.Finder finder;
+
+    if(saved){
+      finder = Db.Finder(filter: Db.Filter.equals(Strings.localId, savedId));
+    } else {
+      finder = Db.Finder(filter: Db.Filter.and(
+          [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, chosenJobId)]
+      ));
+    }
 
     await _temporaryObservationBookingsStore.update(await _db, {
       Strings.formVersion: 1,
@@ -406,13 +682,12 @@ class ObservationBookingModel extends ChangeNotifier {
     notifyListeners();
   }
 
-
-  Future<bool> validateObservationBooking(String jobId, bool edit) async {
+  Future<bool> validateObservationBooking(String jobId, bool edit, bool saved, int savedId) async {
 
     bool success = true;
 
     //Map<String, dynamic> observationBooking = await _databaseHelper.getTemporaryObservationBooking(edit, user.uid, jobId);
-    Map<String, dynamic> observationBooking = await getTemporaryRecord(edit, jobId);
+    Map<String, dynamic> observationBooking = await getTemporaryRecord(edit, jobId, saved, savedId);
 
 
     if(observationBooking[Strings.jobRef]== null || observationBooking[Strings.jobRef].toString().trim() == ''){
@@ -639,35 +914,15 @@ class ObservationBookingModel extends ChangeNotifier {
 
   }
 
-
-
-
-
-
-
-
-  Future<bool> submitObservationBooking(String jobId, [bool edit = false]) async {
+  Future<bool> submitObservationBooking(String jobId, bool edit, bool saved, int savedId) async {
 
     GlobalFunctions.showLoadingDialog('Submitting Observation Booking...');
     String message = '';
     bool success = false;
-
-    //Semabast
-    int count = await _observationBookingsStore.count(await _db);
-    //int count = await _databaseHelper.getRowCount(Strings.observationBookingTable);
-    int id;
-
-    if (count == 0) {
-      id = 1;
-    } else {
-      id = count + 1;
-    }
+    int id = DateTime.now().millisecondsSinceEpoch + int.parse(random_string.randomNumeric(2));
 
     //Sembast
-    Map<String, dynamic> observationBooking = await getTemporaryRecord(false, jobId);
-
-    //Map<String, dynamic> observationBooking = await _databaseHelper.getTemporaryObservationBooking(false, user.uid, jobId);
-
+    Map<String, dynamic> observationBooking = await getTemporaryRecord(false, jobId, saved, savedId);
 
     Map<String, dynamic> localData = {
       Strings.localId: id,
@@ -833,21 +1088,11 @@ class ObservationBookingModel extends ChangeNotifier {
     };
 
     //Sembast
-    int _id = DateTime.now().millisecondsSinceEpoch + int.parse(random_string.randomNumeric(2));
-    await _observationBookingsStore.record(_id).put(await _db,
+    await _observationBookingsStore.record(id).put(await _db,
         localData);
 
     message = 'Observation Booking has successfully been added to local database';
-
-    // int result = await _databaseHelper.add(Strings.observationBookingTable, localData);
-    //
-    // if (result != 0) {
-    //   message = 'Observation Booking has successfully been added to local database';
-    // }
-
-
     bool hasDataConnection = await GlobalFunctions.hasDataConnection();
-
 
     if(hasDataConnection){
 
@@ -861,10 +1106,6 @@ class ObservationBookingModel extends ChangeNotifier {
 
         try {
 
-          await GlobalFunctions.checkFirebaseStorageFail(_databaseHelper);
-
-
-          DocumentReference ref =
           await FirebaseFirestore.instance.collection('observation_bookings').add({
             Strings.uid: user.uid,
             Strings.jobId: '1',
@@ -1028,31 +1269,13 @@ class ObservationBookingModel extends ChangeNotifier {
           });
 
           //Sembast
-          await _observationBookingsStore.record(_id).delete(await _db);
+          await _observationBookingsStore.record(id).delete(await _db);
+          if(saved){
+            deleteSavedRecord(savedId);
+          }
           message = 'Observation Booking uploaded successfully';
           success = true;
 
-          // DocumentSnapshot snap = await ref.get();
-          //
-          //   Map<String, dynamic> localData = {
-          //     Strings.documentId: snap.id,
-          //     Strings.serverUploaded: 1,
-          //     'timestamp': DateTime.fromMillisecondsSinceEpoch(snap.data()[Strings.timestamp].millisecondsSinceEpoch).toIso8601String()
-          //   };
-          //
-          //   int queryResult = await _databaseHelper.updateRow(
-          //       Strings.observationBookingTable,
-          //       localData,
-          //       Strings.localId,
-          //       id);
-          //
-          //   if (queryResult != 0) {
-          //     success = true;
-          //     message = 'Observation Booking uploaded successfully';
-          //   } else {
-          //     message =
-          //     'Observation Booking uploaded successfully to the server';
-          //   }
 
         } on TimeoutException catch (_) {
           // A timeout occurred.
@@ -1073,11 +1296,14 @@ class ObservationBookingModel extends ChangeNotifier {
 
     }
 
-    if(success) resetTemporaryRecord(jobId);
-    //if(success) resetTemporaryObservationBooking(jobId);
+    //Sembast
+    if(success) resetTemporaryRecord(jobId, saved, savedId);
     GlobalFunctions.dismissLoadingDialog();
     if(edit){
       _navigationService.goBack();
+      _navigationService.goBack();
+    }
+    if(saved){
       _navigationService.goBack();
     }
     GlobalFunctions.showToast(message);
@@ -1092,7 +1318,7 @@ class ObservationBookingModel extends ChangeNotifier {
     String message = '';
     bool success = false;
 
-    Map<String, dynamic> observationBooking = await getTemporaryRecord(true, jobId);
+    Map<String, dynamic> observationBooking = await getTemporaryRecord(true, jobId, false, 0);
 
     //Map<String, dynamic> observationBooking = await _databaseHelper.getTemporaryObservationBooking(true, user.uid, jobId);
 
@@ -1112,7 +1338,6 @@ class ObservationBookingModel extends ChangeNotifier {
         try {
 
           await FirebaseFirestore.instance.collection('observation_bookings').doc(observationBooking[Strings.documentId]).update({
-            Strings.uid: user.uid,
             Strings.jobId: '1',
             Strings.formVersion: '1',
             Strings.jobRef: GlobalFunctions.databaseValueString(observationBooking[Strings.jobRef]),
@@ -1269,197 +1494,20 @@ class ObservationBookingModel extends ChangeNotifier {
             Strings.obStaffRmn19: observationBooking[Strings.obStaffRmn19],
             Strings.obStaffRmn20: observationBooking[Strings.obStaffRmn20],
             Strings.obUsefulDetails: observationBooking[Strings.obUsefulDetails],
-            Strings.timestamp: FieldValue.serverTimestamp(),
             Strings.serverUploaded: 1,
           });
 
           //Sembast
 
           final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
-              [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, jobId)]
+              [Db.Filter.equals(Strings.documentId, selectedObservationBooking[Strings.documentId]), Db.Filter.equals(Strings.jobId, jobId)]
           ));
 
-
-          await _observationBookingsStore.delete(await _db,
+          await _editedObservationBookingsStore.delete(await _db,
               finder: finder);
           message = 'Observation Booking uploaded successfully';
           success = true;
-
-          // Map<String, dynamic> localData = {
-          //   Strings.documentId: observationBooking[Strings.documentId],
-          //   Strings.uid: observationBooking[Strings.uid],
-          //   Strings.jobId: observationBooking[Strings.jobId],
-          //   Strings.formVersion: observationBooking[Strings.formVersion],
-          //   Strings.jobRef: observationBooking[Strings.jobRef],
-          //   Strings.obRequestedBy: observationBooking[Strings.obRequestedBy],
-          //   Strings.obJobTitle: observationBooking[Strings.obJobTitle],
-          //   Strings.obJobContact: observationBooking[Strings.obJobContact],
-          //   Strings.obJobAuthorisingManager: observationBooking[Strings.obJobAuthorisingManager],
-          //   Strings.obJobDate: observationBooking[Strings.obJobDate],
-          //   Strings.obJobTime: observationBooking[Strings.obJobTime],
-          //   Strings.obBookingCoordinator: observationBooking[Strings.obBookingCoordinator],
-          //   Strings.obPatientLocation: observationBooking[Strings.obPatientLocation],
-          //   Strings.obPostcode: observationBooking[Strings.obPostcode],
-          //   Strings.obLocationTel: observationBooking[Strings.obLocationTel],
-          //   Strings.obInvoiceDetails: observationBooking[Strings.obInvoiceDetails],
-          //   Strings.obCostCode: observationBooking[Strings.obCostCode],
-          //   Strings.obPurchaseOrder: observationBooking[Strings.obPurchaseOrder],
-          //   Strings.obStartDateTime: observationBooking[Strings.obStartDateTime],
-          //   Strings.obMhaAssessmentYes: observationBooking[Strings.obMhaAssessmentYes],
-          //   Strings.obMhaAssessmentNo: observationBooking[Strings.obMhaAssessmentNo],
-          //   Strings.obBedIdentifiedYes: observationBooking[Strings.obBedIdentifiedYes],
-          //   Strings.obBedIdentifiedNo: observationBooking[Strings.obBedIdentifiedNo],
-          //   Strings.obWrapDocumentationYes: observationBooking[Strings.obWrapDocumentationYes],
-          //   Strings.obWrapDocumentationNo: observationBooking[Strings.obWrapDocumentationNo],
-          //   Strings.obShiftRequired: observationBooking[Strings.obShiftRequired],
-          //   Strings.obPatientName: observationBooking[Strings.obPatientName],
-          //   Strings.obLegalStatus: observationBooking[Strings.obLegalStatus],
-          //   Strings.obDateOfBirth: observationBooking[Strings.obDateOfBirth],
-          //   Strings.obNhsNumber: observationBooking[Strings.obNhsNumber],
-          //   Strings.obGender: observationBooking[Strings.obGender],
-          //   Strings.obEthnicity: observationBooking[Strings.obEthnicity],
-          //   Strings.obCovidStatus: observationBooking[Strings.obCovidStatus],
-          //   Strings.obRmn: observationBooking[Strings.obRmn],
-          //   Strings.obHca: observationBooking[Strings.obHca],
-          //   Strings.obHca1: observationBooking[Strings.obHca1],
-          //   Strings.obHca2: observationBooking[Strings.obHca2],
-          //   Strings.obHca3: observationBooking[Strings.obHca3],
-          //   Strings.obHca4: observationBooking[Strings.obHca4],
-          //   Strings.obHca5: observationBooking[Strings.obHca5],
-          //   Strings.obCurrentPresentation: observationBooking[Strings.obCurrentPresentation],
-          //   Strings.obSpecificCarePlanYes: observationBooking[Strings.obSpecificCarePlanYes],
-          //   Strings.obSpecificCarePlanNo: observationBooking[Strings.obSpecificCarePlanNo],
-          //   Strings.obSpecificCarePlan: observationBooking[Strings.obSpecificCarePlan],
-          //   Strings.obPatientWarningsYes: observationBooking[Strings.obPatientWarningsYes],
-          //   Strings.obPatientWarningsNo: observationBooking[Strings.obPatientWarningsNo],
-          //   Strings.obPatientWarnings: observationBooking[Strings.obPatientWarnings],
-          //   Strings.obPresentingRisks: observationBooking[Strings.obPresentingRisks],
-          //   Strings.obPreviousRisks: observationBooking[Strings.obPreviousRisks],
-          //   Strings.obGenderConcernsYes: observationBooking[Strings.obGenderConcernsYes],
-          //   Strings.obGenderConcernsNo: observationBooking[Strings.obGenderConcernsNo],
-          //   Strings.obGenderConcerns: observationBooking[Strings.obGenderConcerns],
-          //   Strings.obSafeguardingConcernsYes: observationBooking[Strings.obSafeguardingConcernsYes],
-          //   Strings.obSafeguardingConcernsNo: observationBooking[Strings.obSafeguardingConcernsNo],
-          //   Strings.obSafeguardingConcerns: observationBooking[Strings.obSafeguardingConcerns],
-          //   Strings.obTimeDue: observationBooking[Strings.obTimeDue],
-          //   Strings.obStaffDate1: observationBooking[Strings.obStaffDate1],
-          //   Strings.obStaffDate2: observationBooking[Strings.obStaffDate2],
-          //   Strings.obStaffDate3: observationBooking[Strings.obStaffDate3],
-          //   Strings.obStaffDate4: observationBooking[Strings.obStaffDate4],
-          //   Strings.obStaffDate5: observationBooking[Strings.obStaffDate5],
-          //   Strings.obStaffDate6: observationBooking[Strings.obStaffDate6],
-          //   Strings.obStaffDate7: observationBooking[Strings.obStaffDate7],
-          //   Strings.obStaffDate8: observationBooking[Strings.obStaffDate8],
-          //   Strings.obStaffDate9: observationBooking[Strings.obStaffDate9],
-          //   Strings.obStaffDate10: observationBooking[Strings.obStaffDate10],
-          //   Strings.obStaffDate11: observationBooking[Strings.obStaffDate11],
-          //   Strings.obStaffDate12: observationBooking[Strings.obStaffDate12],
-          //   Strings.obStaffDate13: observationBooking[Strings.obStaffDate13],
-          //   Strings.obStaffDate14: observationBooking[Strings.obStaffDate14],
-          //   Strings.obStaffDate15: observationBooking[Strings.obStaffDate15],
-          //   Strings.obStaffDate16: observationBooking[Strings.obStaffDate16],
-          //   Strings.obStaffDate17: observationBooking[Strings.obStaffDate17],
-          //   Strings.obStaffDate18: observationBooking[Strings.obStaffDate18],
-          //   Strings.obStaffDate19: observationBooking[Strings.obStaffDate19],
-          //   Strings.obStaffDate20: observationBooking[Strings.obStaffDate20],
-          //   Strings.obStaffStartTime1: observationBooking[Strings.obStaffStartTime1],
-          //   Strings.obStaffStartTime2: observationBooking[Strings.obStaffStartTime2],
-          //   Strings.obStaffStartTime3: observationBooking[Strings.obStaffStartTime3],
-          //   Strings.obStaffStartTime4: observationBooking[Strings.obStaffStartTime4],
-          //   Strings.obStaffStartTime5: observationBooking[Strings.obStaffStartTime5],
-          //   Strings.obStaffStartTime6: observationBooking[Strings.obStaffStartTime6],
-          //   Strings.obStaffStartTime7: observationBooking[Strings.obStaffStartTime7],
-          //   Strings.obStaffStartTime8: observationBooking[Strings.obStaffStartTime8],
-          //   Strings.obStaffStartTime9: observationBooking[Strings.obStaffStartTime9],
-          //   Strings.obStaffStartTime10: observationBooking[Strings.obStaffStartTime10],
-          //   Strings.obStaffStartTime11: observationBooking[Strings.obStaffStartTime11],
-          //   Strings.obStaffStartTime12: observationBooking[Strings.obStaffStartTime12],
-          //   Strings.obStaffStartTime13: observationBooking[Strings.obStaffStartTime13],
-          //   Strings.obStaffStartTime14: observationBooking[Strings.obStaffStartTime14],
-          //   Strings.obStaffStartTime15: observationBooking[Strings.obStaffStartTime15],
-          //   Strings.obStaffStartTime16: observationBooking[Strings.obStaffStartTime16],
-          //   Strings.obStaffStartTime17: observationBooking[Strings.obStaffStartTime17],
-          //   Strings.obStaffStartTime18: observationBooking[Strings.obStaffStartTime18],
-          //   Strings.obStaffStartTime19: observationBooking[Strings.obStaffStartTime19],
-          //   Strings.obStaffStartTime20: observationBooking[Strings.obStaffStartTime20],
-          //   Strings.obStaffEndTime1: observationBooking[Strings.obStaffEndTime1],
-          //   Strings.obStaffEndTime2: observationBooking[Strings.obStaffEndTime2],
-          //   Strings.obStaffEndTime3: observationBooking[Strings.obStaffEndTime3],
-          //   Strings.obStaffEndTime4: observationBooking[Strings.obStaffEndTime4],
-          //   Strings.obStaffEndTime5: observationBooking[Strings.obStaffEndTime5],
-          //   Strings.obStaffEndTime6: observationBooking[Strings.obStaffEndTime6],
-          //   Strings.obStaffEndTime7: observationBooking[Strings.obStaffEndTime7],
-          //   Strings.obStaffEndTime8: observationBooking[Strings.obStaffEndTime8],
-          //   Strings.obStaffEndTime9: observationBooking[Strings.obStaffEndTime9],
-          //   Strings.obStaffEndTime10: observationBooking[Strings.obStaffEndTime10],
-          //   Strings.obStaffEndTime11: observationBooking[Strings.obStaffEndTime11],
-          //   Strings.obStaffEndTime12: observationBooking[Strings.obStaffEndTime12],
-          //   Strings.obStaffEndTime13: observationBooking[Strings.obStaffEndTime13],
-          //   Strings.obStaffEndTime14: observationBooking[Strings.obStaffEndTime14],
-          //   Strings.obStaffEndTime15: observationBooking[Strings.obStaffEndTime15],
-          //   Strings.obStaffEndTime16: observationBooking[Strings.obStaffEndTime16],
-          //   Strings.obStaffEndTime17: observationBooking[Strings.obStaffEndTime17],
-          //   Strings.obStaffEndTime18: observationBooking[Strings.obStaffEndTime18],
-          //   Strings.obStaffEndTime19: observationBooking[Strings.obStaffEndTime19],
-          //   Strings.obStaffEndTime20: observationBooking[Strings.obStaffEndTime20],
-          //   Strings.obStaffName1: observationBooking[Strings.obStaffName1],
-          //   Strings.obStaffName2: observationBooking[Strings.obStaffName2],
-          //   Strings.obStaffName3: observationBooking[Strings.obStaffName3],
-          //   Strings.obStaffName4: observationBooking[Strings.obStaffName4],
-          //   Strings.obStaffName5: observationBooking[Strings.obStaffName5],
-          //   Strings.obStaffName6: observationBooking[Strings.obStaffName6],
-          //   Strings.obStaffName7: observationBooking[Strings.obStaffName7],
-          //   Strings.obStaffName8: observationBooking[Strings.obStaffName8],
-          //   Strings.obStaffName9: observationBooking[Strings.obStaffName9],
-          //   Strings.obStaffName10: observationBooking[Strings.obStaffName10],
-          //   Strings.obStaffName11: observationBooking[Strings.obStaffName11],
-          //   Strings.obStaffName12: observationBooking[Strings.obStaffName12],
-          //   Strings.obStaffName13: observationBooking[Strings.obStaffName13],
-          //   Strings.obStaffName14: observationBooking[Strings.obStaffName14],
-          //   Strings.obStaffName15: observationBooking[Strings.obStaffName15],
-          //   Strings.obStaffName16: observationBooking[Strings.obStaffName16],
-          //   Strings.obStaffName17: observationBooking[Strings.obStaffName17],
-          //   Strings.obStaffName18: observationBooking[Strings.obStaffName18],
-          //   Strings.obStaffName19: observationBooking[Strings.obStaffName19],
-          //   Strings.obStaffName20: observationBooking[Strings.obStaffName20],
-          //   Strings.obStaffRmn1: observationBooking[Strings.obStaffRmn1],
-          //   Strings.obStaffRmn2: observationBooking[Strings.obStaffRmn2],
-          //   Strings.obStaffRmn3: observationBooking[Strings.obStaffRmn3],
-          //   Strings.obStaffRmn4: observationBooking[Strings.obStaffRmn4],
-          //   Strings.obStaffRmn5: observationBooking[Strings.obStaffRmn5],
-          //   Strings.obStaffRmn6: observationBooking[Strings.obStaffRmn6],
-          //   Strings.obStaffRmn7: observationBooking[Strings.obStaffRmn7],
-          //   Strings.obStaffRmn8: observationBooking[Strings.obStaffRmn8],
-          //   Strings.obStaffRmn9: observationBooking[Strings.obStaffRmn9],
-          //   Strings.obStaffRmn10: observationBooking[Strings.obStaffRmn10],
-          //   Strings.obStaffRmn11: observationBooking[Strings.obStaffRmn11],
-          //   Strings.obStaffRmn12: observationBooking[Strings.obStaffRmn12],
-          //   Strings.obStaffRmn13: observationBooking[Strings.obStaffRmn13],
-          //   Strings.obStaffRmn14: observationBooking[Strings.obStaffRmn14],
-          //   Strings.obStaffRmn15: observationBooking[Strings.obStaffRmn15],
-          //   Strings.obStaffRmn16: observationBooking[Strings.obStaffRmn16],
-          //   Strings.obStaffRmn17: observationBooking[Strings.obStaffRmn17],
-          //   Strings.obStaffRmn18: observationBooking[Strings.obStaffRmn18],
-          //   Strings.obStaffRmn19: observationBooking[Strings.obStaffRmn19],
-          //   Strings.obStaffRmn20: observationBooking[Strings.obStaffRmn20],
-          //   Strings.obUsefulDetails: observationBooking[Strings.obUsefulDetails],
-          // };
-          //
-          // int queryResult = await _databaseHelper.updateRow(
-          //     Strings.observationBookingTable,
-          //     localData,
-          //     Strings.documentId,
-          //     observationBooking[Strings.documentId]);
-          //
-          // if (queryResult != 0) {
-          //   success = true;
-          //   message = 'Observation Booking uploaded successfully';
-          // } else {
-          //   message =
-          //   'Observation Booking uploaded successfully to the server';
-          // }
-
-
+          getObservationBookings();
 
         } on TimeoutException catch (_) {
           // A timeout occurred.
@@ -1498,7 +1546,6 @@ class ObservationBookingModel extends ChangeNotifier {
     String message = '';
 
     List<Map<String, dynamic>> _fetchedObservationBookingList = [];
-    DatabaseHelper databaseHelper = DatabaseHelper();
 
     try {
 
@@ -1508,50 +1555,6 @@ class ObservationBookingModel extends ChangeNotifier {
 
         GlobalFunctions.showToast('No data connection, unable to fetch Observation Bookings');
         _observationBookings = [];
-
-        // int localChecklistCount;
-        //
-        // if(user.role == 'Super User'){
-        //   localChecklistCount = await databaseHelper.getRowCountWhere(Strings.observationBookingTable, Strings.serverUploaded, 1);
-        //
-        // } else {
-        //   localChecklistCount = await databaseHelper.getRowCountWhereAndWhere(Strings.observationBookingTable, Strings.serverUploaded, 1, Strings.uid, user.uid);
-        //
-        // }
-        //
-        //
-        // if (localChecklistCount > 0) {
-        //
-        //   List<Map<String, dynamic>> localRecords = [];
-        //
-        //   if(user.role == 'Super User'){
-        //     localRecords = await databaseHelper.getRowsWhereOrderByDirection(Strings.observationBookingTable, Strings.serverUploaded, 1, Strings.timestamp, 'DESC');
-        //
-        //   } else {
-        //     localRecords = await databaseHelper.getRowsWhereAndWhereOrderByDirection(Strings.observationBookingTable, Strings.serverUploaded, 1, Strings.uid, user.uid, Strings.timestamp, 'DESC');
-        //
-        //   }
-        //
-        //
-        //   if(localRecords.length >0){
-        //
-        //     for (Map<String, dynamic> localRecord in localRecords) {
-        //
-        //       final Map<String, dynamic> observationBooking = localObservationBooking(localRecord);
-        //
-        //       _fetchedObservationBookingList.add(observationBooking);
-        //     }
-        //
-        //     _observationBookings = _fetchedObservationBookingList;
-        //     message = 'No data connection, unable to fetch latest Observation Bookings';
-        //
-        //   }
-        //
-        // } else {
-        //   _observationBookings = [];
-        //   message = 'No Observation Bookings available, please try again when you have a data connection';
-        // }
-
 
       } else {
 
@@ -1598,27 +1601,6 @@ class ObservationBookingModel extends ChangeNotifier {
 
               _fetchedObservationBookingList.add(observationBooking);
 
-              // Map<String, dynamic> localData = Map.from(observationBooking);
-              // int queryResult;
-              //
-              // int existingObservationBooking = await databaseHelper.checkObservationBookingExists(snap.id);
-              //
-              // if (existingObservationBooking == 0) {
-              //
-              //   queryResult = await databaseHelper.add(Strings.observationBookingTable, localData);
-              // } else {
-              //
-              //   queryResult = await databaseHelper.updateRow(Strings.observationBookingTable, localData, Strings.documentId, snap.id);
-              //
-              // }
-              //
-              // if (queryResult != 0) {
-              //
-              //   print('added to local db');
-              // } else {
-              //   print('issue with local db');
-              // }
-
             }
 
             _observationBookings = _fetchedObservationBookingList;
@@ -1651,7 +1633,6 @@ class ObservationBookingModel extends ChangeNotifier {
     String message = '';
 
     List<Map<String, dynamic>> _fetchedObservationBookingList = [];
-    DatabaseHelper databaseHelper = DatabaseHelper();
 
     try {
 
@@ -1713,27 +1694,6 @@ class ObservationBookingModel extends ChangeNotifier {
               final Map<String, dynamic> observationBooking = onlineObservationBooking(snapshotData, snap.id);
 
               _fetchedObservationBookingList.add(observationBooking);
-
-              // Map<String, dynamic> localData = Map.from(observationBooking);
-              // int queryResult;
-              //
-              // int existingObservationBooking = await databaseHelper.checkObservationBookingExists(snap.id);
-              //
-              // if (existingObservationBooking == 0) {
-              //
-              //   queryResult = await databaseHelper.add(Strings.observationBookingTable, localData);
-              // } else {
-              //
-              //   queryResult = await databaseHelper.updateRow(Strings.observationBookingTable, localData, Strings.documentId, snap.id);
-              //
-              // }
-              //
-              // if (queryResult != 0) {
-              //
-              //   print('added to local db');
-              // } else {
-              //   print('issue with local db');
-              // }
 
             }
 
@@ -2898,1615 +2858,6 @@ class ObservationBookingModel extends ChangeNotifier {
     notifyListeners();
   }
 
-//   Future<bool> sharePdf(ShareOption option, [List<String> emailList]) async {
-//
-//     bool success = false;
-//     final dateFormat = DateFormat("dd/MM/yyyy");
-//     final dateTimeFormat = DateFormat("dd/MM/yyyy HH:mm");
-//     final timeFormat = DateFormat("HH:mm");
-//     final ByteData fontData = await rootBundle.load("assets/fonts/OpenSans-Regular.ttf");
-//     final Font ttf = Font.ttf(fontData.buffer.asByteData());
-//     final ByteData fontDataBold = await rootBundle.load("assets/fonts/OpenSans-Bold.ttf");
-//     final Font ttfBold = Font.ttf(fontDataBold.buffer.asByteData());
-//
-//     Widget textField(TextOption option, String value, [double width = 120, double minHeight = 20, double maxHeight]) {
-//
-//
-//       if(option == TextOption.Date){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = dateFormat.format(DateTime.parse(value));
-//         }
-//       } else if(option == TextOption.PlainText){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = value;
-//         }
-//       } else if(option == TextOption.EncryptedText){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = GlobalFunctions.decryptString(value);
-//         }
-//       } else if(option == TextOption.Time){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = timeFormat.format(DateTime.parse(value));
-//         }
-//       } else if(option == TextOption.EncryptedDate){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = dateFormat.format(DateTime.parse(GlobalFunctions.decryptString(value)));
-//         }
-//       } else if(option == TextOption.EncryptedText){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = GlobalFunctions.decryptString(value);
-//         }
-//       }
-//
-//       return ConstrainedBox(constraints: maxHeight == null ? BoxConstraints(minHeight: minHeight) : BoxConstraints(minHeight: minHeight, maxHeight: maxHeight),
-//           child: Container(
-//             width: width,
-//             padding: const EdgeInsets.all(5),
-//             decoration: BoxDecoration(
-//               borderRadius: 5,
-//               border: BoxBorder(
-//                 top: true,
-//                 left: true,
-//                 right: true,
-//                 bottom: true,
-//                 width: 1,
-//                 color: PdfColors.grey,
-//               ),
-//             ),
-//             child: Column(
-//               mainAxisSize: MainAxisSize.min,
-//               crossAxisAlignment: CrossAxisAlignment.start,
-//               children: <Widget>[
-//                 Text(value, style: TextStyle(fontSize: 8)),
-//               ],
-//             ),
-//           ));
-//     }
-//
-//     Widget singleLineFieldSmall(String text, String value){
-//       return Column(
-//           children: [
-//             Row(
-//                 children: [
-//                   Container(width: 90, child: Text(text, style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8))),
-//                   SizedBox(width: 5),
-//                   ConstrainedBox(constraints: BoxConstraints(minHeight: 20),
-//                       child: Container(
-//                         width: 100,
-//                         padding: const EdgeInsets.all(5),
-//                         decoration: BoxDecoration(
-//                           borderRadius: 5,
-//                           border: BoxBorder(
-//                             top: true,
-//                             left: true,
-//                             right: true,
-//                             bottom: true,
-//                             width: 1,
-//                             color: PdfColors.grey,
-//                           ),
-//                         ),
-//                         child: Column(
-//                           mainAxisSize: MainAxisSize.min,
-//                           crossAxisAlignment: CrossAxisAlignment.start,
-//                           children: <Widget>[
-//                             Text(value == null ? '' : value, style: TextStyle(fontSize: 8)),
-//                           ],
-//                         ),
-//                       )),
-//                 ]
-//             ),
-//             Container(height: 4)
-//           ]
-//       );
-//     }
-//
-//     Widget singleLineField(String text, String value, [TextOption option = TextOption.EncryptedText, bool small = false]){
-//
-//       if(option == TextOption.Date){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = dateFormat.format(DateTime.parse(value));
-//         }
-//       } else if(option == TextOption.PlainText){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = value;
-//         }
-//       } else if(option == TextOption.EncryptedText){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = GlobalFunctions.decryptString(value);
-//         }
-//       } else if(option == TextOption.Time){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = timeFormat.format(DateTime.parse(value));
-//         }
-//       } else if(option == TextOption.EncryptedDate){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = dateFormat.format(DateTime.parse(GlobalFunctions.decryptString(value)));
-//         }
-//       } else if(option == TextOption.EncryptedText){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = GlobalFunctions.decryptString(value);
-//         }
-//       }
-//
-//
-//
-//       return Column(
-//           children: [
-//             Row(
-//                 children: [
-//                   Container(width: 90, child: Text(text, style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8))),
-//                   SizedBox(width: 5),
-//                   small ? ConstrainedBox(constraints: BoxConstraints(minHeight: 20),
-//                       child: Container(
-//                         width: 100,
-//                         padding: const EdgeInsets.all(5),
-//                         decoration: BoxDecoration(
-//                           borderRadius: 5,
-//                           border: BoxBorder(
-//                             top: true,
-//                             left: true,
-//                             right: true,
-//                             bottom: true,
-//                             width: 1,
-//                             color: PdfColors.grey,
-//                           ),
-//                         ),
-//                         child: Column(
-//                           mainAxisSize: MainAxisSize.min,
-//                           crossAxisAlignment: CrossAxisAlignment.start,
-//                           children: <Widget>[
-//                             Text(value == null ? '' : value, style: TextStyle(fontSize: 8)),
-//                           ],
-//                         ),
-//                       )) :Expanded(child: ConstrainedBox(constraints: BoxConstraints(minHeight: 20),
-//                       child: Container(
-//                         padding: const EdgeInsets.all(5),
-//                         decoration: BoxDecoration(
-//                           borderRadius: 5,
-//                           border: BoxBorder(
-//                             top: true,
-//                             left: true,
-//                             right: true,
-//                             bottom: true,
-//                             width: 1,
-//                             color: PdfColors.grey,
-//                           ),
-//                         ),
-//                         child: Column(
-//                           mainAxisSize: MainAxisSize.min,
-//                           crossAxisAlignment: CrossAxisAlignment.start,
-//                           children: <Widget>[
-//                             Text(value == null ? '' : value, style: TextStyle(fontSize: 8)),
-//                           ],
-//                         ),
-//                       ))),
-//                 ]
-//             ),
-//             Container(height: 4)
-//           ]
-//       );
-//     }
-//
-//     Widget doubleLineField(String text1, String value1, String text2, String value2, [TextOption option1 = TextOption.EncryptedText, TextOption option2 = TextOption.EncryptedText, FlutterImage.Image signature, PdfDocument doc]){
-//
-//       if(option1 == TextOption.Date){
-//         if(value1 == null){
-//           value1 = '';
-//         } else {
-//           value1 = dateFormat.format(DateTime.parse(value1));
-//         }
-//       } else if(option1 == TextOption.PlainText){
-//         if(value1 == null){
-//           value1 = '';
-//         } else {
-//           value1 = value1;
-//         }
-//       } else if(option1 == TextOption.EncryptedText){
-//         if(value1 == null){
-//           value1 = '';
-//         } else {
-//           value1 = GlobalFunctions.decryptString(value1);
-//         }
-//       } else if(option1 == TextOption.Time){
-//         if(value1 == null){
-//           value1 = '';
-//         } else {
-//           value1 = timeFormat.format(DateTime.parse(value1));
-//         }
-//       } else if(option1 == TextOption.EncryptedDate){
-//         if(value1 == null){
-//           value1 = '';
-//         } else {
-//           value1 = dateFormat.format(DateTime.parse(GlobalFunctions.decryptString(value1)));
-//         }
-//       } else if(option1 == TextOption.EncryptedText){
-//         if(value1 == null){
-//           value1 = '';
-//         } else {
-//           value1 = GlobalFunctions.decryptString(value1);
-//         }
-//       }
-//
-//       if(option2 == TextOption.Date){
-//         if(value2 == null){
-//           value2 = '';
-//         } else {
-//           value2 = dateFormat.format(DateTime.parse(value2));
-//         }
-//       } else if(option2 == TextOption.PlainText){
-//         if(value2 == null){
-//           value2 = '';
-//         } else {
-//           value2 = value2;
-//         }
-//       } else if(option2 == TextOption.EncryptedText){
-//         if(value2 == null){
-//           value2 = '';
-//         } else {
-//           value2 = GlobalFunctions.decryptString(value2);
-//         }
-//       } else if(option2 == TextOption.Time){
-//         if(value2 == null){
-//           value2 = '';
-//         } else {
-//           value2 = timeFormat.format(DateTime.parse(value2));
-//         }
-//       } else if(option2 == TextOption.EncryptedDate){
-//         if(value2 == null){
-//           value2 = '';
-//         } else {
-//           value2 = dateFormat.format(DateTime.parse(GlobalFunctions.decryptString(value2)));
-//         }
-//       } else if(option2 == TextOption.EncryptedText){
-//         if(value2 == null){
-//           value2 = '';
-//         } else {
-//           value2 = GlobalFunctions.decryptString(value2);
-//         }
-//       }
-//
-//
-//
-//       return Column(
-//           children: [
-//             Row(
-//                 children: [
-//                   Container(width: 90, child: Text(text1, style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8))),
-//                   SizedBox(width: 5),
-//                   Expanded(child: ConstrainedBox(constraints: BoxConstraints(minHeight: 20),
-//                       child: Container(
-//                         padding: const EdgeInsets.all(3),
-//                         decoration: BoxDecoration(
-//                           borderRadius: 5,
-//                           border: BoxBorder(
-//                             top: true,
-//                             left: true,
-//                             right: true,
-//                             bottom: true,
-//                             width: 1,
-//                             color: PdfColors.grey,
-//                           ),
-//                         ),
-//                         child: Column(
-//                           mainAxisSize: MainAxisSize.min,
-//                           crossAxisAlignment: CrossAxisAlignment.start,
-//                           children: <Widget>[
-//                             value1 == 'signature' && signature != null ? Container(height: 20, child: FittedBox(alignment: Alignment.centerLeft, child: Image(PdfImage(doc,
-//                                 image: signature.data.buffer
-//                                     .asUint8List(),
-//                                 width: signature.width,
-//                                 height: signature.height)))) : Text(value1 == null || value1 == 'signature' ? '' : value1, style: TextStyle(fontSize: 8))
-//                           ],
-//                         ),
-//                       ))),
-//                   SizedBox(width: 10),
-//                   Container(width: 90, child: Text(text2, style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8))),
-//                   SizedBox(width: 5),
-//                   Expanded(child: ConstrainedBox(constraints: BoxConstraints(minHeight: 20),
-//                       child: Container(
-//                         padding: const EdgeInsets.all(3),
-//                         decoration: BoxDecoration(
-//                           borderRadius: 5,
-//                           border: BoxBorder(
-//                             top: true,
-//                             left: true,
-//                             right: true,
-//                             bottom: true,
-//                             width: 1,
-//                             color: PdfColors.grey,
-//                           ),
-//                         ),
-//                         child: Column(
-//                           mainAxisSize: MainAxisSize.min,
-//                           crossAxisAlignment: CrossAxisAlignment.start,
-//                           children: <Widget>[
-//                             value2 == 'signature' && signature != null ? Container(height: 20, child: FittedBox(alignment: Alignment.centerLeft, child: Image(PdfImage(doc,
-//                                 image: signature.data.buffer
-//                                     .asUint8List(),
-//                                 width: signature.width,
-//                                 height: signature.height)))) : Text(value2 == null || value2 == 'signature' ? '' : value2, style: TextStyle(fontSize: 8)),
-//                           ],
-//                         ),
-//                       ))),
-//                 ]
-//             ),
-//             Container(height: 4)
-//           ]
-//       );
-//     }
-//
-//     Widget tripleLineField(String text1, String value1, String text2, String value2, String text3, String value3, [TextOption option1 = TextOption.EncryptedText, TextOption option2 = TextOption.EncryptedText, TextOption option3 = TextOption.EncryptedText, FlutterImage.Image signature, PdfDocument doc]){
-//
-//       if(option1 == TextOption.Date){
-//         if(value1 == null){
-//           value1 = '';
-//         } else {
-//           value1 = dateFormat.format(DateTime.parse(value1));
-//         }
-//       } else if(option1 == TextOption.PlainText){
-//         if(value1 == null){
-//           value1 = '';
-//         } else {
-//           value1 = value1;
-//         }
-//       } else if(option1 == TextOption.EncryptedText){
-//         if(value1 == null){
-//           value1 = '';
-//         } else {
-//           value1 = GlobalFunctions.decryptString(value1);
-//         }
-//       } else if(option1 == TextOption.Time){
-//         if(value1 == null){
-//           value1 = '';
-//         } else {
-//           value1 = timeFormat.format(DateTime.parse(value1));
-//         }
-//       } else if(option1 == TextOption.EncryptedDate){
-//         if(value1 == null){
-//           value1 = '';
-//         } else {
-//           value1 = dateFormat.format(DateTime.parse(GlobalFunctions.decryptString(value1)));
-//         }
-//       } else if(option1 == TextOption.EncryptedText){
-//         if(value1 == null){
-//           value1 = '';
-//         } else {
-//           value1 = GlobalFunctions.decryptString(value1);
-//         }
-//       }
-//
-//       if(option2 == TextOption.Date){
-//         if(value2 == null){
-//           value2 = '';
-//         } else {
-//           value2 = dateFormat.format(DateTime.parse(value2));
-//         }
-//       } else if(option2 == TextOption.PlainText){
-//         if(value2 == null){
-//           value2 = '';
-//         } else {
-//           value2 = value2;
-//         }
-//       } else if(option2 == TextOption.EncryptedText){
-//         if(value2 == null){
-//           value2 = '';
-//         } else {
-//           value2 = GlobalFunctions.decryptString(value2);
-//         }
-//       } else if(option2 == TextOption.Time){
-//         if(value2 == null){
-//           value2 = '';
-//         } else {
-//           value2 = timeFormat.format(DateTime.parse(value2));
-//         }
-//       } else if(option2 == TextOption.EncryptedDate){
-//         if(value2 == null){
-//           value2 = '';
-//         } else {
-//           value2 = dateFormat.format(DateTime.parse(GlobalFunctions.decryptString(value2)));
-//         }
-//       } else if(option2 == TextOption.EncryptedText){
-//         if(value2 == null){
-//           value2 = '';
-//         } else {
-//           value2 = GlobalFunctions.decryptString(value2);
-//         }
-//       }
-//
-//       if(option3 == TextOption.Date){
-//         if(value3 == null){
-//           value3 = '';
-//         } else {
-//           value3 = dateFormat.format(DateTime.parse(value3));
-//         }
-//       } else if(option3 == TextOption.PlainText){
-//         if(value3 == null){
-//           value3 = '';
-//         } else {
-//           value3 = value3;
-//         }
-//       } else if(option3 == TextOption.EncryptedText){
-//         if(value3 == null){
-//           value3 = '';
-//         } else {
-//           value3 = GlobalFunctions.decryptString(value3);
-//         }
-//       } else if(option3 == TextOption.Time){
-//         if(value3 == null){
-//           value3 = '';
-//         } else {
-//           value3 = timeFormat.format(DateTime.parse(value3));
-//         }
-//       } else if(option3 == TextOption.EncryptedDate){
-//         if(value3 == null){
-//           value3 = '';
-//         } else {
-//           value3 = dateFormat.format(DateTime.parse(GlobalFunctions.decryptString(value3)));
-//         }
-//       } else if(option3 == TextOption.EncryptedText){
-//         if(value3 == null){
-//           value3 = '';
-//         } else {
-//           value3 = GlobalFunctions.decryptString(value3);
-//         }
-//       }
-//
-//
-//
-//       return Column(
-//           children: [
-//             Row(
-//                 children: [
-//                   Container(width: 70, child: Text(text1, style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8))),
-//                   SizedBox(width: 5),
-//                   Expanded(child: ConstrainedBox(constraints: BoxConstraints(minHeight: 20),
-//                       child: Container(
-//                         padding: const EdgeInsets.all(3),
-//                         decoration: BoxDecoration(
-//                           borderRadius: 5,
-//                           border: BoxBorder(
-//                             top: true,
-//                             left: true,
-//                             right: true,
-//                             bottom: true,
-//                             width: 1,
-//                             color: PdfColors.grey,
-//                           ),
-//                         ),
-//                         child: Column(
-//                           mainAxisSize: MainAxisSize.min,
-//                           crossAxisAlignment: CrossAxisAlignment.start,
-//                           children: <Widget>[
-//                             Text(value1 == null ? '' : value1, style: TextStyle(fontSize: 8)),
-//                           ],
-//                         ),
-//                       ))),
-//                   SizedBox(width: 5),
-//                   Container(width: 70, child: Text(text2, style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8))),
-//                   SizedBox(width: 5),
-//                   Expanded(child: ConstrainedBox(constraints: BoxConstraints(minHeight: 20),
-//                       child: Container(
-//                         padding: const EdgeInsets.all(3),
-//                         decoration: BoxDecoration(
-//                           borderRadius: 5,
-//                           border: BoxBorder(
-//                             top: true,
-//                             left: true,
-//                             right: true,
-//                             bottom: true,
-//                             width: 1,
-//                             color: PdfColors.grey,
-//                           ),
-//                         ),
-//                         child: Column(
-//                           mainAxisSize: MainAxisSize.min,
-//                           crossAxisAlignment: CrossAxisAlignment.start,
-//                           children: <Widget>[
-//                             signature == null ? Text(value2 == null ? '' : value2, style: TextStyle(fontSize: 8)) : signature == null ? Text('') : Container(height: 20, child: FittedBox(alignment: Alignment.centerLeft, child: Image(PdfImage(doc,
-//                                 image: signature.data.buffer
-//                                     .asUint8List(),
-//                                 width: signature.width,
-//                                 height: signature.height)))),
-//                           ],
-//                         ),
-//                       ))),
-//                   SizedBox(width: 5),
-//                   Container(width: 70, child: Text(text3, style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8))),
-//                   SizedBox(width: 5),
-//                   Expanded(child: ConstrainedBox(constraints: BoxConstraints(minHeight: 20),
-//                       child: Container(
-//                         padding: const EdgeInsets.all(3),
-//                         decoration: BoxDecoration(
-//                           borderRadius: 5,
-//                           border: BoxBorder(
-//                             top: true,
-//                             left: true,
-//                             right: true,
-//                             bottom: true,
-//                             width: 1,
-//                             color: PdfColors.grey,
-//                           ),
-//                         ),
-//                         child: Column(
-//                           mainAxisSize: MainAxisSize.min,
-//                           crossAxisAlignment: CrossAxisAlignment.start,
-//                           children: <Widget>[
-//                             signature == null ? Text(value3 == null ? '' : value3, style: TextStyle(fontSize: 8)) : signature == null ? Text('') : Container(height: 20, child: FittedBox(alignment: Alignment.centerLeft, child: Image(PdfImage(doc,
-//                                 image: signature.data.buffer
-//                                     .asUint8List(),
-//                                 width: signature.width,
-//                                 height: signature.height)))),
-//                           ],
-//                         ),
-//                       ))),
-//                 ]
-//             ),
-//             Container(height: 4)
-//           ]
-//       );
-//     }
-//
-//
-//
-//     Widget sectionTitle(String text){
-//       return Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: [
-//             Text(text, style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 9, fontWeight: FontWeight.bold)),
-//             Container(height: 5)
-//           ]
-//       );
-//     }
-//
-//     Widget checkBoxTitle(String text1, String text2){
-//       return Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: [
-//             Row(children: [
-//               Text(text1, style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 9, fontWeight: FontWeight.bold)),
-//               Text(text2, style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
-//             ]),
-//             Container(height: 5)
-//           ]
-//       );
-//     }
-//
-//
-//     Widget drivingTimesRow(String value1, String value2, String value3, String value4){
-//       return Column(
-//           children: [
-//             Row(
-//                 children: [
-//                   Expanded(child: Expanded(child: ConstrainedBox(constraints: BoxConstraints(minHeight: 20),
-//                       child: Container(
-//                         padding: const EdgeInsets.all(5),
-//                         decoration: BoxDecoration(
-//                           borderRadius: 5,
-//                           border: BoxBorder(
-//                             top: true,
-//                             left: true,
-//                             right: true,
-//                             bottom: true,
-//                             width: 1,
-//                             color: PdfColors.grey,
-//                           ),
-//                         ),
-//                         child: Column(
-//                           mainAxisSize: MainAxisSize.min,
-//                           crossAxisAlignment: CrossAxisAlignment.start,
-//                           children: <Widget>[
-//                             Text(value1 == null ? '' : GlobalFunctions.decryptString(value1), style: TextStyle(fontSize: 8)),
-//                           ],
-//                         ),
-//                       )))),
-//                   Container(width: 2),
-//                   Expanded(child: Expanded(child: ConstrainedBox(constraints: BoxConstraints(minHeight: 20),
-//                       child: Container(
-//                         padding: const EdgeInsets.all(5),
-//                         decoration: BoxDecoration(
-//                           borderRadius: 5,
-//                           border: BoxBorder(
-//                             top: true,
-//                             left: true,
-//                             right: true,
-//                             bottom: true,
-//                             width: 1,
-//                             color: PdfColors.grey,
-//                           ),
-//                         ),
-//                         child: Column(
-//                           mainAxisSize: MainAxisSize.min,
-//                           crossAxisAlignment: CrossAxisAlignment.start,
-//                           children: <Widget>[
-//                             Text(value2 == null ? '' : GlobalFunctions.decryptString(value2), style: TextStyle(fontSize: 8)),
-//                           ],
-//                         ),
-//                       )))),
-//                   Container(width: 2),
-//                   Expanded(child: Expanded(child: ConstrainedBox(constraints: BoxConstraints(minHeight: 20),
-//                       child: Container(
-//                         padding: const EdgeInsets.all(5),
-//                         decoration: BoxDecoration(
-//                           borderRadius: 5,
-//                           border: BoxBorder(
-//                             top: true,
-//                             left: true,
-//                             right: true,
-//                             bottom: true,
-//                             width: 1,
-//                             color: PdfColors.grey,
-//                           ),
-//                         ),
-//                         child: Column(
-//                           mainAxisSize: MainAxisSize.min,
-//                           crossAxisAlignment: CrossAxisAlignment.start,
-//                           children: <Widget>[
-//                             Text(value3 == null ? '' : timeFormat.format(DateTime.parse(value3)), style: TextStyle(fontSize: 8)),
-//                           ],
-//                         ),
-//                       )))),
-//                   Container(width: 2),
-//                   Expanded(child: Expanded(child: ConstrainedBox(constraints: BoxConstraints(minHeight: 20),
-//                       child: Container(
-//                         padding: const EdgeInsets.all(5),
-//                         decoration: BoxDecoration(
-//                           borderRadius: 5,
-//                           border: BoxBorder(
-//                             top: true,
-//                             left: true,
-//                             right: true,
-//                             bottom: true,
-//                             width: 1,
-//                             color: PdfColors.grey,
-//                           ),
-//                         ),
-//                         child: Column(
-//                           mainAxisSize: MainAxisSize.min,
-//                           crossAxisAlignment: CrossAxisAlignment.start,
-//                           children: <Widget>[
-//                             Text(value4 == null ? '' : timeFormat.format(DateTime.parse(value4)), style: TextStyle(fontSize: 8)),
-//                           ],
-//                         ),
-//                       )))),
-//                 ]
-//             ),
-//             Container(height: 3)
-//           ]
-//       );
-//     }
-//
-//     Widget techniquePositionRow(String value1, String value2, String value3){
-//       return Column(
-//           children: [
-//             Row(
-//                 children: [
-//                   Expanded(child: Expanded(child: ConstrainedBox(constraints: BoxConstraints(minHeight: 20),
-//                       child: Container(
-//                         padding: const EdgeInsets.all(3),
-//                         decoration: BoxDecoration(
-//                           borderRadius: 5,
-//                           border: BoxBorder(
-//                             top: true,
-//                             left: true,
-//                             right: true,
-//                             bottom: true,
-//                             width: 1,
-//                             color: PdfColors.grey,
-//                           ),
-//                         ),
-//                         child: Column(
-//                           mainAxisSize: MainAxisSize.min,
-//                           crossAxisAlignment: CrossAxisAlignment.start,
-//                           children: <Widget>[
-//                             Text(value1 == null ? '' : GlobalFunctions.decryptString(value1), style: TextStyle(fontSize: 8)),
-//                           ],
-//                         ),
-//                       )))),
-//                   Container(width: 2),
-//                   Expanded(child: Expanded(child: ConstrainedBox(constraints: BoxConstraints(minHeight: 20),
-//                       child: Container(
-//                         padding: const EdgeInsets.all(3),
-//                         decoration: BoxDecoration(
-//                           borderRadius: 5,
-//                           border: BoxBorder(
-//                             top: true,
-//                             left: true,
-//                             right: true,
-//                             bottom: true,
-//                             width: 1,
-//                             color: PdfColors.grey,
-//                           ),
-//                         ),
-//                         child: Column(
-//                           mainAxisSize: MainAxisSize.min,
-//                           crossAxisAlignment: CrossAxisAlignment.start,
-//                           children: <Widget>[
-//                             Text(value2 == null ? '' : GlobalFunctions.decryptString(value2), style: TextStyle(fontSize: 8)),
-//                           ],
-//                         ),
-//                       )))),
-//                   Container(width: 2),
-//                   Expanded(child: Expanded(child: ConstrainedBox(constraints: BoxConstraints(minHeight: 20),
-//                       child: Container(
-//                         padding: const EdgeInsets.all(3),
-//                         decoration: BoxDecoration(
-//                           borderRadius: 5,
-//                           border: BoxBorder(
-//                             top: true,
-//                             left: true,
-//                             right: true,
-//                             bottom: true,
-//                             width: 1,
-//                             color: PdfColors.grey,
-//                           ),
-//                         ),
-//                         child: Column(
-//                           mainAxisSize: MainAxisSize.min,
-//                           crossAxisAlignment: CrossAxisAlignment.start,
-//                           children: <Widget>[
-//                             Text(value3 == null ? '' : GlobalFunctions.decryptString(value3), style: TextStyle(fontSize: 8)),
-//                           ],
-//                         ),
-//                       )))),
-//                 ]
-//             ),
-//             Container(height: 3)
-//           ]
-//       );
-//     }
-//
-//     Widget yesNoCheckboxes(String text, var value1, var value2) {
-//       return Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: [
-//         Text(text, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 8)),
-//         Container(height: 5),
-//         Row(
-//             children: [
-//               Text('Yes', style: TextStyle(fontSize: 8)),
-//               Container(width: 5),
-//               Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-//                   decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-//                     top: true,
-//                     left: true,
-//                     right: true,
-//                     bottom: true,
-//                     width: 1,
-//                     color: PdfColors.grey,
-//                   )),
-//                   child: Center(child: Text(value1 == null || value1 == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
-//               Container(width: 10),
-//               Text('No', style: TextStyle(fontSize: 8)),
-//               Container(width: 5),
-//               Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-//                   decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-//                     top: true,
-//                     left: true,
-//                     right: true,
-//                     bottom: true,
-//                     width: 1,
-//                     color: PdfColors.grey,
-//                   )),
-//                   child: Center(child: Text(value2 == null || value2 == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
-//             ]
-//         ),
-//         Container(height: 5)
-//       ]);
-//     }
-//
-//
-//     Widget headingText(String value, [bool margin = false]){
-//       return margin ? Container(margin: EdgeInsets.all(2), child: Text(value, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 8))) : Text(value, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 8));
-//     }
-//
-//
-//
-//     Widget valueText(String value, [bool margin = false, TextOption option = TextOption.EncryptedText]){
-//
-//       if(option == TextOption.Date){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = dateFormat.format(DateTime.parse(value));
-//         }
-//       } else if(option == TextOption.DateTime){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = dateTimeFormat.format(DateTime.parse(value));
-//         }
-//       } else if(option == TextOption.PlainText){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = value;
-//         }
-//       } else if(option == TextOption.EncryptedText){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = GlobalFunctions.decryptString(value);
-//         }
-//       } else if(option == TextOption.Time){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = timeFormat.format(DateTime.parse(value));
-//         }
-//       } else if(option == TextOption.EncryptedDate){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = dateFormat.format(DateTime.parse(GlobalFunctions.decryptString(value)));
-//         }
-//       } else if(option == TextOption.EncryptedText){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = GlobalFunctions.decryptString(value);
-//         }
-//       }
-//
-//
-//
-//       return margin ? Container(margin: EdgeInsets.all(2), child: Text(value == null ? '' : value, style: TextStyle(fontSize: 8))) : Text(value == null ? '' : value, style: TextStyle(fontSize: 8));
-//     }
-//
-//     Widget tableCellContainer(Widget child, [double width = 250, bool margin = true]){
-//       return Container(
-//           padding: EdgeInsets.all(margin ? 2 : 0),
-//           width: width, child: child);
-//     }
-//
-//
-//     String textValue(String value, [TextOption option = TextOption.EncryptedText]){
-//
-//       if(option == TextOption.Date){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = dateFormat.format(DateTime.parse(value));
-//         }
-//       } else if(option == TextOption.DateTime){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = dateTimeFormat.format(DateTime.parse(value));
-//         }
-//       } else if(option == TextOption.PlainText){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = value;
-//         }
-//       } else if(option == TextOption.EncryptedText){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = GlobalFunctions.decryptString(value);
-//         }
-//       } else if(option == TextOption.Time){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = timeFormat.format(DateTime.parse(value));
-//         }
-//       } else if(option == TextOption.EncryptedDate){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = dateFormat.format(DateTime.parse(GlobalFunctions.decryptString(value)));
-//         }
-//       } else if(option == TextOption.EncryptedText){
-//         if(value == null){
-//           value = '';
-//         } else {
-//           value = GlobalFunctions.decryptString(value);
-//         }
-//       }
-//
-//
-//
-//       return value;
-//     }
-//
-//     TableRow staffingRow(String date, String startTime, String endTime, String name, String rmnHca){
-//       return TableRow(
-//           children: [
-//             Container(
-//                 padding: EdgeInsets.all(2),
-//                 width: 50, child: Row(
-//                 mainAxisAlignment: MainAxisAlignment.start,
-//                 children: [
-//                   Text(date, style: TextStyle(fontSize: 8))
-//                 ])),
-//             Container(
-//                 padding: EdgeInsets.all(2),
-//                 width: 30, child: Row(
-//                 mainAxisAlignment: MainAxisAlignment.start,
-//                 children: [
-//                   Text(startTime, style: TextStyle(fontSize: 8))
-//                 ])),
-//             Container(
-//                 padding: EdgeInsets.all(2),
-//                 width: 30, child: Row(
-//                 mainAxisAlignment: MainAxisAlignment.start,
-//                 children: [
-//                   Text(endTime, style: TextStyle(fontSize: 8))
-//                 ])),
-//             Container(
-//                 padding: EdgeInsets.all(2),
-//                 width: 70, child: Row(
-//                 mainAxisAlignment: MainAxisAlignment.start,
-//                 children: [
-//                   Text(name, style: TextStyle(fontSize: 8))
-//                 ])),
-//             Container(
-//                 padding: EdgeInsets.all(2),
-//                 width: 50, child: Row(
-//                 mainAxisAlignment: MainAxisAlignment.start,
-//                 children: [
-//                   Text(rmnHca, style: TextStyle(fontSize: 8))
-//                 ]))
-//           ]
-//       );
-//     }
-//
-//
-//     try {
-//
-//       Document pdf;
-//       pdf = Document();
-//       PdfDocument pdfDoc = pdf.document;
-//       PdfImage pegasusLogo = await pdfImageFromImageProvider(pdf: pdfDoc, image: Material.AssetImage('assets/images/pegasusLogo.png'),);
-//
-//
-//       pdf.addPage(MultiPage(
-//           theme: Theme.withFont(base: ttf, bold: ttfBold),
-//           pageFormat: PdfPageFormat.a4,
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           margin: EdgeInsets.all(40),
-//           footer: (Context context) {
-//             return Container(
-//                 alignment: Alignment.centerRight,
-//                 margin: const EdgeInsets.only(top: 5),
-//                 child: Text('Observation Booking - Page ${context.pageNumber} of ${context.pagesCount}',
-//                     style: TextStyle(color: PdfColors.grey, fontSize: 8)));
-//           },
-//           build: (Context context) => <Widget>[
-//
-//
-//             Row(
-//               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//                 crossAxisAlignment: CrossAxisAlignment.start,
-//                 children: [
-//                   Row(children: [
-//                     sectionTitle('Reference'),
-//                     SizedBox(width: 10),
-//                     textField(TextOption.PlainText, selectedObservationBooking[Strings.jobRef])
-//                   ]),
-//                   Container(height: 70, child: Image(pegasusLogo)),              ]
-//             ),
-//             Container(height: 5),
-//             Table(border: TableBorder(top: true, left: true, right: true, bottom: true),
-//                 children: [
-//                   TableRow(
-//                       children: [
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               headingText('Requested by:'),
-//                               valueText(selectedObservationBooking[Strings.obRequestedBy]),
-//                               SizedBox(height: 3),
-//                               headingText('Job Title:'),
-//                               valueText(selectedObservationBooking[Strings.obJobTitle]),
-//                               SizedBox(height: 3),
-//                               headingText('Contact Telephone Number:'),
-//                               valueText(selectedObservationBooking[Strings.obJobContact]),
-//                               SizedBox(height: 3),
-//                               headingText('Authorising Manager:'),
-//                               valueText(selectedObservationBooking[Strings.obJobAuthorisingManager]),
-//                               SizedBox(height: 3),
-//                               headingText('Date:'),
-//                               valueText(selectedObservationBooking[Strings.obJobDate], false, TextOption.Date),
-//                               SizedBox(height: 3),
-//                               headingText('Time:'),
-//                               valueText(selectedObservationBooking[Strings.obJobTime], false, TextOption.Time),
-//                               SizedBox(height: 3),
-//                             ]
-//                         )),
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               headingText('Invoice Details:'),
-//                               valueText(selectedObservationBooking[Strings.obInvoiceDetails]),
-//                               SizedBox(height: 3),
-//                               headingText('Cost Code:'),
-//                               valueText(selectedObservationBooking[Strings.obCostCode]),
-//                               SizedBox(height: 3),
-//                               headingText('Purchase Order no:'),
-//                               valueText(selectedObservationBooking[Strings.obPurchaseOrder]),
-//                             ]
-//                         )),
-//
-//                       ]
-//                   ),
-//                   TableRow(
-//                       children: [
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               headingText('Booking Coordinator:'),
-//                               valueText(selectedObservationBooking[Strings.obBookingCoordinator]),
-//                             ]
-//                         )),
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               headingText('Start Date & Time:'),
-//                               valueText(selectedObservationBooking[Strings.obStartDateTime], false, TextOption.DateTime),
-//                             ]
-//                         )),
-//
-//                       ]
-//                   ),
-//                   TableRow(
-//                       children: [
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               headingText('Patient Location Address:'),
-//                               valueText(selectedObservationBooking[Strings.obPatientLocation]),
-//                               SizedBox(height: 3),
-//                               headingText('Postcode:'),
-//                               valueText(selectedObservationBooking[Strings.obPostcode]),
-//                               SizedBox(height: 3),
-//                               headingText('Location Tel:'),
-//                               valueText(selectedObservationBooking[Strings.obLocationTel]),
-//                             ]
-//                         )),
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               yesNoCheckboxes('Is the patient awaiting a MHA Assessment?', selectedObservationBooking[Strings.obMhaAssessmentYes], selectedObservationBooking[Strings.obMhaAssessmentNo]),
-//                               yesNoCheckboxes('has a bed been identified?', selectedObservationBooking[Strings.obBedIdentifiedYes], selectedObservationBooking[Strings.obBedIdentifiedNo]),
-//                               yesNoCheckboxes('Wrap documentation available?', selectedObservationBooking[Strings.obWrapDocumentationYes], selectedObservationBooking[Strings.obWrapDocumentationNo]),
-//                               headingText('What shift do you require?'),
-//                               valueText(selectedObservationBooking[Strings.obShiftRequired]),
-//
-//                             ]
-//                         )),
-//
-//                       ]
-//                   ),
-//                 ]
-//             ),
-//             Table(border: TableBorder(top: true, left: true, right: true, bottom: true),
-//                 children: [
-//                   TableRow(
-//                       children: [
-//                         Container(width: 500, color: PdfColors.grey,
-//                             child: Row(
-//                                 mainAxisAlignment: MainAxisAlignment.center,
-//                                 children: [
-//                                   Text('Patient Details', style: TextStyle(fontWeight: FontWeight.bold))
-//                                 ]
-//                             )),
-//                       ]
-//                   ),
-//                 ]
-//             ),
-//             Table(border: TableBorder(top: true, left: true, right: true, bottom: true),
-//                 children: [
-//                   TableRow(
-//                       children: [
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               headingText('Name:'),
-//                               valueText(selectedObservationBooking[Strings.obPatientName]),
-//                             ]
-//                         )),
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               headingText('Gender:'),
-//                               valueText(selectedObservationBooking[Strings.obGender]),
-//                             ]
-//                         )),
-//
-//                       ]
-//                   ),
-//                   TableRow(
-//                       children: [
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               headingText('Legal Status:'),
-//                               valueText(selectedObservationBooking[Strings.obLegalStatus]),
-//                             ]
-//                         )),
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               headingText('Ethnicity:'),
-//                               valueText(selectedObservationBooking[Strings.obEthnicity]),
-//                             ]
-//                         )),
-//
-//                       ]
-//                   ),
-//                   TableRow(
-//                       children: [
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               headingText('Date of birth:'),
-//                               valueText(selectedObservationBooking[Strings.obDateOfBirth], false, TextOption.EncryptedDate),
-//                             ]
-//                         )),
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               headingText('Covid Status:'),
-//                               valueText(selectedObservationBooking[Strings.obCovidStatus]),
-//                             ]
-//                         )),
-//
-//                       ]
-//                   ),
-//                   TableRow(
-//                       children: [
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               headingText('NHS Number:'),
-//                               valueText(selectedObservationBooking[Strings.obNhsNumber]),
-//                             ]
-//                         )),
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               headingText('RMN:'),
-//                               valueText(selectedObservationBooking[Strings.obRmn]),
-//                             ]
-//                         )),
-//
-//                       ]
-//                   ),
-//                   TableRow(
-//                       children: [
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               headingText('Current Presentation: (Reason for attending ED/Acute Hospital)'),
-//                               valueText(selectedObservationBooking[Strings.obCurrentPresentation]),
-//                             ]
-//                         )),
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               headingText("HCA's:", true),
-//                               valueText(selectedObservationBooking[Strings.obHca], true),
-//                               Container(height: 1, color: PdfColors.black),
-//                               headingText("1.", true),
-//                               valueText(selectedObservationBooking[Strings.obHca1], true),
-//                               headingText("2.", true),
-//                               valueText(selectedObservationBooking[Strings.obHca2], true),
-//                               headingText("3.", true),
-//                               valueText(selectedObservationBooking[Strings.obHca3], true),
-//                               headingText("4.", true),
-//                               valueText(selectedObservationBooking[Strings.obHca4], true),
-//                               headingText("5.", true),
-//                               valueText(selectedObservationBooking[Strings.obHca5], true),
-//                             ]
-//                         ), 250, false),
-//
-//                       ]
-//                   ),
-//                   TableRow(
-//                       children: [
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               yesNoCheckboxes('Specific Care Plan:', selectedObservationBooking[Strings.obSpecificCarePlanYes], selectedObservationBooking[Strings.obSpecificCarePlanNo]),
-//                               selectedObservationBooking[Strings.obSpecificCarePlanYes] != null && selectedObservationBooking[Strings.obSpecificCarePlanYes] == 1 ?
-//                               valueText(selectedObservationBooking[Strings.obSpecificCarePlan]): Container(),
-//                             ]
-//                         )),
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               yesNoCheckboxes('Patient warnings/markers:', selectedObservationBooking[Strings.obPatientWarningsYes], selectedObservationBooking[Strings.obPatientWarningsNo]),
-//                               selectedObservationBooking[Strings.obPatientWarningsYes] != null && selectedObservationBooking[Strings.obPatientWarningsYes] == 1 ?
-//                               valueText(selectedObservationBooking[Strings.obPatientWarnings]): Container(),
-//                             ]
-//                         )),
-//
-//                       ]
-//                   ),
-//                   TableRow(
-//                       children: [
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               headingText('Presenting Risks: (inc physical health, covid symptoms):'),
-//                               valueText(selectedObservationBooking[Strings.obPresentingRisks]),
-//                             ]
-//                         )),
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               headingText('Previous Risk History: (inc physical health, covid symptoms)'),
-//                               valueText(selectedObservationBooking[Strings.obPreviousRisks]),
-//                             ]
-//                         )),
-//
-//                       ]
-//                   ),
-//                   TableRow(
-//                       children: [
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               yesNoCheckboxes('Gender/Race/Sexual Behaviour concerns:', selectedObservationBooking[Strings.obGenderConcernsYes], selectedObservationBooking[Strings.obGenderConcernsNo]),
-//                               selectedObservationBooking[Strings.obGenderConcernsYes] != null && selectedObservationBooking[Strings.obGenderConcernsYes] == 1 ?
-//                               valueText(selectedObservationBooking[Strings.obGenderConcerns]): Container(),
-//                             ]
-//                         )),
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               yesNoCheckboxes('Safeguarding Concerns:', selectedObservationBooking[Strings.obSafeguardingConcernsYes], selectedObservationBooking[Strings.obSafeguardingConcernsNo]),
-//                               selectedObservationBooking[Strings.obSafeguardingConcernsYes] != null && selectedObservationBooking[Strings.obSafeguardingConcernsYes] == 1 ?
-//                               valueText(selectedObservationBooking[Strings.obSafeguardingConcerns]): Container(),
-//                             ]
-//                         )),
-//
-//                       ]
-//                   ),
-//                   TableRow(
-//                       children: [
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               headingText('Time Due at Location:'),
-//                               valueText(selectedObservationBooking[Strings.obTimeDue], false, TextOption.Time),
-//                             ]
-//                         )),
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                             ]
-//                         )),
-//
-//                       ]
-//                   ),
-//                 ]
-//             ),
-//             SizedBox(height: 10),
-//             Container(
-//                 decoration: BoxDecoration(border: BoxBorder(top: true, bottom: true, left:true, right: true), color: PdfColors.grey,),
-//                 width: 100, child: Row(
-//               mainAxisAlignment: MainAxisAlignment.center,
-//               children: [
-//                 Text('STAFFING', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 8))
-//               ]
-//             )),
-//             SizedBox(height: 10),
-//
-//             Table(
-//                 border: TableBorder(top: true, left: true, right: true, bottom: true),
-//               children: [
-//                 TableRow(
-//                   children: [
-//                     Container(
-//                       color: PdfColors.grey,
-//                         padding: EdgeInsets.all(2),
-//                         width: 50, child: Row(
-//                         mainAxisAlignment: MainAxisAlignment.center,
-//                         children: [
-//                       Text('Date', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 8))
-//                     ])),
-//                     Container(
-//                         color: PdfColors.grey,
-//                         padding: EdgeInsets.all(2),
-//                         width: 30, child: Row(
-//                         mainAxisAlignment: MainAxisAlignment.center,
-//                         children: [
-//                           Text('Start Time', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 8))
-//                         ])),
-//                     Container(
-//                         color: PdfColors.grey,
-//                         padding: EdgeInsets.all(2),
-//                         width: 30, child: Row(
-//                         mainAxisAlignment: MainAxisAlignment.center,
-//                         children: [
-//                           Text('End Time', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 8))
-//                         ])),
-//                     Container(
-//                         color: PdfColors.grey,
-//                         padding: EdgeInsets.all(2),
-//                         width: 70, child: Row(
-//                         mainAxisAlignment: MainAxisAlignment.center,
-//                         children: [
-//                           Text('Name', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 8))
-//                         ])),
-//                     Container(
-//                         color: PdfColors.grey,
-//                         padding: EdgeInsets.all(2),
-//                         width: 50, child: Row(
-//                         mainAxisAlignment: MainAxisAlignment.center,
-//                         children: [
-//                           Text('RMN/HCA', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 8))
-//                         ]))
-//                   ]
-//                 ),
-//                 staffingRow(textValue(selectedObservationBooking[Strings.obStaffDate1], TextOption.Date),
-//                     textValue(selectedObservationBooking[Strings.obStaffStartTime1], TextOption.Time),
-//                     textValue(selectedObservationBooking[Strings.obStaffEndTime1], TextOption.Time),
-//                     textValue(selectedObservationBooking[Strings.obStaffName1]),
-//                     textValue(selectedObservationBooking[Strings.obStaffRmn1])),
-//                 selectedObservationBooking[Strings.obStaffName2] != null && selectedObservationBooking[Strings.obStaffName2] != '' ?
-//                 staffingRow(textValue(selectedObservationBooking[Strings.obStaffDate2], TextOption.Date),
-//                     textValue(selectedObservationBooking[Strings.obStaffStartTime2], TextOption.Time),
-//                     textValue(selectedObservationBooking[Strings.obStaffEndTime2], TextOption.Time),
-//                     textValue(selectedObservationBooking[Strings.obStaffName2]),
-//                     textValue(selectedObservationBooking[Strings.obStaffRmn2])) : TableRow(children: [Container()]),
-//                 selectedObservationBooking[Strings.obStaffName3] != null && selectedObservationBooking[Strings.obStaffName3] != '' ?
-//                 staffingRow(textValue(selectedObservationBooking[Strings.obStaffDate3], TextOption.Date),
-//                     textValue(selectedObservationBooking[Strings.obStaffStartTime3], TextOption.Time),
-//                     textValue(selectedObservationBooking[Strings.obStaffEndTime3], TextOption.Time),
-//                     textValue(selectedObservationBooking[Strings.obStaffName3]),
-//                     textValue(selectedObservationBooking[Strings.obStaffRmn3])) : TableRow(children: [Container()]),
-//                 selectedObservationBooking[Strings.obStaffName4] != null && selectedObservationBooking[Strings.obStaffName4] != '' ?
-//                 staffingRow(textValue(selectedObservationBooking[Strings.obStaffDate4], TextOption.Date),
-//                     textValue(selectedObservationBooking[Strings.obStaffStartTime4], TextOption.Time),
-//                     textValue(selectedObservationBooking[Strings.obStaffEndTime4], TextOption.Time),
-//                     textValue(selectedObservationBooking[Strings.obStaffName4]),
-//                     textValue(selectedObservationBooking[Strings.obStaffRmn4])) : TableRow(children: [Container()]),
-//                 selectedObservationBooking[Strings.obStaffName5] != null && selectedObservationBooking[Strings.obStaffName5] != '' ?
-//                 staffingRow(textValue(selectedObservationBooking[Strings.obStaffDate5], TextOption.Date),
-//                     textValue(selectedObservationBooking[Strings.obStaffStartTime5], TextOption.Time),
-//                     textValue(selectedObservationBooking[Strings.obStaffEndTime5], TextOption.Time),
-//                     textValue(selectedObservationBooking[Strings.obStaffName5]),
-//                     textValue(selectedObservationBooking[Strings.obStaffRmn5])) : TableRow(children: [Container()]),
-//                 selectedObservationBooking[Strings.obStaffName6] != null && selectedObservationBooking[Strings.obStaffName6] != '' ?
-//                 staffingRow(textValue(selectedObservationBooking[Strings.obStaffDate6], TextOption.Date),
-//                     textValue(selectedObservationBooking[Strings.obStaffStartTime6], TextOption.Time),
-//                     textValue(selectedObservationBooking[Strings.obStaffEndTime6], TextOption.Time),
-//                     textValue(selectedObservationBooking[Strings.obStaffName6]),
-//                     textValue(selectedObservationBooking[Strings.obStaffRmn6])) : TableRow(children: [Container()]),
-//                 selectedObservationBooking[Strings.obStaffName7] != null && selectedObservationBooking[Strings.obStaffName7] != '' ?
-//                 staffingRow(textValue(selectedObservationBooking[Strings.obStaffDate7], TextOption.Date),
-//                     textValue(selectedObservationBooking[Strings.obStaffStartTime7], TextOption.Time),
-//                     textValue(selectedObservationBooking[Strings.obStaffEndTime7], TextOption.Time),
-//                     textValue(selectedObservationBooking[Strings.obStaffName7]),
-//                     textValue(selectedObservationBooking[Strings.obStaffRmn7])) : TableRow(children: [Container()]),
-//                 selectedObservationBooking[Strings.obStaffName8] != null && selectedObservationBooking[Strings.obStaffName8] != '' ?
-//                 staffingRow(textValue(selectedObservationBooking[Strings.obStaffDate8], TextOption.Date),
-//                     textValue(selectedObservationBooking[Strings.obStaffStartTime8], TextOption.Time),
-//                     textValue(selectedObservationBooking[Strings.obStaffEndTime8], TextOption.Time),
-//                     textValue(selectedObservationBooking[Strings.obStaffName8]),
-//                     textValue(selectedObservationBooking[Strings.obStaffRmn8])) : TableRow(children: [Container()]),
-//                 selectedObservationBooking[Strings.obStaffName9] != null && selectedObservationBooking[Strings.obStaffName9] != '' ?
-//                 staffingRow(textValue(selectedObservationBooking[Strings.obStaffDate9], TextOption.Date),
-//                     textValue(selectedObservationBooking[Strings.obStaffStartTime9], TextOption.Time),
-//                     textValue(selectedObservationBooking[Strings.obStaffEndTime9], TextOption.Time),
-//                     textValue(selectedObservationBooking[Strings.obStaffName9]),
-//                     textValue(selectedObservationBooking[Strings.obStaffRmn9])) : TableRow(children: [Container()]),
-//                 selectedObservationBooking[Strings.obStaffName10] != null && selectedObservationBooking[Strings.obStaffName10] != '' ?
-//                 staffingRow(textValue(selectedObservationBooking[Strings.obStaffDate10], TextOption.Date),
-//                     textValue(selectedObservationBooking[Strings.obStaffStartTime10], TextOption.Time),
-//                     textValue(selectedObservationBooking[Strings.obStaffEndTime10], TextOption.Time),
-//                     textValue(selectedObservationBooking[Strings.obStaffName10]),
-//                     textValue(selectedObservationBooking[Strings.obStaffRmn10])) : TableRow(children: [Container()]),
-//                 selectedObservationBooking[Strings.obStaffName11] != null && selectedObservationBooking[Strings.obStaffName11] != '' ?
-//                 staffingRow(textValue(selectedObservationBooking[Strings.obStaffDate11], TextOption.Date),
-//                     textValue(selectedObservationBooking[Strings.obStaffStartTime11], TextOption.Time),
-//                     textValue(selectedObservationBooking[Strings.obStaffEndTime11], TextOption.Time),
-//                     textValue(selectedObservationBooking[Strings.obStaffName11]),
-//                     textValue(selectedObservationBooking[Strings.obStaffRmn11])) : TableRow(children: [Container()]),
-//                 selectedObservationBooking[Strings.obStaffName12] != null && selectedObservationBooking[Strings.obStaffName12] != '' ?
-//                 staffingRow(textValue(selectedObservationBooking[Strings.obStaffDate12], TextOption.Date),
-//                     textValue(selectedObservationBooking[Strings.obStaffStartTime12], TextOption.Time),
-//                     textValue(selectedObservationBooking[Strings.obStaffEndTime12], TextOption.Time),
-//                     textValue(selectedObservationBooking[Strings.obStaffName12]),
-//                     textValue(selectedObservationBooking[Strings.obStaffRmn12])) : TableRow(children: [Container()]),
-//                 selectedObservationBooking[Strings.obStaffName13] != null && selectedObservationBooking[Strings.obStaffName13] != '' ?
-//                 staffingRow(textValue(selectedObservationBooking[Strings.obStaffDate13], TextOption.Date),
-//                     textValue(selectedObservationBooking[Strings.obStaffStartTime13], TextOption.Time),
-//                     textValue(selectedObservationBooking[Strings.obStaffEndTime13], TextOption.Time),
-//                     textValue(selectedObservationBooking[Strings.obStaffName13]),
-//                     textValue(selectedObservationBooking[Strings.obStaffRmn13])) : TableRow(children: [Container()]),
-//                 selectedObservationBooking[Strings.obStaffName14] != null && selectedObservationBooking[Strings.obStaffName14] != '' ?
-//                 staffingRow(textValue(selectedObservationBooking[Strings.obStaffDate14], TextOption.Date),
-//                     textValue(selectedObservationBooking[Strings.obStaffStartTime14], TextOption.Time),
-//                     textValue(selectedObservationBooking[Strings.obStaffEndTime14], TextOption.Time),
-//                     textValue(selectedObservationBooking[Strings.obStaffName14]),
-//                     textValue(selectedObservationBooking[Strings.obStaffRmn14])) : TableRow(children: [Container()]),
-//                 selectedObservationBooking[Strings.obStaffName15] != null && selectedObservationBooking[Strings.obStaffName15] != '' ?
-//                 staffingRow(textValue(selectedObservationBooking[Strings.obStaffDate15], TextOption.Date),
-//                     textValue(selectedObservationBooking[Strings.obStaffStartTime15], TextOption.Time),
-//                     textValue(selectedObservationBooking[Strings.obStaffEndTime15], TextOption.Time),
-//                     textValue(selectedObservationBooking[Strings.obStaffName15]),
-//                     textValue(selectedObservationBooking[Strings.obStaffRmn15])) : TableRow(children: [Container()]),
-//                 selectedObservationBooking[Strings.obStaffName16] != null && selectedObservationBooking[Strings.obStaffName16] != '' ?
-//                 staffingRow(textValue(selectedObservationBooking[Strings.obStaffDate16], TextOption.Date),
-//                     textValue(selectedObservationBooking[Strings.obStaffStartTime16], TextOption.Time),
-//                     textValue(selectedObservationBooking[Strings.obStaffEndTime16], TextOption.Time),
-//                     textValue(selectedObservationBooking[Strings.obStaffName16]),
-//                     textValue(selectedObservationBooking[Strings.obStaffRmn16])) : TableRow(children: [Container()]),
-//                 selectedObservationBooking[Strings.obStaffName17] != null && selectedObservationBooking[Strings.obStaffName17] != '' ?
-//                 staffingRow(textValue(selectedObservationBooking[Strings.obStaffDate17], TextOption.Date),
-//                     textValue(selectedObservationBooking[Strings.obStaffStartTime17], TextOption.Time),
-//                     textValue(selectedObservationBooking[Strings.obStaffEndTime17], TextOption.Time),
-//                     textValue(selectedObservationBooking[Strings.obStaffName17]),
-//                     textValue(selectedObservationBooking[Strings.obStaffRmn17])) : TableRow(children: [Container()]),
-//                 selectedObservationBooking[Strings.obStaffName18] != null && selectedObservationBooking[Strings.obStaffName18] != '' ?
-//                 staffingRow(textValue(selectedObservationBooking[Strings.obStaffDate18], TextOption.Date),
-//                     textValue(selectedObservationBooking[Strings.obStaffStartTime18], TextOption.Time),
-//                     textValue(selectedObservationBooking[Strings.obStaffEndTime18], TextOption.Time),
-//                     textValue(selectedObservationBooking[Strings.obStaffName18]),
-//                     textValue(selectedObservationBooking[Strings.obStaffRmn18])) : TableRow(children: [Container()]),
-//                 selectedObservationBooking[Strings.obStaffName19] != null && selectedObservationBooking[Strings.obStaffName19] != '' ?
-//                 staffingRow(textValue(selectedObservationBooking[Strings.obStaffDate19], TextOption.Date),
-//                     textValue(selectedObservationBooking[Strings.obStaffStartTime19], TextOption.Time),
-//                     textValue(selectedObservationBooking[Strings.obStaffEndTime19], TextOption.Time),
-//                     textValue(selectedObservationBooking[Strings.obStaffName19]),
-//                     textValue(selectedObservationBooking[Strings.obStaffRmn19])) : TableRow(children: [Container()]),
-//                 selectedObservationBooking[Strings.obStaffName20] != null && selectedObservationBooking[Strings.obStaffName20] != '' ?
-//                 staffingRow(textValue(selectedObservationBooking[Strings.obStaffDate20], TextOption.Date),
-//                     textValue(selectedObservationBooking[Strings.obStaffStartTime20], TextOption.Time),
-//                     textValue(selectedObservationBooking[Strings.obStaffEndTime20], TextOption.Time),
-//                     textValue(selectedObservationBooking[Strings.obStaffName20]),
-//                     textValue(selectedObservationBooking[Strings.obStaffRmn20])) : TableRow(children: [Container()]),
-//               ]
-//             ),
-//             Container(height: 10),
-//             Table(border: TableBorder(top: true, left: true, right: true, bottom: true),
-//                 children: [
-//                   TableRow(
-//                       children: [
-//                         tableCellContainer(Column(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               headingText('Useful Details:'),
-//                               valueText(selectedObservationBooking[Strings.obUsefulDetails]),
-//                             ]
-//                         )),
-//                       ]
-//                   ),
-//                 ]
-//             ),
-//           ]
-//
-//       ));
-//
-//       String formDate = selectedObservationBooking[Strings.obJobDate] == null ? '' : dateFormatDay.format(DateTime.parse(selectedObservationBooking[Strings.obJobDate]));
-//       String id = selectedObservationBooking[Strings.documentId];
-//
-//       if(kIsWeb){
-//
-//         if(option == ShareOption.Download){
-//           List<int> pdfList = pdf.save();
-//           Uint8List pdfInBytes = Uint8List.fromList(pdfList);
-//
-// //Create blob and link from bytes
-//           final blob = html.Blob([pdfInBytes], 'application/pdf');
-//           final url = html.Url.createObjectUrlFromBlob(blob);
-//           final anchor = html.document.createElement('a') as html.AnchorElement
-//             ..href = url
-//             ..style.display = 'none'
-//             ..download = 'observation_booking_${formDate}_$id.pdf';
-//           html.document.body.children.add(anchor);
-//           anchor.click();
-//         } else {
-//           if(option == ShareOption.Print) await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save());
-//         }
-//
-//
-//       } else {
-//
-//         Directory dir = await getApplicationDocumentsDirectory();
-//
-//         String pdfPath =
-//             '${dir.path}/pdfs';
-//         Directory(pdfPath).createSync();
-//
-//         final File file = File('$pdfPath/observation_booking_${formDate}_$id.pdf');
-//
-//         if(option == ShareOption.Email){
-//           file.writeAsBytesSync(pdf.save());
-//         }
-//
-//         ConnectivityResult connectivityResult = await Connectivity().checkConnectivity();
-//
-//         if(connectivityResult != ConnectivityResult.none) {
-//
-//           if(option == ShareOption.Share) Printing.sharePdf(bytes: pdf.save(),filename: 'observation_booking_${formDate}_$id.pdf');
-//           if(option == ShareOption.Print) await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save());
-//
-//           if(option == ShareOption.Email) {
-//             final smtpServer = gmail(emailUsername, emailPassword);
-//
-//             // Create our message.
-//             final mailmessage = new Message()
-//               ..from = new Address(emailUsername, 'Pegasus Medical')
-//               ..recipients = emailList
-//               ..subject = 'Completed Observation Booking'
-//               ..html = "<p1>Dear Sir/Madam,</p1>\n<p>Attached is a completed Observation Booking from ${user
-//                   .name}.</p>"
-//                   "<p>Regards,<br>$emailSender</p>"
-//                   "<p><small>$emailFooter</small></p>"
-//               ..attachments = [FileAttachment(file)];
-//
-//             await send(mailmessage, smtpServer);
-//           }
-//
-//         }
-//
-//
-//       }
-//
-//       success = true;
-//
-//     } catch (e) {
-//
-//       print(e);
-//
-//     }
-//     return success;
-//   }
 
   Future<bool> sharePdf(ShareOption option, [List<String> emailList]) async {
 

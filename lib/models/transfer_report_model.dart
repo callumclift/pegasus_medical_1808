@@ -94,15 +94,24 @@ class TransferReportModel extends ChangeNotifier {
   static const String EDITED_TRANSFER_REPORTS_STORE_NAME = 'edited_transfer_reports';
   final _editedTransferReportsStore = Db.intMapStoreFactory.store(EDITED_TRANSFER_REPORTS_STORE_NAME);
 
+  static const String SAVED_TRANSFER_REPORTS_STORE_NAME = 'saved_transfer_reports';
+  final _savedTransferReportsStore = Db.intMapStoreFactory.store(SAVED_TRANSFER_REPORTS_STORE_NAME);
+
   // Private getter to shorten the amount of code needed to get the
   // singleton instance of an opened database.
   Future<Db.Database> get _db async => await AppDatabase.instance.database;
 
 
   Future<void> setupTemporaryRecord() async {
-    int count = await _temporaryTransferReportsStore.count(await _db);
 
-    if(count == 0){
+    final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
+        [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, '1')]
+    ));
+    List records = await _temporaryTransferReportsStore.find(
+      await _db,
+      finder: finder,
+    );
+    if(records.length == 0){
       // Generate a random ID based on the date and a random string for virtual zero chance of duplicates
       int _id = DateTime.now().millisecondsSinceEpoch + int.parse(random_string.randomNumeric(2));
       await _temporaryTransferReportsStore.record(_id).put(await _db,
@@ -110,26 +119,35 @@ class TransferReportModel extends ChangeNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> getTemporaryRecord(bool edit, String selectedJobId) async{
-
-    final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
-        [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, selectedJobId)]
-    ));
+  Future<Map<String, dynamic>> getTemporaryRecord(bool edit, String selectedJobId, bool saved, int savedId) async{
 
     List records;
 
     if(edit){
+      final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
+          [Db.Filter.equals(Strings.documentId, selectedTransferReport[Strings.documentId]), Db.Filter.equals(Strings.jobId, selectedJobId)]
+      ));
       records = await _editedTransferReportsStore.find(
         await _db,
         finder: finder,
       );
+    } else if(saved) {
+      final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
+          [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.localId, savedId)]
+      ));
+      records = await _savedTransferReportsStore.find(
+        await _db,
+        finder: finder,
+      );
     } else {
+      final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
+          [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, selectedJobId)]
+      ));
       records = await _temporaryTransferReportsStore.find(
         await _db,
         finder: finder,
       );
     }
-
 
     return records[0].value;
 
@@ -175,23 +193,42 @@ class TransferReportModel extends ChangeNotifier {
     );
   }
 
-  Future<bool> checkRecordExists(bool edit, String selectedJobId) async{
+  Future <List<dynamic>> getSavedRecords() async{
+    final Db.Finder finder = Db.Finder(filter: Db.Filter.equals(Strings.uid, user.uid));
+    List records = await _savedTransferReportsStore.find(
+      await _db,
+      finder: finder,
+    );
+    return records;
+  }
+
+  Future<bool> checkRecordExists(bool edit, String selectedJobId, bool saved, int savedId) async{
 
     bool hasRecord = false;
-
-    final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
-        [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, selectedJobId)]
-    ));
-
     List records;
 
 
     if(edit){
+
+      final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
+          [Db.Filter.equals(Strings.documentId, selectedTransferReport[Strings.documentId]), Db.Filter.equals(Strings.jobId, selectedJobId)]
+      ));
       records = await _editedTransferReportsStore.find(
         await _db,
         finder: finder,
       );
+    } else if(saved){
+      final Db.Finder finder = Db.Finder(filter: Db.Filter.equals(Strings.localId, savedId));
+      records = await _savedTransferReportsStore.find(
+        await _db,
+        finder: finder,
+      );
+
     } else {
+
+      final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
+          [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, selectedJobId)]
+      ));
       records = await _temporaryTransferReportsStore.find(
         await _db,
         finder: finder,
@@ -205,17 +242,22 @@ class TransferReportModel extends ChangeNotifier {
 
   }
 
-  Future<void> updateTemporaryRecord(bool edit, String field, var value, String selectedJobId) async {
-
-    final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
-        [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, selectedJobId)]
-    ));
-
+  Future<void> updateTemporaryRecord(bool edit, String field, var value, String selectedJobId, bool saved, int savedId) async {
 
     if(edit){
+      final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
+          [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, selectedJobId)]
+      ));
       await _editedTransferReportsStore.update(await _db, {field: value},
           finder: finder);
+    } else if(saved){
+      final Db.Finder finder = Db.Finder(filter: Db.Filter.equals(Strings.localId, savedId));
+      await _savedTransferReportsStore.update(await _db, {field: value},
+          finder: finder);
     } else {
+      final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
+          [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, selectedJobId)]
+      ));
       await _temporaryTransferReportsStore.update(await _db, {field: value},
           finder: finder);
     }
@@ -241,12 +283,426 @@ class TransferReportModel extends ChangeNotifier {
     await _transferReportsStore.delete(await _db);
   }
 
+  Future<bool> saveForLater(String jobId, bool saved, int savedId) async {
 
-  Future<void> resetTemporaryRecord(String chosenJobId) async {
+    GlobalFunctions.showLoadingDialog('Saving Transfer Report...');
+    String message = '';
+    bool success = false;
+    int id;
 
-    final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
-        [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, chosenJobId)]
-    ));
+    if(saved){
+      id = savedId;
+    } else {
+      id = DateTime.now().millisecondsSinceEpoch + int.parse(random_string.randomNumeric(2));
+    }
+
+
+
+    Map<String, dynamic> transferReport = await getTemporaryRecord(false, '1', saved, savedId);
+
+    Map<String, dynamic> localData = {
+      Strings.localId: id,
+      Strings.documentId: null,
+      Strings.uid: user.uid,
+      Strings.jobId: '1',
+      Strings.formVersion: '1',
+      Strings.jobRef: transferReport[Strings.jobRef],
+      Strings.date: transferReport[Strings.date],
+      Strings.startTime: transferReport[Strings.startTime],
+      Strings.finishTime: transferReport[Strings.finishTime],
+      Strings.totalHours: transferReport[Strings.totalHours],
+      Strings.collectionDetails: transferReport[Strings.collectionDetails],
+      Strings.collectionPostcode: transferReport[Strings.collectionPostcode],
+      Strings.collectionContactNo: transferReport[Strings.collectionContactNo],
+      Strings.destinationDetails: transferReport[Strings.destinationDetails],
+      Strings.destinationPostcode: transferReport[Strings.destinationPostcode],
+      Strings.destinationContactNo: transferReport[Strings.destinationContactNo],
+      Strings.collectionArrivalTime: transferReport[Strings.collectionArrivalTime],
+      Strings.collectionDepartureTime: transferReport[Strings.collectionDepartureTime],
+      Strings.destinationArrivalTime: transferReport[Strings.destinationArrivalTime],
+      Strings.destinationDepartureTime: transferReport[Strings.destinationDepartureTime],
+      Strings.vehicleRegNo: transferReport[Strings.vehicleRegNo],
+      Strings.startMileage: transferReport[Strings.startMileage],
+      Strings.finishMileage: transferReport[Strings.finishMileage],
+      Strings.totalMileage: transferReport[Strings.totalMileage],
+      Strings.name1: transferReport[Strings.name1],
+      Strings.role1: transferReport[Strings.role1],
+      Strings.drivingTimes1_1: transferReport[Strings.drivingTimes1_1],
+      Strings.drivingTimes1_2: transferReport[Strings.drivingTimes1_2],
+      Strings.name2: transferReport[Strings.name2],
+      Strings.role2: transferReport[Strings.role2],
+      Strings.drivingTimes2_1: transferReport[Strings.drivingTimes2_1],
+      Strings.drivingTimes2_2: transferReport[Strings.drivingTimes2_2],
+      Strings.name3: transferReport[Strings.name3],
+      Strings.role3: transferReport[Strings.role3],
+      Strings.drivingTimes3_1: transferReport[Strings.drivingTimes3_1],
+      Strings.drivingTimes3_2: transferReport[Strings.drivingTimes3_2],
+      Strings.name4: transferReport[Strings.name4],
+      Strings.role4: transferReport[Strings.role4],
+      Strings.drivingTimes4_1: transferReport[Strings.drivingTimes4_1],
+      Strings.drivingTimes4_2: transferReport[Strings.drivingTimes4_2],
+      Strings.name5: transferReport[Strings.name5],
+      Strings.role5: transferReport[Strings.role5],
+      Strings.drivingTimes5_1: transferReport[Strings.drivingTimes5_1],
+      Strings.drivingTimes5_2: transferReport[Strings.drivingTimes5_2],
+      Strings.name6: transferReport[Strings.name6],
+      Strings.role6: transferReport[Strings.role6],
+      Strings.drivingTimes6_1: transferReport[Strings.drivingTimes6_1],
+      Strings.drivingTimes6_2: transferReport[Strings.drivingTimes6_2],
+      Strings.name7: transferReport[Strings.name7],
+      Strings.role7: transferReport[Strings.role7],
+      Strings.drivingTimes7_1: transferReport[Strings.drivingTimes7_1],
+      Strings.drivingTimes7_2: transferReport[Strings.drivingTimes7_2],
+      Strings.name8: transferReport[Strings.name8],
+      Strings.role8: transferReport[Strings.role8],
+      Strings.drivingTimes8_1: transferReport[Strings.drivingTimes8_1],
+      Strings.drivingTimes8_2: transferReport[Strings.drivingTimes8_2],
+      Strings.name9: transferReport[Strings.name9],
+      Strings.role9: transferReport[Strings.role9],
+      Strings.drivingTimes9_1: transferReport[Strings.drivingTimes9_1],
+      Strings.drivingTimes9_2: transferReport[Strings.drivingTimes9_2],
+      Strings.name10: transferReport[Strings.name10],
+      Strings.role10: transferReport[Strings.role10],
+      Strings.drivingTimes10_1: transferReport[Strings.drivingTimes10_1],
+      Strings.drivingTimes10_2: transferReport[Strings.drivingTimes10_2],
+      Strings.name11: transferReport[Strings.name11],
+      Strings.role11: transferReport[Strings.role11],
+      Strings.drivingTimes11_1: transferReport[Strings.drivingTimes11_1],
+      Strings.drivingTimes11_2: transferReport[Strings.drivingTimes11_2],
+      Strings.collectionUnit: transferReport[Strings.collectionUnit],
+      Strings.collectionPosition: transferReport[Strings.collectionPosition],
+      Strings.collectionPrintName: transferReport[Strings.collectionPrintName],
+      Strings.collectionArrivalTimeEnd: transferReport[Strings.collectionArrivalTimeEnd],
+      Strings.collectionSignature: transferReport[Strings.collectionSignature],
+      Strings.destinationUnit: transferReport[Strings.destinationUnit],
+      Strings.destinationPosition: transferReport[Strings.destinationPosition],
+      Strings.destinationPrintName: transferReport[Strings.destinationPrintName],
+      Strings.destinationArrivalTimeEnd: transferReport[Strings.destinationArrivalTimeEnd],
+      Strings.destinationSignature: transferReport[Strings.destinationSignature],
+      Strings.patientName: transferReport[Strings.patientName],
+      Strings.dateOfBirth: transferReport[Strings.dateOfBirth],
+      Strings.ethnicity: transferReport[Strings.ethnicity],
+      Strings.gender: transferReport[Strings.gender],
+      Strings.mhaMcaDetails: transferReport[Strings.mhaMcaDetails],
+      Strings.diagnosis: transferReport[Strings.diagnosis],
+      Strings.currentPresentation: transferReport[Strings.currentPresentation],
+      Strings.riskYes: transferReport[Strings.riskYes],
+      Strings.riskNo: transferReport[Strings.riskNo],
+      Strings.riskExplanation: transferReport[Strings.riskExplanation],
+      Strings.forensicHistoryYes: transferReport[Strings.forensicHistoryYes],
+      Strings.forensicHistoryNo: transferReport[Strings.forensicHistoryNo],
+      Strings.racialGenderConcernsYes: transferReport[Strings.racialGenderConcernsYes],
+      Strings.racialGenderConcernsNo: transferReport[Strings.racialGenderConcernsNo],
+      Strings.violenceAggressionYes: transferReport[Strings.violenceAggressionYes],
+      Strings.violenceAggressionNo: transferReport[Strings.violenceAggressionNo],
+      Strings.selfHarmYes: transferReport[Strings.selfHarmYes],
+      Strings.selfHarmNo: transferReport[Strings.selfHarmNo],
+      Strings.alcoholSubstanceYes: transferReport[Strings.alcoholSubstanceYes],
+      Strings.alcoholSubstanceNo: transferReport[Strings.alcoholSubstanceNo],
+      Strings.virusesYes: transferReport[Strings.virusesYes],
+      Strings.virusesNo: transferReport[Strings.virusesNo],
+      Strings.safeguardingYes: transferReport[Strings.safeguardingYes],
+      Strings.safeguardingNo: transferReport[Strings.safeguardingNo],
+      Strings.physicalHealthConditionsYes: transferReport[Strings.physicalHealthConditionsYes],
+      Strings.physicalHealthConditionsNo: transferReport[Strings.physicalHealthConditionsNo],
+      Strings.useOfWeaponYes: transferReport[Strings.useOfWeaponYes],
+      Strings.useOfWeaponNo: transferReport[Strings.useOfWeaponNo],
+      Strings.absconsionRiskYes: transferReport[Strings.absconsionRiskYes],
+      Strings.absconsionRiskNo: transferReport[Strings.absconsionRiskNo],
+      Strings.forensicHistory: transferReport[Strings.forensicHistory],
+      Strings.racialGenderConcerns: transferReport[Strings.racialGenderConcerns],
+      Strings.violenceAggression: transferReport[Strings.violenceAggression],
+      Strings.selfHarm: transferReport[Strings.selfHarm],
+      Strings.alcoholSubstance: transferReport[Strings.alcoholSubstance],
+      Strings.viruses: transferReport[Strings.viruses],
+      Strings.safeguarding: transferReport[Strings.safeguarding],
+      Strings.physicalHealthConditions: transferReport[Strings.physicalHealthConditions],
+      Strings.useOfWeapon: transferReport[Strings.useOfWeapon],
+      Strings.absconsionRisk: transferReport[Strings.absconsionRisk],
+      Strings.patientPropertyYes: transferReport[Strings.patientPropertyYes],
+      Strings.patientPropertyNo: transferReport[Strings.patientPropertyNo],
+      Strings.patientPropertyExplanation: transferReport[Strings.riskExplanation],
+      Strings.patientPropertyReceived: transferReport[Strings.patientPropertyReceived],
+      Strings.patientPropertyReceivedYes: transferReport[Strings.patientPropertyReceivedYes],
+      Strings.patientPropertyReceivedNo: transferReport[Strings.patientPropertyReceivedNo],
+      Strings.patientNotesReceived: transferReport[Strings.patientNotesReceived],
+      Strings.patientNotesReceivedYes: transferReport[Strings.patientNotesReceivedYes],
+      Strings.patientNotesReceivedNo: transferReport[Strings.patientNotesReceivedNo],
+      Strings.patientSearched: transferReport[Strings.patientSearched],
+      Strings.patientSearchedYes: transferReport[Strings.patientSearchedYes],
+      Strings.patientSearchedNo: transferReport[Strings.patientSearchedNo],
+      Strings.itemsRemovedYes: transferReport[Strings.itemsRemovedYes],
+      Strings.itemsRemovedNo: transferReport[Strings.itemsRemovedNo],
+      Strings.itemsRemoved: transferReport[Strings.itemsRemoved],
+      Strings.patientInformed: transferReport[Strings.patientInformed],
+      Strings.injuriesNoted: transferReport[Strings.injuriesNoted],
+      Strings.bodyMapImage: transferReport[Strings.bodyMapImage],
+      Strings.medicalAttentionYes: transferReport[Strings.medicalAttentionYes],
+      Strings.medicalAttentionNo: transferReport[Strings.medicalAttentionNo],
+      Strings.relevantInformationYes: transferReport[Strings.relevantInformationYes],
+      Strings.relevantInformationNo: transferReport[Strings.relevantInformationNo],
+      Strings.medicalAttention: transferReport[Strings.medicalAttention],
+      Strings.currentMedication: transferReport[Strings.currentMedication],
+      Strings.physicalObservations: transferReport[Strings.physicalObservations],
+      Strings.relevantInformation: transferReport[Strings.relevantInformation],
+      Strings.patientReport: transferReport[Strings.patientReport],
+      Strings.patientReportPrintName: transferReport[Strings.patientReportPrintName],
+      Strings.patientReportRole: transferReport[Strings.patientReportRole],
+      Strings.patientReportDate: transferReport[Strings.patientReportDate],
+      Strings.patientReportTime: transferReport[Strings.patientReportTime],
+      Strings.patientReportSignature: transferReport[Strings.patientReportSignature],
+      Strings.handcuffsUsedYes: transferReport[Strings.handcuffsUsedYes],
+      Strings.handcuffsUsedNo: transferReport[Strings.handcuffsUsedNo],
+      Strings.handcuffsDate: transferReport[Strings.handcuffsDate],
+      Strings.handcuffsTime: transferReport[Strings.handcuffsTime],
+      Strings.handcuffsAuthorisedBy: transferReport[Strings.handcuffsAuthorisedBy],
+      Strings.handcuffsAppliedBy: transferReport[Strings.handcuffsAppliedBy],
+      Strings.handcuffsRemovedTime: transferReport[Strings.handcuffsRemovedTime],
+      Strings.physicalInterventionYes: transferReport[Strings.physicalInterventionYes],
+      Strings.physicalInterventionNo: transferReport[Strings.physicalInterventionNo],
+      Strings.physicalIntervention: transferReport[Strings.physicalIntervention],
+      Strings.whyInterventionRequired: transferReport[Strings.whyInterventionRequired],
+      Strings.techniqueName1: transferReport[Strings.techniqueName1],
+      Strings.techniqueName2: transferReport[Strings.techniqueName2],
+      Strings.techniqueName3: transferReport[Strings.techniqueName3],
+      Strings.techniqueName4: transferReport[Strings.techniqueName4],
+      Strings.techniqueName5: transferReport[Strings.techniqueName5],
+      Strings.techniqueName6: transferReport[Strings.techniqueName6],
+      Strings.techniqueName7: transferReport[Strings.techniqueName7],
+      Strings.techniqueName8: transferReport[Strings.techniqueName8],
+      Strings.techniqueName9: transferReport[Strings.techniqueName9],
+      Strings.techniqueName10: transferReport[Strings.techniqueName10],
+      Strings.technique1: transferReport[Strings.technique1],
+      Strings.technique2: transferReport[Strings.technique2],
+      Strings.technique3: transferReport[Strings.technique3],
+      Strings.technique4: transferReport[Strings.technique4],
+      Strings.technique5: transferReport[Strings.technique5],
+      Strings.technique6: transferReport[Strings.technique6],
+      Strings.technique7: transferReport[Strings.technique7],
+      Strings.technique8: transferReport[Strings.technique8],
+      Strings.technique9: transferReport[Strings.technique9],
+      Strings.technique10: transferReport[Strings.technique10],
+      Strings.techniquePosition1: transferReport[Strings.techniquePosition1],
+      Strings.techniquePosition2: transferReport[Strings.techniquePosition2],
+      Strings.techniquePosition3: transferReport[Strings.techniquePosition3],
+      Strings.techniquePosition4: transferReport[Strings.techniquePosition4],
+      Strings.techniquePosition5: transferReport[Strings.techniquePosition5],
+      Strings.techniquePosition6: transferReport[Strings.techniquePosition6],
+      Strings.techniquePosition7: transferReport[Strings.techniquePosition7],
+      Strings.techniquePosition8: transferReport[Strings.techniquePosition8],
+      Strings.techniquePosition9: transferReport[Strings.techniquePosition9],
+      Strings.techniquePosition10: transferReport[Strings.techniquePosition10],
+      Strings.timeInterventionCommenced: transferReport[Strings.timeInterventionCommenced],
+      Strings.timeInterventionCompleted: transferReport[Strings.timeInterventionCompleted],
+      Strings.incidentDate: transferReport[Strings.incidentDate],
+      Strings.incidentTime: transferReport[Strings.incidentTime],
+      Strings.incidentDetails: transferReport[Strings.incidentDetails],
+      Strings.incidentLocation: transferReport[Strings.incidentLocation],
+      Strings.incidentAction: transferReport[Strings.incidentAction],
+      Strings.incidentStaffInvolved: transferReport[Strings.incidentStaffInvolved],
+      Strings.incidentSignature: transferReport[Strings.incidentSignature],
+      Strings.incidentSignatureDate: transferReport[Strings.incidentSignatureDate],
+      Strings.incidentPrintName: transferReport[Strings.incidentPrintName],
+      Strings.hasSection2Checklist: transferReport[Strings.hasSection2Checklist],
+      Strings.hasSection3Checklist: transferReport[Strings.hasSection3Checklist],
+      Strings.hasSection3TransferChecklist: transferReport[Strings.hasSection3TransferChecklist],
+      Strings.transferInPatientName1: transferReport[Strings.transferInPatientName1],
+      Strings.patientCorrectYes1: transferReport[Strings.patientCorrectYes1],
+      Strings.patientCorrectNo1: transferReport[Strings.patientCorrectNo1],
+      Strings.hospitalCorrectYes1: transferReport[Strings.hospitalCorrectYes1],
+      Strings.hospitalCorrectNo1: transferReport[Strings.hospitalCorrectNo1],
+      Strings.applicationFormYes1: transferReport[Strings.applicationFormYes1],
+      Strings.applicationFormNo1: transferReport[Strings.applicationFormNo1],
+      Strings.applicationSignedYes1: transferReport[Strings.applicationSignedYes1],
+      Strings.applicationSignedNo1: transferReport[Strings.applicationSignedNo1],
+      Strings.within14DaysYes1: transferReport[Strings.within14DaysYes1],
+      Strings.within14DaysNo1: transferReport[Strings.within14DaysNo1],
+      Strings.localAuthorityNameYes1: transferReport[Strings.localAuthorityNameYes1],
+      Strings.localAuthorityNameNo1: transferReport[Strings.localAuthorityNameNo1],
+      Strings.medicalRecommendationsFormYes1: transferReport[Strings.medicalRecommendationsFormYes1],
+      Strings.medicalRecommendationsFormNo1: transferReport[Strings.medicalRecommendationsFormNo1],
+      Strings.medicalRecommendationsSignedYes1: transferReport[Strings.medicalRecommendationsSignedYes1],
+      Strings.medicalRecommendationsSignedNo1: transferReport[Strings.medicalRecommendationsSignedNo1],
+      Strings.datesSignatureSignedYes: transferReport[Strings.datesSignatureSignedYes],
+      Strings.datesSignatureSignedNo: transferReport[Strings.datesSignatureSignedNo],
+      Strings.signatureDatesOnBeforeYes1: transferReport[Strings.signatureDatesOnBeforeYes1],
+      Strings.signatureDatesOnBeforeNo1: transferReport[Strings.signatureDatesOnBeforeNo1],
+      Strings.practitionersNameYes1: transferReport[Strings.practitionersNameYes1],
+      Strings.practitionersNameNo1: transferReport[Strings.practitionersNameNo1],
+      Strings.transferInCheckedBy1: transferReport[Strings.transferInCheckedBy1],
+      Strings.transferInDate1: transferReport[Strings.transferInDate1],
+      Strings.transferInDesignation1: transferReport[Strings.transferInDesignation1],
+      Strings.transferInSignature1: transferReport[Strings.transferInSignature1],
+      Strings.transferInPatientName2: transferReport[Strings.transferInPatientName2],
+      Strings.patientCorrectYes2: transferReport[Strings.patientCorrectYes2],
+      Strings.patientCorrectNo2: transferReport[Strings.patientCorrectNo2],
+      Strings.hospitalCorrectYes2: transferReport[Strings.hospitalCorrectYes2],
+      Strings.hospitalCorrectNo2: transferReport[Strings.hospitalCorrectNo2],
+      Strings.applicationFormYes2: transferReport[Strings.applicationFormYes2],
+      Strings.applicationFormNo2: transferReport[Strings.applicationFormNo2],
+      Strings.applicationSignedYes2: transferReport[Strings.applicationSignedYes2],
+      Strings.applicationSignedNo2: transferReport[Strings.applicationSignedNo2],
+      Strings.amhpIdentifiedYes: transferReport[Strings.amhpIdentifiedYes],
+      Strings.amhpIdentifiedNo: transferReport[Strings.amhpIdentifiedNo],
+      Strings.medicalRecommendationsFormYes2: transferReport[Strings.medicalRecommendationsFormYes2],
+      Strings.medicalRecommendationsFormNo2: transferReport[Strings.medicalRecommendationsFormNo2],
+      Strings.medicalRecommendationsSignedYes2: transferReport[Strings.medicalRecommendationsSignedYes2],
+      Strings.medicalRecommendationsSignedNo2: transferReport[Strings.medicalRecommendationsSignedNo2],
+      Strings.clearDaysYes2: transferReport[Strings.clearDaysYes2],
+      Strings.clearDaysNo2: transferReport[Strings.clearDaysNo2],
+      Strings.signatureDatesOnBeforeYes2: transferReport[Strings.signatureDatesOnBeforeYes2],
+      Strings.signatureDatesOnBeforeNo2: transferReport[Strings.signatureDatesOnBeforeNo2],
+      Strings.practitionersNameYes2: transferReport[Strings.practitionersNameYes2],
+      Strings.practitionersNameNo2: transferReport[Strings.practitionersNameNo2],
+      Strings.doctorsAgreeYes: transferReport[Strings.doctorsAgreeYes],
+      Strings.doctorsAgreeNo: transferReport[Strings.doctorsAgreeNo],
+      Strings.separateMedicalRecommendationsYes: transferReport[Strings.separateMedicalRecommendationsYes],
+      Strings.separateMedicalRecommendationsNo: transferReport[Strings.separateMedicalRecommendationsNo],
+      Strings.transferInCheckedBy2: transferReport[Strings.transferInCheckedBy2],
+      Strings.transferInDate2: transferReport[Strings.transferInDate2],
+      Strings.transferInDesignation2: transferReport[Strings.transferInDesignation2],
+      Strings.transferInSignature2: transferReport[Strings.transferInSignature2],
+      Strings.transferInPatientName3: transferReport[Strings.transferInPatientName3],
+      Strings.patientCorrectYes3: transferReport[Strings.patientCorrectYes3],
+      Strings.patientCorrectNo3: transferReport[Strings.patientCorrectNo3],
+      Strings.hospitalCorrectYes3: transferReport[Strings.hospitalCorrectYes3],
+      Strings.hospitalCorrectNo3: transferReport[Strings.hospitalCorrectNo3],
+      Strings.h4Yes: transferReport[Strings.h4Yes],
+      Strings.h4No: transferReport[Strings.h4No],
+      Strings.currentConsentYes: transferReport[Strings.currentConsentYes],
+      Strings.currentConsentNo: transferReport[Strings.currentConsentNo],
+      Strings.applicationFormYes3: transferReport[Strings.applicationFormYes3],
+      Strings.applicationFormNo3: transferReport[Strings.applicationFormNo3],
+      Strings.applicationSignedYes3: transferReport[Strings.applicationSignedYes3],
+      Strings.applicationSignedNo3: transferReport[Strings.applicationSignedNo3],
+      Strings.within14DaysYes3: transferReport[Strings.within14DaysYes3],
+      Strings.within14DaysNo3: transferReport[Strings.within14DaysNo3],
+      Strings.localAuthorityNameYes3: transferReport[Strings.localAuthorityNameYes3],
+      Strings.localAuthorityNameNo3: transferReport[Strings.localAuthorityNameNo3],
+      Strings.nearestRelativeYes: transferReport[Strings.nearestRelativeYes],
+      Strings.nearestRelativeNo: transferReport[Strings.nearestRelativeNo],
+      Strings.amhpConsultationYes: transferReport[Strings.amhpConsultationYes],
+      Strings.amhpConsultationNo: transferReport[Strings.amhpConsultationNo],
+      Strings.knewPatientYes: transferReport[Strings.knewPatientYes],
+      Strings.knewPatientNo: transferReport[Strings.knewPatientNo],
+      Strings.medicalRecommendationsFormYes3: transferReport[Strings.medicalRecommendationsFormYes3],
+      Strings.medicalRecommendationsFormNo3: transferReport[Strings.medicalRecommendationsFormNo3],
+      Strings.medicalRecommendationsSignedYes3: transferReport[Strings.medicalRecommendationsSignedYes3],
+      Strings.medicalRecommendationsSignedNo3: transferReport[Strings.medicalRecommendationsSignedNo3],
+      Strings.clearDaysYes3: transferReport[Strings.clearDaysYes3],
+      Strings.clearDaysNo3: transferReport[Strings.clearDaysNo3],
+      Strings.approvedSection12Yes: transferReport[Strings.approvedSection12Yes],
+      Strings.approvedSection12No: transferReport[Strings.approvedSection12No],
+      Strings.signatureDatesOnBeforeYes3: transferReport[Strings.signatureDatesOnBeforeYes3],
+      Strings.signatureDatesOnBeforeNo3: transferReport[Strings.signatureDatesOnBeforeNo3],
+      Strings.practitionersNameYes3: transferReport[Strings.practitionersNameYes3],
+      Strings.practitionersNameNo3: transferReport[Strings.practitionersNameNo3],
+      Strings.previouslyAcquaintedYes: transferReport[Strings.previouslyAcquaintedYes],
+      Strings.previouslyAcquaintedNo: transferReport[Strings.previouslyAcquaintedNo],
+      Strings.acquaintedIfNoYes: transferReport[Strings.acquaintedIfNoYes],
+      Strings.acquaintedIfNoNo: transferReport[Strings.acquaintedIfNoNo],
+      Strings.recommendationsDifferentTeamsYes: transferReport[Strings.recommendationsDifferentTeamsYes],
+      Strings.recommendationsDifferentTeamsNo: transferReport[Strings.recommendationsDifferentTeamsNo],
+      Strings.originalDetentionPapersYes: transferReport[Strings.originalDetentionPapersYes],
+      Strings.originalDetentionPapersNo: transferReport[Strings.originalDetentionPapersNo],
+      Strings.transferInCheckedBy3: transferReport[Strings.transferInCheckedBy3],
+      Strings.transferInDate3: transferReport[Strings.transferInDate3],
+      Strings.transferInDesignation3: transferReport[Strings.transferInDesignation3],
+      Strings.transferInSignature3: transferReport[Strings.transferInSignature3],
+      Strings.feltSafeYes: transferReport[Strings.feltSafeYes],
+      Strings.feltSafeNo: transferReport[Strings.feltSafeNo],
+      Strings.staffIntroducedYes: transferReport[Strings.staffIntroducedYes],
+      Strings.staffIntroducedNo: transferReport[Strings.staffIntroducedNo],
+      Strings.experiencePositiveYes: transferReport[Strings.experiencePositiveYes],
+      Strings.experiencePositiveNo: transferReport[Strings.experiencePositiveNo],
+      Strings.otherComments: transferReport[Strings.otherComments],
+      Strings.vehicleCompletedBy1: transferReport[Strings.vehicleCompletedBy1],
+      Strings.vehicleDate: transferReport[Strings.vehicleDate],
+      Strings.vehicleTime: transferReport[Strings.vehicleTime],
+      Strings.ambulanceReg: transferReport[Strings.ambulanceReg],
+      Strings.vehicleStartMileage: transferReport[Strings.vehicleStartMileage],
+      Strings.nearestTank1: transferReport[Strings.nearestTank1],
+      Strings.ambulanceTidyYes1: transferReport[Strings.ambulanceTidyYes1],
+      Strings.ambulanceTidyNo1: transferReport[Strings.ambulanceTidyNo1],
+      Strings.lightsWorkingYes: transferReport[Strings.lightsWorkingYes],
+      Strings.lightsWorkingNo: transferReport[Strings.lightsWorkingNo],
+      Strings.tyresInflatedYes: transferReport[Strings.tyresInflatedYes],
+      Strings.tyresInflatedNo: transferReport[Strings.tyresInflatedNo],
+      Strings.warningSignsYes: transferReport[Strings.warningSignsYes],
+      Strings.warningSignsNo: transferReport[Strings.warningSignsNo],
+      Strings.vehicleCompletedBy2: transferReport[Strings.vehicleCompletedBy2],
+      Strings.nearestTank2: transferReport[Strings.nearestTank2],
+      Strings.vehicleFinishMileage: transferReport[Strings.vehicleFinishMileage],
+      Strings.ambulanceTidyYes2: transferReport[Strings.ambulanceTidyYes2],
+      Strings.ambulanceTidyNo2: transferReport[Strings.ambulanceTidyNo2],
+      Strings.sanitiserCleanYes: transferReport[Strings.sanitiserCleanYes],
+      Strings.sanitiserCleanNo: transferReport[Strings.sanitiserCleanNo],
+      Strings.issuesFaults: transferReport[Strings.issuesFaults],
+    };
+
+    await _savedTransferReportsStore.record(id).put(await _db,
+        localData);
+
+    message = 'Transfer Report saved to device';
+    success = true;
+
+    if(success) resetTemporaryRecord(jobId, false, 0);
+    GlobalFunctions.dismissLoadingDialog();
+    GlobalFunctions.showToast(message);
+    return success;
+  }
+
+  Future<void> deleteSavedRecord(int id) async {
+    await _savedTransferReportsStore.record(id).delete(await _db);
+    _transferReports.removeWhere((element) => element[Strings.localId] == id);
+    notifyListeners();
+  }
+
+  Future<void> getSavedRecordsList() async{
+
+    _isLoading = true;
+    notifyListeners();
+    String message = '';
+
+    List<Map<String, dynamic>> _fetchedRecordList = [];
+
+    try {
+
+      List<dynamic> records = await getSavedRecords();
+
+      if(records.length > 0){
+        for(var record in records){
+          _fetchedRecordList.add(record.value);
+        }
+
+        _transferReports = List.from(_fetchedRecordList.reversed);
+      } else {
+        message = 'No saved records available';
+      }
+
+    } catch(e){
+      print(e);
+      message = 'Something went wrong. Please try again';
+
+    }
+    _isLoading = false;
+    notifyListeners();
+    _selTransferReportId = null;
+    if(message != '') GlobalFunctions.showToast(message);
+
+  }
+
+  Future<void> resetTemporaryRecord(String chosenJobId, bool saved, int savedId) async {
+
+    Db.Finder finder;
+
+    if(saved){
+      finder = Db.Finder(filter: Db.Filter.equals(Strings.localId, savedId));
+    } else {
+      finder = Db.Finder(filter: Db.Filter.and(
+          [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, chosenJobId)]
+      ));
+    }
 
     await _temporaryTransferReportsStore.update(await _db, {
       Strings.formVersion: 1,
@@ -596,7 +1052,7 @@ class TransferReportModel extends ChangeNotifier {
   }
 
 
-  Future<Map<String, dynamic>> validateTransferReport(String jobId, bool edit) async {
+  Future<Map<String, dynamic>> validateTransferReport(String jobId, bool edit, bool saved, int savedId) async {
 
     bool successJobDetails = true;
     bool successVehicleChecklist = true;
@@ -604,7 +1060,7 @@ class TransferReportModel extends ChangeNotifier {
 
 
     //Map<String, dynamic> transferReport = await _databaseHelper.getTemporaryTransferReport(edit, user.uid, jobId);
-    Map<String, dynamic> transferReport = await getTemporaryRecord(edit, jobId);
+    Map<String, dynamic> transferReport = await getTemporaryRecord(edit, jobId, saved, savedId);
 
 
 
@@ -1230,26 +1686,15 @@ class TransferReportModel extends ChangeNotifier {
   }
 
 
-  Future<bool> submitTransferReport(String jobId, [bool edit = false]) async {
+  Future<bool> submitTransferReport(String jobId, bool edit, bool saved, int savedId) async {
 
     GlobalFunctions.showLoadingDialog('Submitting Transfer Report...');
     String message = '';
     bool success = false;
     List<String> storageUrlList = [];
 
-    //Sembast
-    int count = await _transferReportsStore.count(await _db);
-    //int count = await _databaseHelper.getRowCount(Strings.transferReportTable);
-    int id;
-
-    if (count == 0) {
-      id = 1;
-    } else {
-      id = count + 1;
-    }
-
-    Map<String, dynamic> transferReport = await getTemporaryRecord(false, jobId);
-    //Map<String, dynamic> transferReport = await _databaseHelper.getTemporaryTransferReport(false, user.uid, jobId);
+    int id = DateTime.now().millisecondsSinceEpoch + int.parse(random_string.randomNumeric(2));
+    Map<String, dynamic> transferReport = await getTemporaryRecord(false, jobId, saved, savedId);
 
 
     Map<String, dynamic> localData = {
@@ -1595,17 +2040,12 @@ class TransferReportModel extends ChangeNotifier {
     };
 
     //Sembast
-    int _id = DateTime.now().millisecondsSinceEpoch + int.parse(random_string.randomNumeric(2));
-    await _transferReportsStore.record(_id).put(await _db,
+    await _transferReportsStore.record(id).put(await _db,
         localData);
+
 
     message = 'Transfer Report has successfully been added to local database';
 
-    // int result = await _databaseHelper.add(Strings.transferReportTable, localData);
-    //
-    // if (result != 0) {
-    //   message = 'Transfer Report has successfully been added to local database';
-    // }
 
 
     bool hasDataConnection = await GlobalFunctions.hasDataConnection();
@@ -2197,30 +2637,13 @@ class TransferReportModel extends ChangeNotifier {
 
 
             //Sembast
-            await _transferReportsStore.record(_id).delete(await _db);
+            await _transferReportsStore.record(id).delete(await _db);
+            if(saved){
+              deleteSavedRecord(savedId);
+            }
             message = 'Transfer Report uploaded successfully';
             success = true;
 
-
-            // Map<String, dynamic> localData = {
-            //   Strings.documentId: snap.id,
-            //   Strings.serverUploaded: 1,
-            //   'timestamp': DateTime.fromMillisecondsSinceEpoch(snap.data()[Strings.timestamp].millisecondsSinceEpoch).toIso8601String()
-            // };
-            //
-            // int queryResult = await _databaseHelper.updateRow(
-            //     Strings.transferReportTable,
-            //     localData,
-            //     Strings.localId,
-            //     id);
-            //
-            // if (queryResult != 0) {
-            //   success = true;
-            //   message = 'Transfer Report uploaded successfully';
-            // } else {
-            //   message =
-            //   'Transfer Report uploaded successfully to the server';
-            // }
 
           } else {
             await FirebaseFirestore.instance.collection('transfer_reports').doc(snap.id).delete();
@@ -2249,13 +2672,15 @@ class TransferReportModel extends ChangeNotifier {
     }
 
     if(success){
-      await resetTemporaryRecord(jobId);
-      if(kIsWeb) await resetTemporaryRecord(jobId);
+      await resetTemporaryRecord(jobId, saved, savedId);
+      if(kIsWeb) await resetTemporaryRecord(jobId, saved, savedId);
     }
-    //if(success) resetTemporaryTransferReport(jobId);
     GlobalFunctions.dismissLoadingDialog();
     if(edit){
       _navigationService.goBack();
+      _navigationService.goBack();
+    }
+    if(saved){
       _navigationService.goBack();
     }
     GlobalFunctions.showToast(message);
@@ -2272,7 +2697,7 @@ class TransferReportModel extends ChangeNotifier {
     List<String> storageUrlList = [];
 
     //Map<String, dynamic> transferReport = await _databaseHelper.getTemporaryTransferReport(true, user.uid, jobId);
-    Map<String, dynamic> transferReport = await getTemporaryRecord(true, jobId);
+    Map<String, dynamic> transferReport = await getTemporaryRecord(true, jobId, false, 0);
 
 
     bool hasDataConnection = await GlobalFunctions.hasDataConnection();
@@ -2291,7 +2716,6 @@ class TransferReportModel extends ChangeNotifier {
         try {
 
           await FirebaseFirestore.instance.collection('transfer_reports').doc(transferReport[Strings.documentId]).update({
-            Strings.uid: user.uid,
             Strings.jobId: '1',
             Strings.formVersion: '1',
             Strings.jobRef: GlobalFunctions.databaseValueString(transferReport[Strings.jobRef]),
@@ -2619,373 +3043,20 @@ class TransferReportModel extends ChangeNotifier {
             Strings.sanitiserCleanYes: transferReport[Strings.sanitiserCleanYes],
             Strings.sanitiserCleanNo: transferReport[Strings.sanitiserCleanNo],
             Strings.issuesFaults: transferReport[Strings.issuesFaults],
-            Strings.timestamp: FieldValue.serverTimestamp(),
             Strings.serverUploaded: 1,
           });
 
           //Sembast
           final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
-              [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, jobId)]
+              [Db.Filter.equals(Strings.documentId, selectedTransferReport[Strings.documentId]), Db.Filter.equals(Strings.jobId, jobId)]
           ));
 
-
-          await _transferReportsStore.delete(await _db,
+          await _editedTransferReportsStore.delete(await _db,
               finder: finder);
           message = 'Transfer Report uploaded successfully';
           success = true;
+          getTransferReports();
 
-          // Map<String, dynamic> localData = {
-          //   Strings.documentId: transferReport[Strings.documentId],
-          //   Strings.uid: transferReport[Strings.uid],
-          //   Strings.jobId: transferReport[Strings.jobId],
-          //   Strings.formVersion: transferReport[Strings.formVersion],
-          //   Strings.jobRef: transferReport[Strings.jobRef],
-          //   Strings.date: transferReport[Strings.date],
-          //   Strings.startTime: transferReport[Strings.startTime],
-          //   Strings.finishTime: transferReport[Strings.finishTime],
-          //   Strings.totalHours: transferReport[Strings.totalHours],
-          //   Strings.collectionDetails: transferReport[Strings.collectionDetails],
-          //   Strings.collectionPostcode: transferReport[Strings.collectionPostcode],
-          //   Strings.collectionContactNo: transferReport[Strings.collectionContactNo],
-          //   Strings.destinationDetails: transferReport[Strings.destinationDetails],
-          //   Strings.destinationPostcode: transferReport[Strings.destinationPostcode],
-          //   Strings.destinationContactNo: transferReport[Strings.destinationContactNo],
-          //   Strings.collectionArrivalTime: transferReport[Strings.collectionArrivalTime],
-          //   Strings.collectionDepartureTime: transferReport[Strings.collectionDepartureTime],
-          //   Strings.destinationArrivalTime: transferReport[Strings.destinationArrivalTime],
-          //   Strings.destinationDepartureTime: transferReport[Strings.destinationDepartureTime],
-          //   Strings.vehicleRegNo: transferReport[Strings.vehicleRegNo],
-          //   Strings.startMileage: transferReport[Strings.startMileage],
-          //   Strings.finishMileage: transferReport[Strings.finishMileage],
-          //   Strings.totalMileage: transferReport[Strings.totalMileage],
-          //   Strings.name1: transferReport[Strings.name1],
-          //   Strings.role1: transferReport[Strings.role1],
-          //   Strings.drivingTimes1_1: transferReport[Strings.drivingTimes1_1],
-          //   Strings.drivingTimes1_2: transferReport[Strings.drivingTimes1_2],
-          //   Strings.name2: transferReport[Strings.name2],
-          //   Strings.role2: transferReport[Strings.role2],
-          //   Strings.drivingTimes2_1: transferReport[Strings.drivingTimes2_1],
-          //   Strings.drivingTimes2_2: transferReport[Strings.drivingTimes2_2],
-          //   Strings.name3: transferReport[Strings.name3],
-          //   Strings.role3: transferReport[Strings.role3],
-          //   Strings.drivingTimes3_1: transferReport[Strings.drivingTimes3_1],
-          //   Strings.drivingTimes3_2: transferReport[Strings.drivingTimes3_2],
-          //   Strings.name4: transferReport[Strings.name4],
-          //   Strings.role4: transferReport[Strings.role4],
-          //   Strings.drivingTimes4_1: transferReport[Strings.drivingTimes4_1],
-          //   Strings.drivingTimes4_2: transferReport[Strings.drivingTimes4_2],
-          //   Strings.name5: transferReport[Strings.name5],
-          //   Strings.role5: transferReport[Strings.role5],
-          //   Strings.drivingTimes5_1: transferReport[Strings.drivingTimes5_1],
-          //   Strings.drivingTimes5_2: transferReport[Strings.drivingTimes5_2],
-          //   Strings.name6: transferReport[Strings.name6],
-          //   Strings.role6: transferReport[Strings.role6],
-          //   Strings.drivingTimes6_1: transferReport[Strings.drivingTimes6_1],
-          //   Strings.drivingTimes6_2: transferReport[Strings.drivingTimes6_2],
-          //   Strings.name7: transferReport[Strings.name7],
-          //   Strings.role7: transferReport[Strings.role7],
-          //   Strings.drivingTimes7_1: transferReport[Strings.drivingTimes7_1],
-          //   Strings.drivingTimes7_2: transferReport[Strings.drivingTimes7_2],
-          //   Strings.name8: transferReport[Strings.name8],
-          //   Strings.role8: transferReport[Strings.role8],
-          //   Strings.drivingTimes8_1: transferReport[Strings.drivingTimes8_1],
-          //   Strings.drivingTimes8_2: transferReport[Strings.drivingTimes8_2],
-          //   Strings.name9: transferReport[Strings.name9],
-          //   Strings.role9: transferReport[Strings.role9],
-          //   Strings.drivingTimes9_1: transferReport[Strings.drivingTimes9_1],
-          //   Strings.drivingTimes9_2: transferReport[Strings.drivingTimes9_2],
-          //   Strings.name10: transferReport[Strings.name10],
-          //   Strings.role10: transferReport[Strings.role10],
-          //   Strings.drivingTimes10_1: transferReport[Strings.drivingTimes10_1],
-          //   Strings.drivingTimes10_2: transferReport[Strings.drivingTimes10_2],
-          //   Strings.name11: transferReport[Strings.name11],
-          //   Strings.role11: transferReport[Strings.role11],
-          //   Strings.drivingTimes11_1: transferReport[Strings.drivingTimes11_1],
-          //   Strings.drivingTimes11_2: transferReport[Strings.drivingTimes11_2],
-          //   Strings.collectionUnit: transferReport[Strings.collectionUnit],
-          //   Strings.collectionPosition: transferReport[Strings.collectionPosition],
-          //   Strings.collectionPrintName: transferReport[Strings.collectionPrintName],
-          //   Strings.collectionArrivalTimeEnd: transferReport[Strings.collectionArrivalTimeEnd],
-          //   Strings.collectionSignature: transferReport[Strings.collectionSignature],
-          //   Strings.destinationUnit: transferReport[Strings.destinationUnit],
-          //   Strings.destinationPosition: transferReport[Strings.destinationPosition],
-          //   Strings.destinationPrintName: transferReport[Strings.destinationPrintName],
-          //   Strings.destinationArrivalTimeEnd: transferReport[Strings.destinationArrivalTimeEnd],
-          //   Strings.destinationSignature: transferReport[Strings.destinationSignature],
-          //   Strings.patientName: transferReport[Strings.patientName],
-          //   Strings.dateOfBirth: transferReport[Strings.dateOfBirth],
-          //   Strings.ethnicity: transferReport[Strings.ethnicity],
-          //   Strings.gender: transferReport[Strings.gender],
-          //   Strings.mhaMcaDetails: transferReport[Strings.mhaMcaDetails],
-          //   Strings.diagnosis: transferReport[Strings.diagnosis],
-          //   Strings.currentPresentation: transferReport[Strings.currentPresentation],
-          //   Strings.riskYes: transferReport[Strings.riskYes],
-          //   Strings.riskNo: transferReport[Strings.riskNo],
-          //   Strings.riskExplanation: transferReport[Strings.riskExplanation],
-          //   Strings.forensicHistoryYes: transferReport[Strings.forensicHistoryYes],
-          //   Strings.forensicHistoryNo: transferReport[Strings.forensicHistoryNo],
-          //   Strings.racialGenderConcernsYes: transferReport[Strings.racialGenderConcernsYes],
-          //   Strings.racialGenderConcernsNo: transferReport[Strings.racialGenderConcernsNo],
-          //   Strings.violenceAggressionYes: transferReport[Strings.violenceAggressionYes],
-          //   Strings.violenceAggressionNo: transferReport[Strings.violenceAggressionNo],
-          //   Strings.selfHarmYes: transferReport[Strings.selfHarmYes],
-          //   Strings.selfHarmNo: transferReport[Strings.selfHarmNo],
-          //   Strings.alcoholSubstanceYes: transferReport[Strings.alcoholSubstanceYes],
-          //   Strings.alcoholSubstanceNo: transferReport[Strings.alcoholSubstanceNo],
-          //   Strings.virusesYes: transferReport[Strings.virusesYes],
-          //   Strings.virusesNo: transferReport[Strings.virusesNo],
-          //   Strings.safeguardingYes: transferReport[Strings.safeguardingYes],
-          //   Strings.safeguardingNo: transferReport[Strings.safeguardingNo],
-          //   Strings.physicalHealthConditionsYes: transferReport[Strings.physicalHealthConditionsYes],
-          //   Strings.physicalHealthConditionsNo: transferReport[Strings.physicalHealthConditionsNo],
-          //   Strings.useOfWeaponYes: transferReport[Strings.useOfWeaponYes],
-          //   Strings.useOfWeaponNo: transferReport[Strings.useOfWeaponNo],
-          //   Strings.absconsionRiskYes: transferReport[Strings.absconsionRiskYes],
-          //   Strings.absconsionRiskNo: transferReport[Strings.absconsionRiskNo],
-          //   Strings.forensicHistory: transferReport[Strings.forensicHistory],
-          //   Strings.racialGenderConcerns: transferReport[Strings.racialGenderConcerns],
-          //   Strings.violenceAggression: transferReport[Strings.violenceAggression],
-          //   Strings.selfHarm: transferReport[Strings.selfHarm],
-          //   Strings.alcoholSubstance: transferReport[Strings.alcoholSubstance],
-          //   Strings.viruses: transferReport[Strings.viruses],
-          //   Strings.safeguarding: transferReport[Strings.safeguarding],
-          //   Strings.physicalHealthConditions: transferReport[Strings.physicalHealthConditions],
-          //   Strings.useOfWeapon: transferReport[Strings.useOfWeapon],
-          //   Strings.absconsionRisk: transferReport[Strings.absconsionRisk],
-          //   Strings.patientPropertyYes: transferReport[Strings.patientPropertyYes],
-          //   Strings.patientPropertyNo: transferReport[Strings.patientPropertyNo],
-          //   Strings.patientPropertyExplanation: transferReport[Strings.riskExplanation],
-          //   Strings.patientPropertyReceived: transferReport[Strings.patientPropertyReceived],
-          //   Strings.patientPropertyReceivedYes: transferReport[Strings.patientPropertyReceivedYes],
-          //   Strings.patientPropertyReceivedNo: transferReport[Strings.patientPropertyReceivedNo],
-          //   Strings.patientNotesReceived: transferReport[Strings.patientNotesReceived],
-          //   Strings.patientNotesReceivedYes: transferReport[Strings.patientNotesReceivedYes],
-          //   Strings.patientNotesReceivedNo: transferReport[Strings.patientNotesReceivedNo],
-          //   Strings.patientSearched: transferReport[Strings.patientSearched],
-          //   Strings.patientSearchedYes: transferReport[Strings.patientSearchedYes],
-          //   Strings.patientSearchedNo: transferReport[Strings.patientSearchedNo],
-          //   Strings.itemsRemovedYes: transferReport[Strings.itemsRemovedYes],
-          //   Strings.itemsRemovedNo: transferReport[Strings.itemsRemovedNo],
-          //   Strings.itemsRemoved: transferReport[Strings.itemsRemoved],
-          //   Strings.patientInformed: transferReport[Strings.patientInformed],
-          //   Strings.injuriesNoted: transferReport[Strings.injuriesNoted],
-          //   Strings.bodyMapImage: transferReport[Strings.bodyMapImage],
-          //   Strings.medicalAttentionYes: transferReport[Strings.medicalAttentionYes],
-          //   Strings.medicalAttentionNo: transferReport[Strings.medicalAttentionNo],
-          //   Strings.relevantInformationYes: transferReport[Strings.relevantInformationYes],
-          //   Strings.relevantInformationNo: transferReport[Strings.relevantInformationNo],
-          //   Strings.medicalAttention: transferReport[Strings.medicalAttention],
-          //   Strings.currentMedication: transferReport[Strings.currentMedication],
-          //   Strings.physicalObservations: transferReport[Strings.physicalObservations],
-          //   Strings.relevantInformation: transferReport[Strings.relevantInformation],
-          //   Strings.patientReport: transferReport[Strings.patientReport],
-          //   Strings.patientReportPrintName: transferReport[Strings.patientReportPrintName],
-          //   Strings.patientReportRole: transferReport[Strings.patientReportRole],
-          //   Strings.patientReportDate: transferReport[Strings.patientReportDate],
-          //   Strings.patientReportTime: transferReport[Strings.patientReportTime],
-          //   Strings.patientReportSignature: transferReport[Strings.patientReportSignature],
-          //   Strings.handcuffsUsedYes: transferReport[Strings.handcuffsUsedYes],
-          //   Strings.handcuffsUsedNo: transferReport[Strings.handcuffsUsedNo],
-          //   Strings.handcuffsDate: transferReport[Strings.handcuffsDate],
-          //   Strings.handcuffsTime: transferReport[Strings.handcuffsTime],
-          //   Strings.handcuffsAuthorisedBy: transferReport[Strings.handcuffsAuthorisedBy],
-          //   Strings.handcuffsAppliedBy: transferReport[Strings.handcuffsAppliedBy],
-          //   Strings.handcuffsRemovedTime: transferReport[Strings.handcuffsRemovedTime],
-          //   Strings.physicalInterventionYes: transferReport[Strings.physicalInterventionYes],
-          //   Strings.physicalInterventionNo: transferReport[Strings.physicalInterventionNo],
-          //   Strings.physicalIntervention: transferReport[Strings.physicalIntervention],
-          //   Strings.whyInterventionRequired: transferReport[Strings.whyInterventionRequired],
-          //   Strings.techniqueName1: transferReport[Strings.techniqueName1],
-          //   Strings.techniqueName2: transferReport[Strings.techniqueName2],
-          //   Strings.techniqueName3: transferReport[Strings.techniqueName3],
-          //   Strings.techniqueName4: transferReport[Strings.techniqueName4],
-          //   Strings.techniqueName5: transferReport[Strings.techniqueName5],
-          //   Strings.techniqueName6: transferReport[Strings.techniqueName6],
-          //   Strings.techniqueName7: transferReport[Strings.techniqueName7],
-          //   Strings.techniqueName8: transferReport[Strings.techniqueName8],
-          //   Strings.techniqueName9: transferReport[Strings.techniqueName9],
-          //   Strings.techniqueName10: transferReport[Strings.techniqueName10],
-          //   Strings.technique1: transferReport[Strings.technique1],
-          //   Strings.technique2: transferReport[Strings.technique2],
-          //   Strings.technique3: transferReport[Strings.technique3],
-          //   Strings.technique4: transferReport[Strings.technique4],
-          //   Strings.technique5: transferReport[Strings.technique5],
-          //   Strings.technique6: transferReport[Strings.technique6],
-          //   Strings.technique7: transferReport[Strings.technique7],
-          //   Strings.technique8: transferReport[Strings.technique8],
-          //   Strings.technique9: transferReport[Strings.technique9],
-          //   Strings.technique10: transferReport[Strings.technique10],
-          //   Strings.techniquePosition1: transferReport[Strings.techniquePosition1],
-          //   Strings.techniquePosition2: transferReport[Strings.techniquePosition2],
-          //   Strings.techniquePosition3: transferReport[Strings.techniquePosition3],
-          //   Strings.techniquePosition4: transferReport[Strings.techniquePosition4],
-          //   Strings.techniquePosition5: transferReport[Strings.techniquePosition5],
-          //   Strings.techniquePosition6: transferReport[Strings.techniquePosition6],
-          //   Strings.techniquePosition7: transferReport[Strings.techniquePosition7],
-          //   Strings.techniquePosition8: transferReport[Strings.techniquePosition8],
-          //   Strings.techniquePosition9: transferReport[Strings.techniquePosition9],
-          //   Strings.techniquePosition10: transferReport[Strings.techniquePosition10],
-          //   Strings.timeInterventionCommenced: transferReport[Strings.timeInterventionCommenced],
-          //   Strings.timeInterventionCompleted: transferReport[Strings.timeInterventionCompleted],
-          //   Strings.incidentDate: transferReport[Strings.incidentDate],
-          //   Strings.incidentTime: transferReport[Strings.incidentTime],
-          //   Strings.incidentDetails: transferReport[Strings.incidentDetails],
-          //   Strings.incidentLocation: transferReport[Strings.incidentLocation],
-          //   Strings.incidentAction: transferReport[Strings.incidentAction],
-          //   Strings.incidentStaffInvolved: transferReport[Strings.incidentStaffInvolved],
-          //   Strings.incidentSignature: transferReport[Strings.incidentSignature],
-          //   Strings.incidentSignatureDate: transferReport[Strings.incidentSignatureDate],
-          //   Strings.incidentPrintName: transferReport[Strings.incidentPrintName],
-          //   Strings.hasSection2Checklist: transferReport[Strings.hasSection2Checklist],
-          //   Strings.hasSection3Checklist: transferReport[Strings.hasSection3Checklist],
-          //   Strings.hasSection3TransferChecklist: transferReport[Strings.hasSection3TransferChecklist],
-          //   Strings.transferInPatientName1: transferReport[Strings.transferInPatientName1],
-          //   Strings.patientCorrectYes1: transferReport[Strings.patientCorrectYes1],
-          //   Strings.patientCorrectNo1: transferReport[Strings.patientCorrectNo1],
-          //   Strings.hospitalCorrectYes1: transferReport[Strings.hospitalCorrectYes1],
-          //   Strings.hospitalCorrectNo1: transferReport[Strings.hospitalCorrectNo1],
-          //   Strings.applicationFormYes1: transferReport[Strings.applicationFormYes1],
-          //   Strings.applicationFormNo1: transferReport[Strings.applicationFormNo1],
-          //   Strings.applicationSignedYes1: transferReport[Strings.applicationSignedYes1],
-          //   Strings.applicationSignedNo1: transferReport[Strings.applicationSignedNo1],
-          //   Strings.within14DaysYes1: transferReport[Strings.within14DaysYes1],
-          //   Strings.within14DaysNo1: transferReport[Strings.within14DaysNo1],
-          //   Strings.localAuthorityNameYes1: transferReport[Strings.localAuthorityNameYes1],
-          //   Strings.localAuthorityNameNo1: transferReport[Strings.localAuthorityNameNo1],
-          //   Strings.medicalRecommendationsFormYes1: transferReport[Strings.medicalRecommendationsFormYes1],
-          //   Strings.medicalRecommendationsFormNo1: transferReport[Strings.medicalRecommendationsFormNo1],
-          //   Strings.medicalRecommendationsSignedYes1: transferReport[Strings.medicalRecommendationsSignedYes1],
-          //   Strings.medicalRecommendationsSignedNo1: transferReport[Strings.medicalRecommendationsSignedNo1],
-          //   Strings.datesSignatureSignedYes: transferReport[Strings.datesSignatureSignedYes],
-          //   Strings.datesSignatureSignedNo: transferReport[Strings.datesSignatureSignedNo],
-          //   Strings.signatureDatesOnBeforeYes1: transferReport[Strings.signatureDatesOnBeforeYes1],
-          //   Strings.signatureDatesOnBeforeNo1: transferReport[Strings.signatureDatesOnBeforeNo1],
-          //   Strings.practitionersNameYes1: transferReport[Strings.practitionersNameYes1],
-          //   Strings.practitionersNameNo1: transferReport[Strings.practitionersNameNo1],
-          //   Strings.transferInCheckedBy1: transferReport[Strings.transferInCheckedBy1],
-          //   Strings.transferInDate1: transferReport[Strings.transferInDate1],
-          //   Strings.transferInDesignation1: transferReport[Strings.transferInDesignation1],
-          //   Strings.transferInSignature1: transferReport[Strings.transferInSignature1],
-          //   Strings.transferInPatientName2: transferReport[Strings.transferInPatientName2],
-          //   Strings.patientCorrectYes2: transferReport[Strings.patientCorrectYes2],
-          //   Strings.patientCorrectNo2: transferReport[Strings.patientCorrectNo2],
-          //   Strings.hospitalCorrectYes2: transferReport[Strings.hospitalCorrectYes2],
-          //   Strings.hospitalCorrectNo2: transferReport[Strings.hospitalCorrectNo2],
-          //   Strings.applicationFormYes2: transferReport[Strings.applicationFormYes2],
-          //   Strings.applicationFormNo2: transferReport[Strings.applicationFormNo2],
-          //   Strings.applicationSignedYes2: transferReport[Strings.applicationSignedYes2],
-          //   Strings.applicationSignedNo2: transferReport[Strings.applicationSignedNo2],
-          //   Strings.amhpIdentifiedYes: transferReport[Strings.amhpIdentifiedYes],
-          //   Strings.amhpIdentifiedNo: transferReport[Strings.amhpIdentifiedNo],
-          //   Strings.medicalRecommendationsFormYes2: transferReport[Strings.medicalRecommendationsFormYes2],
-          //   Strings.medicalRecommendationsFormNo2: transferReport[Strings.medicalRecommendationsFormNo2],
-          //   Strings.medicalRecommendationsSignedYes2: transferReport[Strings.medicalRecommendationsSignedYes2],
-          //   Strings.medicalRecommendationsSignedNo2: transferReport[Strings.medicalRecommendationsSignedNo2],
-          //   Strings.clearDaysYes2: transferReport[Strings.clearDaysYes2],
-          //   Strings.clearDaysNo2: transferReport[Strings.clearDaysNo2],
-          //   Strings.signatureDatesOnBeforeYes2: transferReport[Strings.signatureDatesOnBeforeYes2],
-          //   Strings.signatureDatesOnBeforeNo2: transferReport[Strings.signatureDatesOnBeforeNo2],
-          //   Strings.practitionersNameYes2: transferReport[Strings.practitionersNameYes2],
-          //   Strings.practitionersNameNo2: transferReport[Strings.practitionersNameNo2],
-          //   Strings.doctorsAgreeYes: transferReport[Strings.doctorsAgreeYes],
-          //   Strings.doctorsAgreeNo: transferReport[Strings.doctorsAgreeNo],
-          //   Strings.separateMedicalRecommendationsYes: transferReport[Strings.separateMedicalRecommendationsYes],
-          //   Strings.separateMedicalRecommendationsNo: transferReport[Strings.separateMedicalRecommendationsNo],
-          //   Strings.transferInCheckedBy2: transferReport[Strings.transferInCheckedBy2],
-          //   Strings.transferInDate2: transferReport[Strings.transferInDate2],
-          //   Strings.transferInDesignation2: transferReport[Strings.transferInDesignation2],
-          //   Strings.transferInSignature2: transferReport[Strings.transferInSignature2],
-          //   Strings.transferInPatientName3: transferReport[Strings.transferInPatientName3],
-          //   Strings.patientCorrectYes3: transferReport[Strings.patientCorrectYes3],
-          //   Strings.patientCorrectNo3: transferReport[Strings.patientCorrectNo3],
-          //   Strings.hospitalCorrectYes3: transferReport[Strings.hospitalCorrectYes3],
-          //   Strings.hospitalCorrectNo3: transferReport[Strings.hospitalCorrectNo3],
-          //   Strings.h4Yes: transferReport[Strings.h4Yes],
-          //   Strings.h4No: transferReport[Strings.h4No],
-          //   Strings.currentConsentYes: transferReport[Strings.currentConsentYes],
-          //   Strings.currentConsentNo: transferReport[Strings.currentConsentNo],
-          //   Strings.applicationFormYes3: transferReport[Strings.applicationFormYes3],
-          //   Strings.applicationFormNo3: transferReport[Strings.applicationFormNo3],
-          //   Strings.applicationSignedYes3: transferReport[Strings.applicationSignedYes3],
-          //   Strings.applicationSignedNo3: transferReport[Strings.applicationSignedNo3],
-          //   Strings.within14DaysYes3: transferReport[Strings.within14DaysYes3],
-          //   Strings.within14DaysNo3: transferReport[Strings.within14DaysNo3],
-          //   Strings.localAuthorityNameYes3: transferReport[Strings.localAuthorityNameYes3],
-          //   Strings.localAuthorityNameNo3: transferReport[Strings.localAuthorityNameNo3],
-          //   Strings.nearestRelativeYes: transferReport[Strings.nearestRelativeYes],
-          //   Strings.nearestRelativeNo: transferReport[Strings.nearestRelativeNo],
-          //   Strings.amhpConsultationYes: transferReport[Strings.amhpConsultationYes],
-          //   Strings.amhpConsultationNo: transferReport[Strings.amhpConsultationNo],
-          //   Strings.knewPatientYes: transferReport[Strings.knewPatientYes],
-          //   Strings.knewPatientNo: transferReport[Strings.knewPatientNo],
-          //   Strings.medicalRecommendationsFormYes3: transferReport[Strings.medicalRecommendationsFormYes3],
-          //   Strings.medicalRecommendationsFormNo3: transferReport[Strings.medicalRecommendationsFormNo3],
-          //   Strings.medicalRecommendationsSignedYes3: transferReport[Strings.medicalRecommendationsSignedYes3],
-          //   Strings.medicalRecommendationsSignedNo3: transferReport[Strings.medicalRecommendationsSignedNo3],
-          //   Strings.clearDaysYes3: transferReport[Strings.clearDaysYes3],
-          //   Strings.clearDaysNo3: transferReport[Strings.clearDaysNo3],
-          //   Strings.approvedSection12Yes: transferReport[Strings.approvedSection12Yes],
-          //   Strings.approvedSection12No: transferReport[Strings.approvedSection12No],
-          //   Strings.signatureDatesOnBeforeYes3: transferReport[Strings.signatureDatesOnBeforeYes3],
-          //   Strings.signatureDatesOnBeforeNo3: transferReport[Strings.signatureDatesOnBeforeNo3],
-          //   Strings.practitionersNameYes3: transferReport[Strings.practitionersNameYes3],
-          //   Strings.practitionersNameNo3: transferReport[Strings.practitionersNameNo3],
-          //   Strings.previouslyAcquaintedYes: transferReport[Strings.previouslyAcquaintedYes],
-          //   Strings.previouslyAcquaintedNo: transferReport[Strings.previouslyAcquaintedNo],
-          //   Strings.acquaintedIfNoYes: transferReport[Strings.acquaintedIfNoYes],
-          //   Strings.acquaintedIfNoNo: transferReport[Strings.acquaintedIfNoNo],
-          //   Strings.recommendationsDifferentTeamsYes: transferReport[Strings.recommendationsDifferentTeamsYes],
-          //   Strings.recommendationsDifferentTeamsNo: transferReport[Strings.recommendationsDifferentTeamsNo],
-          //   Strings.originalDetentionPapersYes: transferReport[Strings.originalDetentionPapersYes],
-          //   Strings.originalDetentionPapersNo: transferReport[Strings.originalDetentionPapersNo],
-          //   Strings.transferInCheckedBy3: transferReport[Strings.transferInCheckedBy3],
-          //   Strings.transferInDate3: transferReport[Strings.transferInDate3],
-          //   Strings.transferInDesignation3: transferReport[Strings.transferInDesignation3],
-          //   Strings.transferInSignature3: transferReport[Strings.transferInSignature3],
-          //   Strings.feltSafeYes: transferReport[Strings.feltSafeYes],
-          //   Strings.feltSafeNo: transferReport[Strings.feltSafeNo],
-          //   Strings.staffIntroducedYes: transferReport[Strings.staffIntroducedYes],
-          //   Strings.staffIntroducedNo: transferReport[Strings.staffIntroducedNo],
-          //   Strings.experiencePositiveYes: transferReport[Strings.experiencePositiveYes],
-          //   Strings.experiencePositiveNo: transferReport[Strings.experiencePositiveNo],
-          //   Strings.otherComments: transferReport[Strings.otherComments],
-          //   Strings.vehicleCompletedBy1: transferReport[Strings.vehicleCompletedBy1],
-          //   Strings.vehicleDate: transferReport[Strings.vehicleDate],
-          //   Strings.vehicleTime: transferReport[Strings.vehicleTime],
-          //   Strings.ambulanceReg: transferReport[Strings.ambulanceReg],
-          //   Strings.vehicleStartMileage: transferReport[Strings.vehicleStartMileage],
-          //   Strings.nearestTank1: transferReport[Strings.nearestTank1],
-          //   Strings.ambulanceTidyYes1: transferReport[Strings.ambulanceTidyYes1],
-          //   Strings.ambulanceTidyNo1: transferReport[Strings.ambulanceTidyNo1],
-          //   Strings.lightsWorkingYes: transferReport[Strings.lightsWorkingYes],
-          //   Strings.lightsWorkingNo: transferReport[Strings.lightsWorkingNo],
-          //   Strings.tyresInflatedYes: transferReport[Strings.tyresInflatedYes],
-          //   Strings.tyresInflatedNo: transferReport[Strings.tyresInflatedNo],
-          //   Strings.warningSignsYes: transferReport[Strings.warningSignsYes],
-          //   Strings.warningSignsNo: transferReport[Strings.warningSignsNo],
-          //   Strings.vehicleCompletedBy2: transferReport[Strings.vehicleCompletedBy2],
-          //   Strings.nearestTank2: transferReport[Strings.nearestTank2],
-          //   Strings.vehicleFinishMileage: transferReport[Strings.vehicleFinishMileage],
-          //   Strings.ambulanceTidyYes2: transferReport[Strings.ambulanceTidyYes2],
-          //   Strings.ambulanceTidyNo2: transferReport[Strings.ambulanceTidyNo2],
-          //   Strings.sanitiserCleanYes: transferReport[Strings.sanitiserCleanYes],
-          //   Strings.sanitiserCleanNo: transferReport[Strings.sanitiserCleanNo],
-          //   Strings.issuesFaults: transferReport[Strings.issuesFaults],
-          // };
-          //
-          //   int queryResult = await _databaseHelper.updateRow(
-          //       Strings.transferReportTable,
-          //       localData,
-          //       Strings.documentId,
-          //       transferReport[Strings.documentId]);
-          //
-          //   if (queryResult != 0) {
-          //     success = true;
-          //     message = 'Transfer Report uploaded successfully';
-          //   } else {
-          //     message =
-          //     'Transfer Report uploaded successfully to the server';
-          //   }
 
 
 
@@ -3029,9 +3100,7 @@ class TransferReportModel extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     String message = '';
-
     List<Map<String, dynamic>> _fetchedTransferReportList = [];
-    DatabaseHelper databaseHelper = DatabaseHelper();
 
     try {
 
@@ -3041,50 +3110,6 @@ class TransferReportModel extends ChangeNotifier {
 
         GlobalFunctions.showToast('No data connection, unable to fetch Transfer Reports');
         _transferReports = [];
-
-        // int localChecklistCount;
-        //
-        // if(user.role == 'Super User'){
-        //   localChecklistCount = await databaseHelper.getRowCountWhere(Strings.transferReportTable, Strings.serverUploaded, 1);
-        //
-        // } else {
-        //   localChecklistCount = await databaseHelper.getRowCountWhereAndWhere(Strings.transferReportTable, Strings.serverUploaded, 1, Strings.uid, user.uid);
-        //
-        // }
-        //
-        //
-        // if (localChecklistCount > 0) {
-        //
-        //   List<Map<String, dynamic>> localRecords = [];
-        //
-        //   if(user.role == 'Super User'){
-        //     localRecords = await databaseHelper.getRowsWhereOrderByDirection(Strings.transferReportTable, Strings.serverUploaded, 1, Strings.timestamp, 'DESC');
-        //
-        //   } else {
-        //     localRecords = await databaseHelper.getRowsWhereAndWhereOrderByDirection(Strings.transferReportTable, Strings.serverUploaded, 1, Strings.uid, user.uid, Strings.timestamp, 'DESC');
-        //
-        //   }
-        //
-        //
-        //   if(localRecords.length >0){
-        //
-        //     for (Map<String, dynamic> localRecord in localRecords) {
-        //
-        //       final Map<String, dynamic> transferReport = localTransferReport(localRecord);
-        //
-        //       _fetchedTransferReportList.add(transferReport);
-        //     }
-        //
-        //     _transferReports = _fetchedTransferReportList;
-        //     message = 'No data connection, unable to fetch latest Transfer Reports';
-        //
-        //   }
-        //
-        // } else {
-        //   _transferReports = [];
-        //   message = 'No Transfer Reports available, please try again when you have a data connection';
-        // }
-
 
       } else {
 
@@ -3113,10 +3138,6 @@ class TransferReportModel extends ChangeNotifier {
               print(e);
             }
           }
-
-
-
-
 
           Map<String, dynamic> snapshotData = {};
 
@@ -3222,27 +3243,6 @@ class TransferReportModel extends ChangeNotifier {
 
               _fetchedTransferReportList.add(transferReport);
 
-              // Map<String, dynamic> localData = Map.from(transferReport);
-              // int queryResult;
-              //
-              // int existingTransferReport = await databaseHelper.checkTransferReportExists(snap.id);
-              //
-              // if (existingTransferReport == 0) {
-              //
-              //   queryResult = await databaseHelper.add(Strings.transferReportTable, localData);
-              // } else {
-              //
-              //   queryResult = await databaseHelper.updateRow(Strings.transferReportTable, localData, Strings.documentId, snap.id);
-              //
-              // }
-              //
-              // if (queryResult != 0) {
-              //
-              //   print('added to local db');
-              // } else {
-              //   print('issue with local db');
-              // }
-
             }
 
             _transferReports = _fetchedTransferReportList;
@@ -3275,7 +3275,6 @@ class TransferReportModel extends ChangeNotifier {
     String message = '';
 
     List<Map<String, dynamic>> _fetchedTransferReportList = [];
-    DatabaseHelper databaseHelper = DatabaseHelper();
 
     try {
 
@@ -3427,27 +3426,6 @@ class TransferReportModel extends ChangeNotifier {
               final Map<String, dynamic> transferReport = onlineTransferReport(snapshotData, snap.id, incidentSignature, collectionSignature, destinationSignature, bodyMapImage, patientReportSignature, transferInSignature1, transferInSignature2, transferInSignature3);
 
               _fetchedTransferReportList.add(transferReport);
-
-              // Map<String, dynamic> localData = Map.from(transferReport);
-              // int queryResult;
-              //
-              // int existingTransferReport = await databaseHelper.checkTransferReportExists(snap.id);
-              //
-              // if (existingTransferReport == 0) {
-              //
-              //   queryResult = await databaseHelper.add(Strings.transferReportTable, localData);
-              // } else {
-              //
-              //   queryResult = await databaseHelper.updateRow(Strings.transferReportTable, localData, Strings.documentId, snap.id);
-              //
-              // }
-              //
-              // if (queryResult != 0) {
-              //
-              //   print('added to local db');
-              // } else {
-              //   print('issue with local db');
-              // }
 
             }
 

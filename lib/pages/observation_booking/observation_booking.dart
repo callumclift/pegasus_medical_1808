@@ -21,12 +21,19 @@ class ObservationBooking extends StatefulWidget {
   final String jobId;
   final bool fillDetails;
   final bool edit;
+  final bool saved;
+  final int savedId;
 
   ObservationBooking(
-      [this.fromJob = false,
+      [
+        this.fromJob = false,
         this.jobId = '1',
         this.fillDetails = false,
-        this.edit = false]);
+        this.edit = false,
+        this.saved = false,
+        this.savedId = 0
+      ]
+      );
 
   @override
   _ObservationBookingState createState() => _ObservationBookingState();
@@ -387,12 +394,12 @@ class _ObservationBookingState extends State<ObservationBooking> {
       }
 
       //Sembast
-      observationBookingModel.updateTemporaryRecord(widget.edit, value, encrypt ? GlobalFunctions.encryptString(controllerText) : GlobalFunctions.databaseValueString(controllerText), widget.jobId);
+      observationBookingModel.updateTemporaryRecord(widget.edit, value, encrypt ? GlobalFunctions.encryptString(controllerText) : GlobalFunctions.databaseValueString(controllerText), widget.jobId, widget.saved, widget.savedId);
 
       // _databaseHelper.updateTemporaryObservationBookingField(widget.edit, {
       //   value:
       //   encrypt ? GlobalFunctions.encryptString(controllerText) : GlobalFunctions.databaseValueString(controllerText)
-      // }, user.uid, widget.jobId);
+      // }, user.uid, widget.jobId, widget.saved, widget.savedId);
     });
   }
 
@@ -458,11 +465,11 @@ class _ObservationBookingState extends State<ObservationBooking> {
 
       await observationBookingModel.setupTemporaryRecord();
 
-      bool hasRecord = await observationBookingModel.checkRecordExists(widget.edit, widget.jobId);
+      bool hasRecord = await observationBookingModel.checkRecordExists(widget.edit, widget.jobId, widget.saved, widget.savedId);
 
 
       if (hasRecord) {
-        Map<String, dynamic> observationBooking = await observationBookingModel.getTemporaryRecord(widget.edit, widget.jobId);
+        Map<String, dynamic> observationBooking = await observationBookingModel.getTemporaryRecord(widget.edit, widget.jobId, widget.saved, widget.savedId);
 
 
 
@@ -960,10 +967,10 @@ class _ObservationBookingState extends State<ObservationBooking> {
 
     // if (mounted) {
     //   int result = await _databaseHelper.checkTemporaryObservationBookingExists(widget.edit,
-    //       user.uid, widget.jobId);
+    //       user.uid, widget.jobId, widget.saved, widget.savedId);
     //   if (result != 0) {
     //     Map<String, dynamic> observationBooking = await _databaseHelper
-    //         .getTemporaryObservationBooking(widget.edit, user.uid, widget.jobId);
+    //         .getTemporaryObservationBooking(widget.edit, user.uid, widget.jobId, widget.saved, widget.savedId);
     //
     //
     //     if (observationBooking[Strings.jobRef] != null) {
@@ -1571,10 +1578,10 @@ class _ObservationBookingState extends State<ObservationBooking> {
                 onPressed: () {
                   setState(() {
                     controller.clear();
-                    observationBookingModel.updateTemporaryRecord(widget.edit, value, null, widget.jobId);
+                    observationBookingModel.updateTemporaryRecord(widget.edit, value, null, widget.jobId, widget.saved, widget.savedId);
 
                     // _databaseHelper.updateTemporaryObservationBookingField(widget.edit,
-                    //     {value : null}, user.uid, widget.jobId);
+                    //     {value : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
 
                   });
                 }),
@@ -1606,18 +1613,18 @@ class _ObservationBookingState extends State<ObservationBooking> {
                         controller.text = dateTime;
                         if(encrypt){
 
-                          observationBookingModel.updateTemporaryRecord(widget.edit, value, GlobalFunctions.encryptString(DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String()), widget.jobId);
+                          observationBookingModel.updateTemporaryRecord(widget.edit, value, GlobalFunctions.encryptString(DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String()), widget.jobId, widget.saved, widget.savedId);
 
 
                           // _databaseHelper.updateTemporaryObservationBookingField(widget.edit,
-                          //     {value : GlobalFunctions.encryptString(DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String())}, user.uid, widget.jobId);
+                          //     {value : GlobalFunctions.encryptString(DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String())}, user.uid, widget.jobId, widget.saved, widget.savedId);
                         } else {
 
-                          observationBookingModel.updateTemporaryRecord(widget.edit, value, DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String(), widget.jobId);
+                          observationBookingModel.updateTemporaryRecord(widget.edit, value, DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String(), widget.jobId, widget.saved, widget.savedId);
 
 
                           // _databaseHelper.updateTemporaryObservationBookingField(widget.edit,
-                          //     {value : DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String()}, user.uid, widget.jobId);
+                          //     {value : DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String()}, user.uid, widget.jobId, widget.saved, widget.savedId);
                         }
 
 
@@ -1674,10 +1681,10 @@ class _ObservationBookingState extends State<ObservationBooking> {
                 onPressed: () {
                   setState(() {
                     controller.clear();
-                    observationBookingModel.updateTemporaryRecord(widget.edit, value, null, widget.jobId);
+                    observationBookingModel.updateTemporaryRecord(widget.edit, value, null, widget.jobId, widget.saved, widget.savedId);
 
                     // _databaseHelper.updateTemporaryObservationBookingField(widget.edit,
-                    //     {value : null}, user.uid, widget.jobId);
+                    //     {value : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
                   });
                 }),
             IconButton(
@@ -1708,15 +1715,15 @@ class _ObservationBookingState extends State<ObservationBooking> {
                       setState(() {
                         controller.text = dateTime;
                         if(encrypt){
-                         observationBookingModel.updateTemporaryRecord(widget.edit, value, GlobalFunctions.encryptString(DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String()), widget.jobId);
+                         observationBookingModel.updateTemporaryRecord(widget.edit, value, GlobalFunctions.encryptString(DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String()), widget.jobId, widget.saved, widget.savedId);
 
                           // _databaseHelper.updateTemporaryObservationBookingField(widget.edit,
-                          //     {value : GlobalFunctions.encryptString(DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String())}, user.uid, widget.jobId);
+                          //     {value : GlobalFunctions.encryptString(DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String())}, user.uid, widget.jobId, widget.saved, widget.savedId);
                         } else {
-                          observationBookingModel.updateTemporaryRecord(widget.edit, value, DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String(), widget.jobId);
+                          observationBookingModel.updateTemporaryRecord(widget.edit, value, DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String(), widget.jobId, widget.saved, widget.savedId);
 
                           // _databaseHelper.updateTemporaryObservationBookingField(widget.edit,
-                          //     {value : DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String()}, user.uid, widget.jobId);
+                          //     {value : DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String()}, user.uid, widget.jobId, widget.saved, widget.savedId);
                         }
                       });
                     }
@@ -1771,11 +1778,11 @@ class _ObservationBookingState extends State<ObservationBooking> {
                 onPressed: () {
                   setState(() {
                     obStartDateTime.clear();
-                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obStartDateTime, null, widget.jobId);
+                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obStartDateTime, null, widget.jobId, widget.saved, widget.savedId);
 
 
                     // _databaseHelper.updateTemporaryObservationBookingField(widget.edit,
-                    //     {Strings.obStartDateTime : null}, user.uid, widget.jobId);
+                    //     {Strings.obStartDateTime : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
 
                   });
                 }),
@@ -1812,10 +1819,10 @@ class _ObservationBookingState extends State<ObservationBooking> {
                         obStartDateTime.text = dateTime;
                       });
 
-                      await observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obStartDateTime, DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String(), widget.jobId);
+                      await observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obStartDateTime, DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String(), widget.jobId, widget.saved, widget.savedId);
 
                       // await _databaseHelper.updateTemporaryObservationBookingField(widget.edit,
-                      //     {Strings.obStartDateTime : DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String()}, user.uid, widget.jobId);
+                      //     {Strings.obStartDateTime : DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String()}, user.uid, widget.jobId, widget.saved, widget.savedId);
                     }
                   }
 
@@ -1855,14 +1862,14 @@ class _ObservationBookingState extends State<ObservationBooking> {
                 value: obMhaAssessmentYes,
                 onChanged: (bool value) => setState(() {
                   obMhaAssessmentYes = value;
-                  observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obMhaAssessmentYes, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+                  observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obMhaAssessmentYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
 
-                  //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obMhaAssessmentYes : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId);
+                  //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obMhaAssessmentYes : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId, widget.saved, widget.savedId);
                   if (obMhaAssessmentNo == true){
                     obMhaAssessmentNo = false;
-                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obMhaAssessmentNo, null, widget.jobId);
+                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obMhaAssessmentNo, null, widget.jobId, widget.saved, widget.savedId);
 
-                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obMhaAssessmentNo : null}, user.uid, widget.jobId);
+                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obMhaAssessmentNo : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
                   }
                 })),
             Text(
@@ -1873,15 +1880,15 @@ class _ObservationBookingState extends State<ObservationBooking> {
                 value: obMhaAssessmentNo,
                 onChanged: (bool value) => setState(() {
                   obMhaAssessmentNo = value;
-                  observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obMhaAssessmentNo, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+                  observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obMhaAssessmentNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
 
-                  //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obMhaAssessmentNo : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId);
+                  //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obMhaAssessmentNo : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId, widget.saved, widget.savedId);
                   if (obMhaAssessmentYes == true){
                     obMhaAssessmentYes = false;
-                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obMhaAssessmentYes, null, widget.jobId);
+                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obMhaAssessmentYes, null, widget.jobId, widget.saved, widget.savedId);
 
 
-                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obMhaAssessmentYes : null}, user.uid, widget.jobId);
+                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obMhaAssessmentYes : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
                   }
                 }))
           ],
@@ -1921,15 +1928,15 @@ class _ObservationBookingState extends State<ObservationBooking> {
                 onChanged: (bool value) => setState(() {
                   obBedIdentifiedYes = value;
 
-                  observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obBedIdentifiedYes, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+                  observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obBedIdentifiedYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
 
-                  //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obBedIdentifiedYes : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId);
+                  //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obBedIdentifiedYes : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId, widget.saved, widget.savedId);
                   if (obBedIdentifiedNo == true){
                     obBedIdentifiedNo = false;
 
-                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obBedIdentifiedNo, null, widget.jobId);
+                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obBedIdentifiedNo, null, widget.jobId, widget.saved, widget.savedId);
 
-                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obBedIdentifiedNo : null}, user.uid, widget.jobId);
+                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obBedIdentifiedNo : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
                   }
                 })),
             Text(
@@ -1940,15 +1947,15 @@ class _ObservationBookingState extends State<ObservationBooking> {
                 value: obBedIdentifiedNo,
                 onChanged: (bool value) => setState(() {
                   obBedIdentifiedNo = value;
-                  observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obBedIdentifiedNo, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+                  observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obBedIdentifiedNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
 
-                  //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obBedIdentifiedNo : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId);
+                  //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obBedIdentifiedNo : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId, widget.saved, widget.savedId);
                   if (obBedIdentifiedYes == true){
                     obBedIdentifiedYes = false;
 
-                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obBedIdentifiedYes, null, widget.jobId);
+                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obBedIdentifiedYes, null, widget.jobId, widget.saved, widget.savedId);
 
-                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obBedIdentifiedYes : null}, user.uid, widget.jobId);
+                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obBedIdentifiedYes : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
                   }
                 }))
           ],
@@ -1987,14 +1994,14 @@ class _ObservationBookingState extends State<ObservationBooking> {
                 value: obWrapDocumentationYes,
                 onChanged: (bool value) => setState(() {
                   obWrapDocumentationYes = value;
-                  observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obWrapDocumentationYes, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+                  observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obWrapDocumentationYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
 
-                  //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obWrapDocumentationYes : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId);
+                  //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obWrapDocumentationYes : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId, widget.saved, widget.savedId);
                   if (obWrapDocumentationNo == true){
                     obWrapDocumentationNo = false;
-                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obWrapDocumentationNo, null, widget.jobId);
+                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obWrapDocumentationNo, null, widget.jobId, widget.saved, widget.savedId);
 
-                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obWrapDocumentationNo : null}, user.uid, widget.jobId);
+                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obWrapDocumentationNo : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
                   }
                 })),
             Text(
@@ -2005,14 +2012,14 @@ class _ObservationBookingState extends State<ObservationBooking> {
                 value: obWrapDocumentationNo,
                 onChanged: (bool value) => setState(() {
                   obWrapDocumentationNo = value;
-                  observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obWrapDocumentationNo, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+                  observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obWrapDocumentationNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
 
-                  //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obWrapDocumentationNo : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId);
+                  //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obWrapDocumentationNo : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId, widget.saved, widget.savedId);
                   if (obWrapDocumentationYes == true){
                     obWrapDocumentationYes = false;
-                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obWrapDocumentationYes, null, widget.jobId);
+                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obWrapDocumentationYes, null, widget.jobId, widget.saved, widget.savedId);
 
-                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obWrapDocumentationYes : null}, user.uid, widget.jobId);
+                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obWrapDocumentationYes : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
                   }
                 }))
           ],
@@ -2051,14 +2058,14 @@ class _ObservationBookingState extends State<ObservationBooking> {
                 value: obSpecificCarePlanYes,
                 onChanged: (bool value) => setState(() {
                   obSpecificCarePlanYes = value;
-                  observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obSpecificCarePlanYes, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+                  observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obSpecificCarePlanYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
 
-                  //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obSpecificCarePlanYes : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId);
+                  //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obSpecificCarePlanYes : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId, widget.saved, widget.savedId);
                   if (obSpecificCarePlanNo == true){
                     obSpecificCarePlanNo = false;
-                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obSpecificCarePlanNo, null, widget.jobId);
+                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obSpecificCarePlanNo, null, widget.jobId, widget.saved, widget.savedId);
 
-                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obSpecificCarePlanNo : null}, user.uid, widget.jobId);
+                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obSpecificCarePlanNo : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
                   }
                 })),
             Text(
@@ -2069,14 +2076,14 @@ class _ObservationBookingState extends State<ObservationBooking> {
                 value: obSpecificCarePlanNo,
                 onChanged: (bool value) => setState(() {
                   obSpecificCarePlanNo = value;
-                  observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obSpecificCarePlanNo, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+                  observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obSpecificCarePlanNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
 
-                  //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obSpecificCarePlanNo : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId);
+                  //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obSpecificCarePlanNo : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId, widget.saved, widget.savedId);
                   if (obSpecificCarePlanYes == true){
                     obSpecificCarePlanYes = false;
-                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obSpecificCarePlanYes, null, widget.jobId);
+                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obSpecificCarePlanYes, null, widget.jobId, widget.saved, widget.savedId);
 
-                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obSpecificCarePlanYes : null}, user.uid, widget.jobId);
+                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obSpecificCarePlanYes : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
                   }
                 }))
           ],
@@ -2115,14 +2122,14 @@ class _ObservationBookingState extends State<ObservationBooking> {
                 value: obPatientWarningsYes,
                 onChanged: (bool value) => setState(() {
                   obPatientWarningsYes = value;
-                  observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obPatientWarningsYes, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+                  observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obPatientWarningsYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
 
-                  //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obPatientWarningsYes : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId);
+                  //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obPatientWarningsYes : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId, widget.saved, widget.savedId);
                   if (obPatientWarningsNo == true){
                     obPatientWarningsNo = false;
-                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obPatientWarningsNo, null, widget.jobId);
+                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obPatientWarningsNo, null, widget.jobId, widget.saved, widget.savedId);
 
-                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obPatientWarningsNo : null}, user.uid, widget.jobId);
+                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obPatientWarningsNo : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
                   }
                 })),
             Text(
@@ -2133,14 +2140,14 @@ class _ObservationBookingState extends State<ObservationBooking> {
                 value: obPatientWarningsNo,
                 onChanged: (bool value) => setState(() {
                   obPatientWarningsNo = value;
-                  observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obPatientWarningsNo, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+                  observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obPatientWarningsNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
 
-                  //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obPatientWarningsNo : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId);
+                  //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obPatientWarningsNo : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId, widget.saved, widget.savedId);
                   if (obPatientWarningsYes == true){
                     obPatientWarningsYes = false;
-                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obPatientWarningsYes, null, widget.jobId);
+                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obPatientWarningsYes, null, widget.jobId, widget.saved, widget.savedId);
 
-                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obPatientWarningsYes : null}, user.uid, widget.jobId);
+                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obPatientWarningsYes : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
                   }
                 }))
           ],
@@ -2179,14 +2186,14 @@ class _ObservationBookingState extends State<ObservationBooking> {
                 value: obGenderConcernsYes,
                 onChanged: (bool value) => setState(() {
                   obGenderConcernsYes = value;
-                  observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obGenderConcernsYes, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+                  observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obGenderConcernsYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
 
-                  //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obGenderConcernsYes : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId);
+                  //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obGenderConcernsYes : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId, widget.saved, widget.savedId);
                   if (obGenderConcernsNo == true){
                     obGenderConcernsNo = false;
-                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obGenderConcernsNo, null, widget.jobId);
+                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obGenderConcernsNo, null, widget.jobId, widget.saved, widget.savedId);
 
-                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obGenderConcernsNo : null}, user.uid, widget.jobId);
+                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obGenderConcernsNo : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
                   }
                 })),
             Text(
@@ -2197,14 +2204,14 @@ class _ObservationBookingState extends State<ObservationBooking> {
                 value: obGenderConcernsNo,
                 onChanged: (bool value) => setState(() {
                   obGenderConcernsNo = value;
-                  observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obGenderConcernsNo, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+                  observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obGenderConcernsNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
 
-                  //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obGenderConcernsNo : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId);
+                  //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obGenderConcernsNo : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId, widget.saved, widget.savedId);
                   if (obGenderConcernsYes == true){
                     obGenderConcernsYes = false;
-                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obGenderConcernsYes, null, widget.jobId);
+                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obGenderConcernsYes, null, widget.jobId, widget.saved, widget.savedId);
 
-                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obGenderConcernsYes : null}, user.uid, widget.jobId);
+                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obGenderConcernsYes : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
                   }
                 }))
           ],
@@ -2243,14 +2250,14 @@ class _ObservationBookingState extends State<ObservationBooking> {
                 value: obSafeguardingConcernsYes,
                 onChanged: (bool value) => setState(() {
                   obSafeguardingConcernsYes = value;
-                  observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obSafeguardingConcernsYes, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+                  observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obSafeguardingConcernsYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
 
-                  //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obSafeguardingConcernsYes : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId);
+                  //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obSafeguardingConcernsYes : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId, widget.saved, widget.savedId);
                   if (obSafeguardingConcernsNo == true){
                     obSafeguardingConcernsNo = false;
-                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obSafeguardingConcernsNo, null, widget.jobId);
+                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obSafeguardingConcernsNo, null, widget.jobId, widget.saved, widget.savedId);
 
-                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obSafeguardingConcernsNo : null}, user.uid, widget.jobId);
+                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obSafeguardingConcernsNo : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
                   }
                 })),
             Text(
@@ -2261,14 +2268,14 @@ class _ObservationBookingState extends State<ObservationBooking> {
                 value: obSafeguardingConcernsNo,
                 onChanged: (bool value) => setState(() {
                   obSafeguardingConcernsNo = value;
-                  observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obSafeguardingConcernsNo, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+                  observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obSafeguardingConcernsNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
 
-                  //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obSafeguardingConcernsNo : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId);
+                  //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obSafeguardingConcernsNo : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId, widget.saved, widget.savedId);
                   if (obSafeguardingConcernsYes == true){
                     obSafeguardingConcernsYes = false;
-                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obSafeguardingConcernsYes, null, widget.jobId);
+                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obSafeguardingConcernsYes, null, widget.jobId, widget.saved, widget.savedId);
 
-                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obSafeguardingConcernsYes : null}, user.uid, widget.jobId);
+                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obSafeguardingConcernsYes : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
                   }
                 }))
           ],
@@ -2291,10 +2298,10 @@ class _ObservationBookingState extends State<ObservationBooking> {
             obRmn = val;
             if(val == 'Select One'){
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obRmn, null, widget.jobId);
+                  Strings.obRmn, null, widget.jobId, widget.saved, widget.savedId);
             } else {
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obRmn, GlobalFunctions.encryptString(val), widget.jobId);
+                  Strings.obRmn, GlobalFunctions.encryptString(val), widget.jobId, widget.saved, widget.savedId);
             }
 
             FocusScope.of(context).unfocus();
@@ -2319,10 +2326,10 @@ class _ObservationBookingState extends State<ObservationBooking> {
             obHca = val;
             if(val == 'Select One'){
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obHca, null, widget.jobId);
+                  Strings.obHca, null, widget.jobId, widget.saved, widget.savedId);
             } else {
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obHca, GlobalFunctions.encryptString(val), widget.jobId);
+                  Strings.obHca, GlobalFunctions.encryptString(val), widget.jobId, widget.saved, widget.savedId);
             }
 
             FocusScope.of(context).unfocus();
@@ -2347,10 +2354,10 @@ class _ObservationBookingState extends State<ObservationBooking> {
             obStaffRmn1 = val;
             if(val == 'Select One'){
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obStaffRmn1, null, widget.jobId);
+                  Strings.obStaffRmn1, null, widget.jobId, widget.saved, widget.savedId);
             } else {
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obStaffRmn1, GlobalFunctions.encryptString(val), widget.jobId);
+                  Strings.obStaffRmn1, GlobalFunctions.encryptString(val), widget.jobId, widget.saved, widget.savedId);
             }
 
             FocusScope.of(context).unfocus();
@@ -2374,10 +2381,10 @@ class _ObservationBookingState extends State<ObservationBooking> {
             obStaffRmn2 = val;
             if(val == 'Select One'){
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obStaffRmn2, null, widget.jobId);
+                  Strings.obStaffRmn2, null, widget.jobId, widget.saved, widget.savedId);
             } else {
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obStaffRmn2, GlobalFunctions.encryptString(val), widget.jobId);
+                  Strings.obStaffRmn2, GlobalFunctions.encryptString(val), widget.jobId, widget.saved, widget.savedId);
             }
 
             FocusScope.of(context).unfocus();
@@ -2401,10 +2408,10 @@ class _ObservationBookingState extends State<ObservationBooking> {
             obStaffRmn3 = val;
             if(val == 'Select One'){
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obStaffRmn3, null, widget.jobId);
+                  Strings.obStaffRmn3, null, widget.jobId, widget.saved, widget.savedId);
             } else {
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obStaffRmn3, GlobalFunctions.encryptString(val), widget.jobId);
+                  Strings.obStaffRmn3, GlobalFunctions.encryptString(val), widget.jobId, widget.saved, widget.savedId);
             }
 
             FocusScope.of(context).unfocus();
@@ -2428,10 +2435,10 @@ class _ObservationBookingState extends State<ObservationBooking> {
             obStaffRmn4 = val;
             if(val == 'Select One'){
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obStaffRmn4, null, widget.jobId);
+                  Strings.obStaffRmn4, null, widget.jobId, widget.saved, widget.savedId);
             } else {
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obStaffRmn4, GlobalFunctions.encryptString(val), widget.jobId);
+                  Strings.obStaffRmn4, GlobalFunctions.encryptString(val), widget.jobId, widget.saved, widget.savedId);
             }
 
             FocusScope.of(context).unfocus();
@@ -2455,10 +2462,10 @@ class _ObservationBookingState extends State<ObservationBooking> {
             obStaffRmn5 = val;
             if(val == 'Select One'){
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obStaffRmn5, null, widget.jobId);
+                  Strings.obStaffRmn5, null, widget.jobId, widget.saved, widget.savedId);
             } else {
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obStaffRmn5, GlobalFunctions.encryptString(val), widget.jobId);
+                  Strings.obStaffRmn5, GlobalFunctions.encryptString(val), widget.jobId, widget.saved, widget.savedId);
             }
 
             FocusScope.of(context).unfocus();
@@ -2482,10 +2489,10 @@ class _ObservationBookingState extends State<ObservationBooking> {
             obStaffRmn6 = val;
             if(val == 'Select One'){
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obStaffRmn6, null, widget.jobId);
+                  Strings.obStaffRmn6, null, widget.jobId, widget.saved, widget.savedId);
             } else {
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obStaffRmn6, GlobalFunctions.encryptString(val), widget.jobId);
+                  Strings.obStaffRmn6, GlobalFunctions.encryptString(val), widget.jobId, widget.saved, widget.savedId);
             }
 
             FocusScope.of(context).unfocus();
@@ -2509,10 +2516,10 @@ class _ObservationBookingState extends State<ObservationBooking> {
             obStaffRmn7 = val;
             if(val == 'Select One'){
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obStaffRmn7, null, widget.jobId);
+                  Strings.obStaffRmn7, null, widget.jobId, widget.saved, widget.savedId);
             } else {
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obStaffRmn7, GlobalFunctions.encryptString(val), widget.jobId);
+                  Strings.obStaffRmn7, GlobalFunctions.encryptString(val), widget.jobId, widget.saved, widget.savedId);
             }
 
             FocusScope.of(context).unfocus();
@@ -2536,10 +2543,10 @@ class _ObservationBookingState extends State<ObservationBooking> {
             obStaffRmn8 = val;
             if(val == 'Select One'){
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obStaffRmn8, null, widget.jobId);
+                  Strings.obStaffRmn8, null, widget.jobId, widget.saved, widget.savedId);
             } else {
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obStaffRmn8, GlobalFunctions.encryptString(val), widget.jobId);
+                  Strings.obStaffRmn8, GlobalFunctions.encryptString(val), widget.jobId, widget.saved, widget.savedId);
             }
 
             FocusScope.of(context).unfocus();
@@ -2563,10 +2570,10 @@ class _ObservationBookingState extends State<ObservationBooking> {
             obStaffRmn9 = val;
             if(val == 'Select One'){
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obStaffRmn9, null, widget.jobId);
+                  Strings.obStaffRmn9, null, widget.jobId, widget.saved, widget.savedId);
             } else {
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obStaffRmn9, GlobalFunctions.encryptString(val), widget.jobId);
+                  Strings.obStaffRmn9, GlobalFunctions.encryptString(val), widget.jobId, widget.saved, widget.savedId);
             }
 
             FocusScope.of(context).unfocus();
@@ -2590,10 +2597,10 @@ class _ObservationBookingState extends State<ObservationBooking> {
             obStaffRmn10 = val;
             if(val == 'Select One'){
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obStaffRmn10, null, widget.jobId);
+                  Strings.obStaffRmn10, null, widget.jobId, widget.saved, widget.savedId);
             } else {
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obStaffRmn10, GlobalFunctions.encryptString(val), widget.jobId);
+                  Strings.obStaffRmn10, GlobalFunctions.encryptString(val), widget.jobId, widget.saved, widget.savedId);
             }
 
             FocusScope.of(context).unfocus();
@@ -2617,10 +2624,10 @@ class _ObservationBookingState extends State<ObservationBooking> {
             obStaffRmn11 = val;
             if(val == 'Select One'){
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obStaffRmn11, null, widget.jobId);
+                  Strings.obStaffRmn11, null, widget.jobId, widget.saved, widget.savedId);
             } else {
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obStaffRmn11, GlobalFunctions.encryptString(val), widget.jobId);
+                  Strings.obStaffRmn11, GlobalFunctions.encryptString(val), widget.jobId, widget.saved, widget.savedId);
             }
 
             FocusScope.of(context).unfocus();
@@ -2644,10 +2651,10 @@ class _ObservationBookingState extends State<ObservationBooking> {
             obStaffRmn12 = val;
             if(val == 'Select One'){
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obStaffRmn12, null, widget.jobId);
+                  Strings.obStaffRmn12, null, widget.jobId, widget.saved, widget.savedId);
             } else {
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obStaffRmn12, GlobalFunctions.encryptString(val), widget.jobId);
+                  Strings.obStaffRmn12, GlobalFunctions.encryptString(val), widget.jobId, widget.saved, widget.savedId);
             }
 
             FocusScope.of(context).unfocus();
@@ -2671,10 +2678,10 @@ class _ObservationBookingState extends State<ObservationBooking> {
             obStaffRmn13 = val;
             if(val == 'Select One'){
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obStaffRmn13, null, widget.jobId);
+                  Strings.obStaffRmn13, null, widget.jobId, widget.saved, widget.savedId);
             } else {
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obStaffRmn13, GlobalFunctions.encryptString(val), widget.jobId);
+                  Strings.obStaffRmn13, GlobalFunctions.encryptString(val), widget.jobId, widget.saved, widget.savedId);
             }
 
             FocusScope.of(context).unfocus();
@@ -2698,10 +2705,10 @@ class _ObservationBookingState extends State<ObservationBooking> {
             obStaffRmn14 = val;
             if(val == 'Select One'){
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obStaffRmn14, null, widget.jobId);
+                  Strings.obStaffRmn14, null, widget.jobId, widget.saved, widget.savedId);
             } else {
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obStaffRmn14, GlobalFunctions.encryptString(val), widget.jobId);
+                  Strings.obStaffRmn14, GlobalFunctions.encryptString(val), widget.jobId, widget.saved, widget.savedId);
             }
 
             FocusScope.of(context).unfocus();
@@ -2725,10 +2732,10 @@ class _ObservationBookingState extends State<ObservationBooking> {
             obStaffRmn15 = val;
             if(val == 'Select One'){
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obStaffRmn15, null, widget.jobId);
+                  Strings.obStaffRmn15, null, widget.jobId, widget.saved, widget.savedId);
             } else {
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obStaffRmn15, GlobalFunctions.encryptString(val), widget.jobId);
+                  Strings.obStaffRmn15, GlobalFunctions.encryptString(val), widget.jobId, widget.saved, widget.savedId);
             }
 
             FocusScope.of(context).unfocus();
@@ -2752,10 +2759,10 @@ class _ObservationBookingState extends State<ObservationBooking> {
             obStaffRmn16 = val;
             if(val == 'Select One'){
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obStaffRmn16, null, widget.jobId);
+                  Strings.obStaffRmn16, null, widget.jobId, widget.saved, widget.savedId);
             } else {
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obStaffRmn16, GlobalFunctions.encryptString(val), widget.jobId);
+                  Strings.obStaffRmn16, GlobalFunctions.encryptString(val), widget.jobId, widget.saved, widget.savedId);
             }
 
             FocusScope.of(context).unfocus();
@@ -2779,10 +2786,10 @@ class _ObservationBookingState extends State<ObservationBooking> {
             obStaffRmn17 = val;
             if(val == 'Select One'){
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obStaffRmn17, null, widget.jobId);
+                  Strings.obStaffRmn17, null, widget.jobId, widget.saved, widget.savedId);
             } else {
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obStaffRmn17, GlobalFunctions.encryptString(val), widget.jobId);
+                  Strings.obStaffRmn17, GlobalFunctions.encryptString(val), widget.jobId, widget.saved, widget.savedId);
             }
 
             FocusScope.of(context).unfocus();
@@ -2806,10 +2813,10 @@ class _ObservationBookingState extends State<ObservationBooking> {
             obStaffRmn18 = val;
             if(val == 'Select One'){
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obStaffRmn18, null, widget.jobId);
+                  Strings.obStaffRmn18, null, widget.jobId, widget.saved, widget.savedId);
             } else {
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obStaffRmn18, GlobalFunctions.encryptString(val), widget.jobId);
+                  Strings.obStaffRmn18, GlobalFunctions.encryptString(val), widget.jobId, widget.saved, widget.savedId);
             }
 
             FocusScope.of(context).unfocus();
@@ -2833,10 +2840,10 @@ class _ObservationBookingState extends State<ObservationBooking> {
             obStaffRmn19 = val;
             if(val == 'Select One'){
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obStaffRmn19, null, widget.jobId);
+                  Strings.obStaffRmn19, null, widget.jobId, widget.saved, widget.savedId);
             } else {
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obStaffRmn19, GlobalFunctions.encryptString(val), widget.jobId);
+                  Strings.obStaffRmn19, GlobalFunctions.encryptString(val), widget.jobId, widget.saved, widget.savedId);
             }
 
             FocusScope.of(context).unfocus();
@@ -2860,10 +2867,10 @@ class _ObservationBookingState extends State<ObservationBooking> {
             obStaffRmn20 = val;
             if(val == 'Select One'){
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obStaffRmn20, null, widget.jobId);
+                  Strings.obStaffRmn20, null, widget.jobId, widget.saved, widget.savedId);
             } else {
               observationBookingModel.updateTemporaryRecord(widget.edit,
-                  Strings.obStaffRmn20, GlobalFunctions.encryptString(val), widget.jobId);
+                  Strings.obStaffRmn20, GlobalFunctions.encryptString(val), widget.jobId, widget.saved, widget.savedId);
             }
 
             FocusScope.of(context).unfocus();
@@ -2910,8 +2917,8 @@ class _ObservationBookingState extends State<ObservationBooking> {
               ),
               TextButton(
                 onPressed: () {
-                  context.read<ObservationBookingModel>().resetTemporaryRecord(widget.jobId);
-                  //context.read<ObservationBookingModel>().resetTemporaryObservationBooking(widget.jobId);
+                  context.read<ObservationBookingModel>().resetTemporaryRecord(widget.jobId, widget.saved, widget.savedId);
+                  //context.read<ObservationBookingModel>().resetTemporaryObservationBooking(widget.jobId, widget.saved, widget.savedId);
                   FocusScope.of(context).requestFocus(new FocusNode());
                   setState(() {
                     jobRef.clear();
@@ -3080,10 +3087,230 @@ class _ObservationBookingState extends State<ObservationBooking> {
         });
   }
 
+  void _saveForLater() async {
+    FocusScope.of(context).unfocus();
+
+    bool submitForm = await showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.all(Radius.circular(32.0))),
+            contentPadding: EdgeInsets.fromLTRB(10, 10, 10, 0),
+            titlePadding: EdgeInsets.all(0),
+            title: Container(
+              padding: EdgeInsets.only(top: 10, bottom: 10),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [purpleDesign, purpleDesign]),
+                borderRadius: BorderRadius.only(topLeft: Radius.circular(32),
+                    topRight: Radius.circular(32)),
+              ),
+              child: Center(child: Text("Save for later", style: TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.bold),),),
+            ),
+            content: Text(
+                'This form will be moved to your saved list, do you wish to proceed?'),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () {
+                  FocusScope.of(context).requestFocus(new FocusNode());
+                  Navigator.of(context).pop(false);
+                },
+                child: Text(
+                  'No',
+                  style: TextStyle(
+                      color: blueDesign, fontWeight: FontWeight.bold),
+                ),
+              ),
+              TextButton(
+                onPressed: () async {
+                  Navigator.of(context).pop(true);
+                },
+                child: Text(
+                  'Yes',
+                  style: TextStyle(
+                      color: blueDesign, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          );
+        });
+
+
+    if (submitForm) {
+      bool success = await context.read<ObservationBookingModel>().saveForLater(
+          widget.jobId, widget.saved, widget.savedId);
+      FocusScope.of(context).requestFocus(new FocusNode());
+
+
+      if (success) {
+        setState(() {
+          jobRef.clear();
+          obRequestedBy.clear();
+          obJobTitle.clear();
+          obJobContact.clear();
+          obJobAuthorisingManager.clear();
+          obJobDate.clear();
+          obJobTime.clear();
+          obBookingCoordinator.clear();
+          obPatientLocation.clear();
+          obPostcode.clear();
+          obLocationTel.clear();
+          obInvoiceDetails.clear();
+          obCostCode.clear();
+          obPurchaseOrder.clear();
+          obStartDateTime.clear();
+          obMhaAssessmentYes = false;
+          obMhaAssessmentNo = false;
+          obBedIdentifiedYes = false;
+          obBedIdentifiedNo = false;
+          obWrapDocumentationYes = false;
+          obWrapDocumentationNo = false;
+          obShiftRequired.clear();
+          obPatientName.clear();
+          obLegalStatus.clear();
+          obDateOfBirth.clear();
+          obNhsNumber.clear();
+          obGender.clear();
+          obEthnicity.clear();
+          obCovidStatus.clear();
+          obRmn = 'Select One';
+          obHca = 'Select One';
+          obHca1.clear();
+          obHca2.clear();
+          obHca3.clear();
+          obHca4.clear();
+          obHca5.clear();
+          obCurrentPresentation.clear();
+          obSpecificCarePlanYes = false;
+          obSpecificCarePlanNo = false;
+          obSpecificCarePlan.clear();
+          obPatientWarningsYes = false;
+          obPatientWarningsNo = false;
+          obPatientWarnings.clear();
+          obPresentingRisks.clear();
+          obPreviousRisks.clear();
+          obGenderConcernsYes = false;
+          obGenderConcernsNo = false;
+          obGenderConcerns.clear();
+          obSafeguardingConcernsYes = false;
+          obSafeguardingConcernsNo = false;
+          obSafeguardingConcerns.clear();
+          obTimeDue.clear();
+          obStaffDate1.clear();
+          obStaffDate2.clear();
+          obStaffDate3.clear();
+          obStaffDate4.clear();
+          obStaffDate5.clear();
+          obStaffDate6.clear();
+          obStaffDate7.clear();
+          obStaffDate8.clear();
+          obStaffDate9.clear();
+          obStaffDate10.clear();
+          obStaffDate11.clear();
+          obStaffDate12.clear();
+          obStaffDate13.clear();
+          obStaffDate14.clear();
+          obStaffDate15.clear();
+          obStaffDate16.clear();
+          obStaffDate17.clear();
+          obStaffDate18.clear();
+          obStaffDate19.clear();
+          obStaffDate20.clear();
+          obStaffStartTime1.clear();
+          obStaffStartTime2.clear();
+          obStaffStartTime3.clear();
+          obStaffStartTime4.clear();
+          obStaffStartTime5.clear();
+          obStaffStartTime6.clear();
+          obStaffStartTime7.clear();
+          obStaffStartTime8.clear();
+          obStaffStartTime9.clear();
+          obStaffStartTime10.clear();
+          obStaffStartTime11.clear();
+          obStaffStartTime12.clear();
+          obStaffStartTime13.clear();
+          obStaffStartTime14.clear();
+          obStaffStartTime15.clear();
+          obStaffStartTime16.clear();
+          obStaffStartTime17.clear();
+          obStaffStartTime18.clear();
+          obStaffStartTime19.clear();
+          obStaffStartTime20.clear();
+          obStaffEndTime1.clear();
+          obStaffEndTime2.clear();
+          obStaffEndTime3.clear();
+          obStaffEndTime4.clear();
+          obStaffEndTime5.clear();
+          obStaffEndTime6.clear();
+          obStaffEndTime7.clear();
+          obStaffEndTime8.clear();
+          obStaffEndTime9.clear();
+          obStaffEndTime10.clear();
+          obStaffEndTime11.clear();
+          obStaffEndTime12.clear();
+          obStaffEndTime13.clear();
+          obStaffEndTime14.clear();
+          obStaffEndTime15.clear();
+          obStaffEndTime16.clear();
+          obStaffEndTime17.clear();
+          obStaffEndTime18.clear();
+          obStaffEndTime19.clear();
+          obStaffEndTime20.clear();
+          obStaffName1.clear();
+          obStaffName2.clear();
+          obStaffName3.clear();
+          obStaffName4.clear();
+          obStaffName5.clear();
+          obStaffName6.clear();
+          obStaffName7.clear();
+          obStaffName8.clear();
+          obStaffName9.clear();
+          obStaffName10.clear();
+          obStaffName11.clear();
+          obStaffName12.clear();
+          obStaffName13.clear();
+          obStaffName14.clear();
+          obStaffName15.clear();
+          obStaffName16.clear();
+          obStaffName17.clear();
+          obStaffName18.clear();
+          obStaffName19.clear();
+          obStaffName20.clear();
+          obStaffRmn1 = 'Select One';
+          obStaffRmn2 = 'Select One';
+          obStaffRmn3 = 'Select One';
+          obStaffRmn4 = 'Select One';
+          obStaffRmn5 = 'Select One';
+          obStaffRmn6 = 'Select One';
+          obStaffRmn7 = 'Select One';
+          obStaffRmn8 = 'Select One';
+          obStaffRmn9 = 'Select One';
+          obStaffRmn10 = 'Select One';
+          obStaffRmn11 = 'Select One';
+          obStaffRmn12 = 'Select One';
+          obStaffRmn13 = 'Select One';
+          obStaffRmn14 = 'Select One';
+          obStaffRmn15 = 'Select One';
+          obStaffRmn16 = 'Select One';
+          obStaffRmn17 = 'Select One';
+          obStaffRmn18 = 'Select One';
+          obStaffRmn19 = 'Select One';
+          obStaffRmn20 = 'Select One';
+          obUsefulDetails.clear();
+          FocusScope.of(context).requestFocus(new FocusNode());
+        });
+      }
+    }
+  }
+
   void _submitForm() async {
     FocusScope.of(context).unfocus();
 
-    bool continueSubmit = await observationBookingModel.validateObservationBooking(widget.jobId, widget.edit);
+    bool continueSubmit = await observationBookingModel.validateObservationBooking(widget.jobId, widget.edit, widget.saved, widget.savedId);
 
 
     if (!continueSubmit) {
@@ -3200,7 +3427,7 @@ class _ObservationBookingState extends State<ObservationBooking> {
           FocusScope.of(context).requestFocus(new FocusNode());
 
         } else {
-          success = await context.read<ObservationBookingModel>().submitObservationBooking(widget.jobId);
+          success = await context.read<ObservationBookingModel>().submitObservationBooking(widget.jobId, widget.edit, widget.saved, widget.savedId);
           FocusScope.of(context).requestFocus(new FocusNode());
         }
 
@@ -3851,14 +4078,15 @@ class _ObservationBookingState extends State<ObservationBooking> {
   Widget build(BuildContext context) {
     // TODO: implement build
     return Scaffold(
-      drawer: widget.edit ? null : SideDrawer(),
+      drawer: widget.edit || widget.saved ? null : SideDrawer(),
       appBar: AppBar(
         flexibleSpace: AppBarGradient(),
         title: FittedBox(fit:BoxFit.fitWidth,
             child: Text('Observation Booking', style: TextStyle(fontWeight: FontWeight.bold),)),
         actions: <Widget>[
-          widget.edit ? Container() : IconButton(icon: Icon(Icons.refresh), onPressed: _resetForm),
-          IconButton(icon: Icon(Icons.send), onPressed: _submitForm)
+          widget.edit || widget.saved ? Container() : IconButton(icon: Icon(Icons.refresh), onPressed: _resetForm),
+          widget.saved || widget.edit ? Container() : IconButton(icon: Icon(Icons.watch_later_outlined), onPressed: _saveForLater),
+          IconButton(icon: Icon(Icons.send), onPressed: _submitForm),
         ],
       ),
       body: _loadingTemporary

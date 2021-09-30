@@ -45,7 +45,6 @@ class _ProfilePictureEditState extends State<ProfilePictureEdit> {
           _imageWeb = pickedFileWeb;
         } else {
           _imageWeb = null;
-          print('No image selected.');
         }
       });
     } else {
@@ -57,7 +56,6 @@ class _ProfilePictureEditState extends State<ProfilePictureEdit> {
           _image = File(pickedFile.path);
         } else {
           _image = null;
-          print('No image selected.');
         }
       });
     }
@@ -212,8 +210,6 @@ class _ProfilePictureEditState extends State<ProfilePictureEdit> {
                 _imageWeb = null;
               });
             } else if(deleteImage == true){
-
-              print('in delete image');
 
               ConnectivityResult connectivityResult = await Connectivity().checkConnectivity();
 

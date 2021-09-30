@@ -331,11 +331,8 @@ class AuthenticationModel extends ChangeNotifier {
           if(kIsWeb){
 
             if(FirebaseAuth.instance.currentUser != null){
-              print('current user is not null');
               token = await FirebaseAuth.instance.currentUser.getIdToken(true);
               uid = FirebaseAuth.instance.currentUser.uid;
-            } else {
-              print('current user is null');
             }
           } else {
             String password = await _secureStorage.readSecureData('password');

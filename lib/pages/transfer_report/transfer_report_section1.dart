@@ -23,16 +23,24 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 
 
 class TransferReportSection1 extends StatefulWidget {
+
   final bool fromJob;
   final String jobId;
   final bool fillDetails;
   final bool edit;
+  final bool saved;
+  final int savedId;
 
   TransferReportSection1(
-      [this.fromJob = false,
-      this.jobId = '1',
-      this.fillDetails = false,
-      this.edit = false]);
+      [
+        this.fromJob = false,
+        this.jobId = '1',
+        this.fillDetails = false,
+        this.edit = false,
+        this.saved = false,
+        this.savedId = 0
+      ]
+      );
 
   @override
   _TransferReportSection1State createState() => _TransferReportSection1State();
@@ -166,7 +174,6 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
 
   @override
   void dispose() {
-    print('dispose');
     jobRef.dispose();
     date.dispose();
     startTime.dispose();
@@ -243,8 +250,6 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
 
   @override
   void afterFirstLayout(BuildContext context) async {
-   //  await Future.delayed(Duration(milliseconds: 100));
-   // _formKey.currentState.validate();
     if(!kIsWeb) {
       if (Platform.isIOS) OneSignal.shared
           .promptUserForPushNotificationPermission().then((accepted) {
@@ -281,12 +286,12 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
       }
 
       //Sembast
-      transferReportModel.updateTemporaryRecord(widget.edit, value, encrypt ? GlobalFunctions.encryptString(controllerText) : GlobalFunctions.databaseValueString(controllerText), widget.jobId);
+      transferReportModel.updateTemporaryRecord(widget.edit, value, encrypt ? GlobalFunctions.encryptString(controllerText) : GlobalFunctions.databaseValueString(controllerText), widget.jobId, widget.saved, widget.savedId);
 
         // _databaseHelper.updateTemporaryTransferReportField(widget.edit, {
         //   value:
         //   encrypt ? GlobalFunctions.encryptString(controllerText) : GlobalFunctions.databaseValueString(controllerText)
-        // }, user.uid, widget.jobId);
+        // }, user.uid, widget.jobId, widget.saved, widget.savedId);
     });
   }
 
@@ -304,46 +309,42 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
 
     startMileage.addListener(() async{
 
-      Map<String, dynamic> transferReport = await transferReportModel.getTemporaryRecord(widget.edit, widget.jobId);
-      //Map<String, dynamic> transferReport = await _databaseHelper.getTemporaryTransferReport(widget.edit, user.uid, widget.jobId);
+      Map<String, dynamic> transferReport = await transferReportModel.getTemporaryRecord(widget.edit, widget.jobId, widget.saved, widget.savedId);
+      //Map<String, dynamic> transferReport = await _databaseHelper.getTemporaryTransferReport(widget.edit, user.uid, widget.jobId, widget.saved, widget.savedId);
       if(transferReport[Strings.finishMileage] != null){
-        print(transferReport[Strings.finishMileage]);
         double startMileageDouble = double.tryParse(startMileage.text);
         double finishMileageDouble = double.tryParse(GlobalFunctions.decryptString(transferReport[Strings.finishMileage]));
-
-        print(startMileageDouble);
-        print(finishMileageDouble);
 
         if(startMileageDouble != null && finishMileageDouble != null){
           double totalMileageDouble = finishMileageDouble - startMileageDouble;
           num totalNumber = totalMileageDouble % 1 == 0 ? totalMileageDouble.toInt() : totalMileageDouble;
 
           if(totalMileageDouble != null){
-            transferReportModel.updateTemporaryRecord(widget.edit, Strings.totalMileage, GlobalFunctions.encryptString(totalNumber.toString()), widget.jobId);
+            transferReportModel.updateTemporaryRecord(widget.edit, Strings.totalMileage, GlobalFunctions.encryptString(totalNumber.toString()), widget.jobId, widget.saved, widget.savedId);
             // _databaseHelper.updateTemporaryTransferReportField(widget.edit, {
             //   Strings.totalMileage:
             //   GlobalFunctions.encryptString(totalNumber.toString())
-            // }, user.uid, widget.jobId);
+            // }, user.uid, widget.jobId, widget.saved, widget.savedId);
           }
 
         } else {
-          transferReportModel.updateTemporaryRecord(widget.edit, Strings.totalMileage, GlobalFunctions.encryptString(''), widget.jobId);
+          transferReportModel.updateTemporaryRecord(widget.edit, Strings.totalMileage, GlobalFunctions.encryptString(''), widget.jobId, widget.saved, widget.savedId);
 
           // _databaseHelper.updateTemporaryTransferReportField(widget.edit, {
           //   Strings.totalMileage:
           //   GlobalFunctions.encryptString('')
-          // }, user.uid, widget.jobId);
+          // }, user.uid, widget.jobId, widget.saved, widget.savedId);
         }
       }
 
       setState(() {
       });
-      transferReportModel.updateTemporaryRecord(widget.edit, Strings.startMileage, GlobalFunctions.encryptString(startMileage.text), widget.jobId);
+      transferReportModel.updateTemporaryRecord(widget.edit, Strings.startMileage, GlobalFunctions.encryptString(startMileage.text), widget.jobId, widget.saved, widget.savedId);
 
       // _databaseHelper.updateTemporaryTransferReportField(widget.edit, {
       //   Strings.startMileage:
       //   GlobalFunctions.encryptString(startMileage.text)
-      // }, user.uid, widget.jobId);
+      // }, user.uid, widget.jobId, widget.saved, widget.savedId);
     });
 
 
@@ -385,10 +386,10 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
     if (mounted) {
       await transferReportModel.setupTemporaryRecord();
 
-      bool hasRecord = await transferReportModel.checkRecordExists(widget.edit, widget.jobId);
+      bool hasRecord = await transferReportModel.checkRecordExists(widget.edit, widget.jobId, widget.saved, widget.savedId);
 
       if(hasRecord){
-        Map<String, dynamic> transferReport = await transferReportModel.getTemporaryRecord(widget.edit, widget.jobId);
+        Map<String, dynamic> transferReport = await transferReportModel.getTemporaryRecord(widget.edit, widget.jobId, widget.saved, widget.savedId);
 
         if (transferReport[Strings.collectionSignature] != null) {
           if (mounted) {
@@ -470,8 +471,6 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
           date.text = '';
         }
 
-        print(transferReport[Strings.jobRef]);
-
         GlobalFunctions.getTemporaryValue(transferReport, totalHours, Strings.totalHours, false);
         GlobalFunctions.getTemporaryValue(transferReport, collectionDetails, Strings.collectionDetails);
         GlobalFunctions.getTemporaryValue(transferReport, collectionPostcode, Strings.collectionPostcode);
@@ -489,7 +488,6 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
             roleCount += 1;
           });
           String decryptedRole = GlobalFunctions.decryptString(transferReport[Strings.role1]);
-          print(decryptedRole);
           bool inDrop = false;
 
           for(String role in roleDrop){
@@ -509,7 +507,6 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
             roleCount += 1;
           });
           String decryptedRole = GlobalFunctions.decryptString(transferReport[Strings.role2]);
-          print(decryptedRole);
           bool inDrop = false;
 
           for(String role in roleDrop){
@@ -529,7 +526,6 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
             roleCount += 1;
           });
           String decryptedRole = GlobalFunctions.decryptString(transferReport[Strings.role3]);
-          print(decryptedRole);
           bool inDrop = false;
 
           for(String role in roleDrop){
@@ -549,7 +545,6 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
             roleCount += 1;
           });
           String decryptedRole = GlobalFunctions.decryptString(transferReport[Strings.role4]);
-          print(decryptedRole);
           bool inDrop = false;
 
           for(String role in roleDrop){
@@ -569,7 +564,6 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
             roleCount += 1;
           });
           String decryptedRole = GlobalFunctions.decryptString(transferReport[Strings.role5]);
-          print(decryptedRole);
           bool inDrop = false;
 
           for(String role in roleDrop){
@@ -589,7 +583,6 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
             roleCount += 1;
           });
           String decryptedRole = GlobalFunctions.decryptString(transferReport[Strings.role6]);
-          print(decryptedRole);
           bool inDrop = false;
 
           for(String role in roleDrop){
@@ -609,7 +602,6 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
             roleCount += 1;
           });
           String decryptedRole = GlobalFunctions.decryptString(transferReport[Strings.role7]);
-          print(decryptedRole);
           bool inDrop = false;
 
           for(String role in roleDrop){
@@ -629,7 +621,6 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
             roleCount += 1;
           });
           String decryptedRole = GlobalFunctions.decryptString(transferReport[Strings.role8]);
-          print(decryptedRole);
           bool inDrop = false;
 
           for(String role in roleDrop){
@@ -649,7 +640,6 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
             roleCount += 1;
           });
           String decryptedRole = GlobalFunctions.decryptString(transferReport[Strings.role9]);
-          print(decryptedRole);
           bool inDrop = false;
 
           for(String role in roleDrop){
@@ -669,7 +659,6 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
             roleCount += 1;
           });
           String decryptedRole = GlobalFunctions.decryptString(transferReport[Strings.role10]);
-          print(decryptedRole);
           bool inDrop = false;
 
           for(String role in roleDrop){
@@ -689,7 +678,6 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
             roleCount += 1;
           });
           String decryptedRole = GlobalFunctions.decryptString(transferReport[Strings.role11]);
-          print(decryptedRole);
           bool inDrop = false;
 
           for(String role in roleDrop){
@@ -734,7 +722,7 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
         //   collectionPrintName.text = user.name;
         //   _databaseHelper.updateTemporaryTransferReportField(widget.edit, {
         //     Strings.collectionPrintName: GlobalFunctions.encryptString(collectionPrintName.text)
-        //   }, user.uid, widget.jobId);
+        //   }, user.uid, widget.jobId, widget.saved, widget.savedId);
         // } else {
         //   GlobalFunctions.getTemporaryValue(transferReport, collectionPrintName, Strings.collectionPrintName);
         // }
@@ -745,7 +733,7 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
         //   destinationPrintName.text = user.name;
         //   _databaseHelper.updateTemporaryTransferReportField(widget.edit, {
         //     Strings.destinationPrintName: GlobalFunctions.encryptString(destinationPrintName.text)
-        //   }, user.uid, widget.jobId);
+        //   }, user.uid, widget.jobId, widget.saved, widget.savedId);
         // } else {
         //   GlobalFunctions.getTemporaryValue(transferReport, destinationPrintName, Strings.destinationPrintName);
         // }
@@ -799,10 +787,10 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
 
     // if (mounted) {
     //   int result = await _databaseHelper.checkTemporaryTransferReportExists(widget.edit,
-    //       user.uid, widget.jobId);
+    //       user.uid, widget.jobId, widget.saved, widget.savedId);
     //   if (result != 0) {
     //     Map<String, dynamic> transferReport = await _databaseHelper
-    //         .getTemporaryTransferReport(widget.edit, user.uid, widget.jobId);
+    //         .getTemporaryTransferReport(widget.edit, user.uid, widget.jobId, widget.saved, widget.savedId);
     //
     //     if (transferReport[Strings.collectionSignature] != null) {
     //       if (mounted) {
@@ -1148,7 +1136,7 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
     //     //   collectionPrintName.text = user.name;
     //     //   _databaseHelper.updateTemporaryTransferReportField(widget.edit, {
     //     //     Strings.collectionPrintName: GlobalFunctions.encryptString(collectionPrintName.text)
-    //     //   }, user.uid, widget.jobId);
+    //     //   }, user.uid, widget.jobId, widget.saved, widget.savedId);
     //     // } else {
     //     //   GlobalFunctions.getTemporaryValue(transferReport, collectionPrintName, Strings.collectionPrintName);
     //     // }
@@ -1159,7 +1147,7 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
     //     //   destinationPrintName.text = user.name;
     //     //   _databaseHelper.updateTemporaryTransferReportField(widget.edit, {
     //     //     Strings.destinationPrintName: GlobalFunctions.encryptString(destinationPrintName.text)
-    //     //   }, user.uid, widget.jobId);
+    //     //   }, user.uid, widget.jobId, widget.saved, widget.savedId);
     //     // } else {
     //     //   GlobalFunctions.getTemporaryValue(transferReport, destinationPrintName, Strings.destinationPrintName);
     //     // }
@@ -1269,95 +1257,95 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
       });
 
 
-      transferReportModel.updateTemporaryRecord(widget.edit, Strings.date, DateTime.fromMillisecondsSinceEpoch(localRecord[Strings.bfJobDate].millisecondsSinceEpoch).toIso8601String(), widget.jobId);
+      transferReportModel.updateTemporaryRecord(widget.edit, Strings.date, DateTime.fromMillisecondsSinceEpoch(localRecord[Strings.bfJobDate].millisecondsSinceEpoch).toIso8601String(), widget.jobId, widget.saved, widget.savedId);
       // _databaseHelper.updateTemporaryTransferReportField(widget.edit,
-      //     {Strings.date : DateTime.fromMillisecondsSinceEpoch(localRecord[Strings.bfJobDate].millisecondsSinceEpoch).toIso8601String()}, user.uid, widget.jobId);
+      //     {Strings.date : DateTime.fromMillisecondsSinceEpoch(localRecord[Strings.bfJobDate].millisecondsSinceEpoch).toIso8601String()}, user.uid, widget.jobId, widget.saved, widget.savedId);
 
-      transferReportModel.updateTemporaryRecord(widget.edit, Strings.startTime, bookingForm[Strings.bfJobTime], widget.jobId);
+      transferReportModel.updateTemporaryRecord(widget.edit, Strings.startTime, bookingForm[Strings.bfJobTime], widget.jobId, widget.saved, widget.savedId);
       // _databaseHelper.updateTemporaryTransferReportField(widget.edit,
-      //     {Strings.startTime : bookingForm[Strings.bfJobTime]}, user.uid, widget.jobId);
+      //     {Strings.startTime : bookingForm[Strings.bfJobTime]}, user.uid, widget.jobId, widget.saved, widget.savedId);
 
-      transferReportModel.updateTemporaryRecord(widget.edit, Strings.collectionDetails, bookingForm[Strings.bfCollectionAddress], widget.jobId);
+      transferReportModel.updateTemporaryRecord(widget.edit, Strings.collectionDetails, bookingForm[Strings.bfCollectionAddress], widget.jobId, widget.saved, widget.savedId);
       // _databaseHelper.updateTemporaryTransferReportField(widget.edit,
-      //     {Strings.collectionDetails : bookingForm[Strings.bfCollectionAddress]}, user.uid, widget.jobId);
+      //     {Strings.collectionDetails : bookingForm[Strings.bfCollectionAddress]}, user.uid, widget.jobId, widget.saved, widget.savedId);
 
-      transferReportModel.updateTemporaryRecord(widget.edit, Strings.collectionPostcode, bookingForm[Strings.bfCollectionPostcode], widget.jobId);
+      transferReportModel.updateTemporaryRecord(widget.edit, Strings.collectionPostcode, bookingForm[Strings.bfCollectionPostcode], widget.jobId, widget.saved, widget.savedId);
       // _databaseHelper.updateTemporaryTransferReportField(widget.edit,
-      //     {Strings.collectionPostcode : bookingForm[Strings.bfCollectionPostcode]}, user.uid, widget.jobId);
+      //     {Strings.collectionPostcode : bookingForm[Strings.bfCollectionPostcode]}, user.uid, widget.jobId, widget.saved, widget.savedId);
 
-      transferReportModel.updateTemporaryRecord(widget.edit, Strings.collectionContactNo, bookingForm[Strings.bfCollectionTel], widget.jobId);
+      transferReportModel.updateTemporaryRecord(widget.edit, Strings.collectionContactNo, bookingForm[Strings.bfCollectionTel], widget.jobId, widget.saved, widget.savedId);
       // _databaseHelper.updateTemporaryTransferReportField(widget.edit,
-      //     {Strings.collectionContactNo : bookingForm[Strings.bfCollectionTel]}, user.uid, widget.jobId);
+      //     {Strings.collectionContactNo : bookingForm[Strings.bfCollectionTel]}, user.uid, widget.jobId, widget.saved, widget.savedId);
 
-      transferReportModel.updateTemporaryRecord(widget.edit, Strings.destinationDetails, bookingForm[Strings.bfDestinationAddress], widget.jobId);
+      transferReportModel.updateTemporaryRecord(widget.edit, Strings.destinationDetails, bookingForm[Strings.bfDestinationAddress], widget.jobId, widget.saved, widget.savedId);
       // _databaseHelper.updateTemporaryTransferReportField(widget.edit,
-      //     {Strings.destinationDetails : bookingForm[Strings.bfDestinationAddress]}, user.uid, widget.jobId);
+      //     {Strings.destinationDetails : bookingForm[Strings.bfDestinationAddress]}, user.uid, widget.jobId, widget.saved, widget.savedId);
 
-      transferReportModel.updateTemporaryRecord(widget.edit, Strings.destinationPostcode, bookingForm[Strings.bfDestinationPostcode], widget.jobId);
+      transferReportModel.updateTemporaryRecord(widget.edit, Strings.destinationPostcode, bookingForm[Strings.bfDestinationPostcode], widget.jobId, widget.saved, widget.savedId);
       // _databaseHelper.updateTemporaryTransferReportField(widget.edit,
-      //     {Strings.destinationPostcode : bookingForm[Strings.bfDestinationPostcode]}, user.uid, widget.jobId);
+      //     {Strings.destinationPostcode : bookingForm[Strings.bfDestinationPostcode]}, user.uid, widget.jobId, widget.saved, widget.savedId);
 
-      transferReportModel.updateTemporaryRecord(widget.edit, Strings.destinationContactNo, bookingForm[Strings.bfDestinationTel], widget.jobId);
+      transferReportModel.updateTemporaryRecord(widget.edit, Strings.destinationContactNo, bookingForm[Strings.bfDestinationTel], widget.jobId, widget.saved, widget.savedId);
       // _databaseHelper.updateTemporaryTransferReportField(widget.edit,
-      //     {Strings.destinationContactNo : bookingForm[Strings.bfDestinationTel]}, user.uid, widget.jobId);
+      //     {Strings.destinationContactNo : bookingForm[Strings.bfDestinationTel]}, user.uid, widget.jobId, widget.saved, widget.savedId);
 
-      transferReportModel.updateTemporaryRecord(widget.edit, Strings.vehicleRegNo, bookingForm[Strings.bfAmbulanceRegistration], widget.jobId);
+      transferReportModel.updateTemporaryRecord(widget.edit, Strings.vehicleRegNo, bookingForm[Strings.bfAmbulanceRegistration], widget.jobId, widget.saved, widget.savedId);
       // _databaseHelper.updateTemporaryTransferReportField(widget.edit,
-      //     {Strings.vehicleRegNo : bookingForm[Strings.bfAmbulanceRegistration]}, user.uid, widget.jobId);
+      //     {Strings.vehicleRegNo : bookingForm[Strings.bfAmbulanceRegistration]}, user.uid, widget.jobId, widget.saved, widget.savedId);
 
-      transferReportModel.updateTemporaryRecord(widget.edit, Strings.ambulanceReg, bookingForm[Strings.bfAmbulanceRegistration], widget.jobId);
+      transferReportModel.updateTemporaryRecord(widget.edit, Strings.ambulanceReg, bookingForm[Strings.bfAmbulanceRegistration], widget.jobId, widget.saved, widget.savedId);
       // _databaseHelper.updateTemporaryTransferReportField(widget.edit,
-      //     {Strings.ambulanceReg : bookingForm[Strings.bfAmbulanceRegistration]}, user.uid, widget.jobId);
+      //     {Strings.ambulanceReg : bookingForm[Strings.bfAmbulanceRegistration]}, user.uid, widget.jobId, widget.saved, widget.savedId);
 
-      transferReportModel.updateTemporaryRecord(widget.edit, Strings.patientName, bookingForm[Strings.bfPatientName], widget.jobId);
+      transferReportModel.updateTemporaryRecord(widget.edit, Strings.patientName, bookingForm[Strings.bfPatientName], widget.jobId, widget.saved, widget.savedId);
       // _databaseHelper.updateTemporaryTransferReportField(widget.edit,
-      //     {Strings.patientName : bookingForm[Strings.bfPatientName]}, user.uid, widget.jobId);
+      //     {Strings.patientName : bookingForm[Strings.bfPatientName]}, user.uid, widget.jobId, widget.saved, widget.savedId);
 
-      transferReportModel.updateTemporaryRecord(widget.edit, Strings.gender, bookingForm[Strings.bfGender], widget.jobId);
+      transferReportModel.updateTemporaryRecord(widget.edit, Strings.gender, bookingForm[Strings.bfGender], widget.jobId, widget.saved, widget.savedId);
       // _databaseHelper.updateTemporaryTransferReportField(widget.edit,
-      //     {Strings.gender : bookingForm[Strings.bfGender]}, user.uid, widget.jobId);
+      //     {Strings.gender : bookingForm[Strings.bfGender]}, user.uid, widget.jobId, widget.saved, widget.savedId);
 
-      transferReportModel.updateTemporaryRecord(widget.edit, Strings.ethnicity, bookingForm[Strings.bfEthnicity], widget.jobId);
+      transferReportModel.updateTemporaryRecord(widget.edit, Strings.ethnicity, bookingForm[Strings.bfEthnicity], widget.jobId, widget.saved, widget.savedId);
       // _databaseHelper.updateTemporaryTransferReportField(widget.edit,
-      //     {Strings.ethnicity : bookingForm[Strings.bfEthnicity]}, user.uid, widget.jobId);
+      //     {Strings.ethnicity : bookingForm[Strings.bfEthnicity]}, user.uid, widget.jobId, widget.saved, widget.savedId);
 
-      transferReportModel.updateTemporaryRecord(widget.edit, Strings.mhaMcaDetails, bookingForm[Strings.bfLegalStatus], widget.jobId);
+      transferReportModel.updateTemporaryRecord(widget.edit, Strings.mhaMcaDetails, bookingForm[Strings.bfLegalStatus], widget.jobId, widget.saved, widget.savedId);
       // _databaseHelper.updateTemporaryTransferReportField(widget.edit,
-      //     {Strings.mhaMcaDetails : bookingForm[Strings.bfLegalStatus]}, user.uid, widget.jobId);
+      //     {Strings.mhaMcaDetails : bookingForm[Strings.bfLegalStatus]}, user.uid, widget.jobId, widget.saved, widget.savedId);
 
-      transferReportModel.updateTemporaryRecord(widget.edit, Strings.currentPresentation, bookingForm[Strings.bfCurrentPresentation], widget.jobId);
+      transferReportModel.updateTemporaryRecord(widget.edit, Strings.currentPresentation, bookingForm[Strings.bfCurrentPresentation], widget.jobId, widget.saved, widget.savedId);
       // _databaseHelper.updateTemporaryTransferReportField(widget.edit,
-      //     {Strings.currentPresentation : bookingForm[Strings.bfCurrentPresentation]}, user.uid, widget.jobId);
+      //     {Strings.currentPresentation : bookingForm[Strings.bfCurrentPresentation]}, user.uid, widget.jobId, widget.saved, widget.savedId);
 
 
-      transferReportModel.updateTemporaryRecord(widget.edit, Strings.dateOfBirth, bookingForm[Strings.bfDateOfBirth], widget.jobId);
+      transferReportModel.updateTemporaryRecord(widget.edit, Strings.dateOfBirth, bookingForm[Strings.bfDateOfBirth], widget.jobId, widget.saved, widget.savedId);
       // _databaseHelper.updateTemporaryTransferReportField(widget.edit,
-      //     {Strings.dateOfBirth : bookingForm[Strings.bfDateOfBirth]}, user.uid, widget.jobId);
+      //     {Strings.dateOfBirth : bookingForm[Strings.bfDateOfBirth]}, user.uid, widget.jobId, widget.saved, widget.savedId);
 
 
-      transferReportModel.updateTemporaryRecord(widget.edit, Strings.racialGenderConcernsYes, bookingForm[Strings.bfGenderConcernsYes], widget.jobId);
+      transferReportModel.updateTemporaryRecord(widget.edit, Strings.racialGenderConcernsYes, bookingForm[Strings.bfGenderConcernsYes], widget.jobId, widget.saved, widget.savedId);
       // _databaseHelper.updateTemporaryTransferReportField(widget.edit,
-      //     {Strings.racialGenderConcernsYes : bookingForm[Strings.bfGenderConcernsYes]}, user.uid, widget.jobId);
+      //     {Strings.racialGenderConcernsYes : bookingForm[Strings.bfGenderConcernsYes]}, user.uid, widget.jobId, widget.saved, widget.savedId);
 
-      transferReportModel.updateTemporaryRecord(widget.edit, Strings.racialGenderConcernsNo, bookingForm[Strings.bfGenderConcernsNo], widget.jobId);
+      transferReportModel.updateTemporaryRecord(widget.edit, Strings.racialGenderConcernsNo, bookingForm[Strings.bfGenderConcernsNo], widget.jobId, widget.saved, widget.savedId);
       // _databaseHelper.updateTemporaryTransferReportField(widget.edit,
-      //     {Strings.racialGenderConcernsNo : bookingForm[Strings.bfGenderConcernsNo]}, user.uid, widget.jobId);
+      //     {Strings.racialGenderConcernsNo : bookingForm[Strings.bfGenderConcernsNo]}, user.uid, widget.jobId, widget.saved, widget.savedId);
 
-      transferReportModel.updateTemporaryRecord(widget.edit, Strings.racialGenderConcerns, bookingForm[Strings.bfGenderConcerns], widget.jobId);
+      transferReportModel.updateTemporaryRecord(widget.edit, Strings.racialGenderConcerns, bookingForm[Strings.bfGenderConcerns], widget.jobId, widget.saved, widget.savedId);
       // _databaseHelper.updateTemporaryTransferReportField(widget.edit,
-      //     {Strings.racialGenderConcerns : bookingForm[Strings.bfGenderConcerns]}, user.uid, widget.jobId);
+      //     {Strings.racialGenderConcerns : bookingForm[Strings.bfGenderConcerns]}, user.uid, widget.jobId, widget.saved, widget.savedId);
 
-      transferReportModel.updateTemporaryRecord(widget.edit, Strings.safeguardingYes, bookingForm[Strings.bfSafeguardingConcernsYes], widget.jobId);
+      transferReportModel.updateTemporaryRecord(widget.edit, Strings.safeguardingYes, bookingForm[Strings.bfSafeguardingConcernsYes], widget.jobId, widget.saved, widget.savedId);
       // _databaseHelper.updateTemporaryTransferReportField(widget.edit,
-      //     {Strings.safeguardingYes : bookingForm[Strings.bfSafeguardingConcernsYes]}, user.uid, widget.jobId);
+      //     {Strings.safeguardingYes : bookingForm[Strings.bfSafeguardingConcernsYes]}, user.uid, widget.jobId, widget.saved, widget.savedId);
 
-      transferReportModel.updateTemporaryRecord(widget.edit, Strings.safeguardingNo, bookingForm[Strings.bfSafeguardingConcernsNo], widget.jobId);
+      transferReportModel.updateTemporaryRecord(widget.edit, Strings.safeguardingNo, bookingForm[Strings.bfSafeguardingConcernsNo], widget.jobId, widget.saved, widget.savedId);
       // _databaseHelper.updateTemporaryTransferReportField(widget.edit,
-      //     {Strings.safeguardingNo : bookingForm[Strings.bfSafeguardingConcernsNo]}, user.uid, widget.jobId);
+      //     {Strings.safeguardingNo : bookingForm[Strings.bfSafeguardingConcernsNo]}, user.uid, widget.jobId, widget.saved, widget.savedId);
 
-      transferReportModel.updateTemporaryRecord(widget.edit, Strings.safeguarding, bookingForm[Strings.bfSafeguardingConcerns], widget.jobId);
+      transferReportModel.updateTemporaryRecord(widget.edit, Strings.safeguarding, bookingForm[Strings.bfSafeguardingConcerns], widget.jobId, widget.saved, widget.savedId);
       // _databaseHelper.updateTemporaryTransferReportField(widget.edit,
-      //     {Strings.safeguarding : bookingForm[Strings.bfSafeguardingConcerns]}, user.uid, widget.jobId);
+      //     {Strings.safeguarding : bookingForm[Strings.bfSafeguardingConcerns]}, user.uid, widget.jobId, widget.saved, widget.savedId);
 
     } else {
       GlobalFunctions.showToast('No results found');
@@ -1379,9 +1367,9 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
           onChanged: (val) => setState(() {
             role1 = val;
             if(val == 'Select One'){
-              transferReportModel.updateTemporaryRecord(widget.edit, Strings.role1, null, widget.jobId);
+              transferReportModel.updateTemporaryRecord(widget.edit, Strings.role1, null, widget.jobId, widget.saved, widget.savedId);
             } else {
-              transferReportModel.updateTemporaryRecord(widget.edit, Strings.role1, GlobalFunctions.encryptString(val), widget.jobId);
+              transferReportModel.updateTemporaryRecord(widget.edit, Strings.role1, GlobalFunctions.encryptString(val), widget.jobId, widget.saved, widget.savedId);
             }
             FocusScope.of(context).unfocus();
           }),
@@ -1405,9 +1393,9 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
           onChanged: (val) => setState(() {
             role2 = val;
             if(val == 'Select One'){
-              transferReportModel.updateTemporaryRecord(widget.edit, Strings.role2, null, widget.jobId);
+              transferReportModel.updateTemporaryRecord(widget.edit, Strings.role2, null, widget.jobId, widget.saved, widget.savedId);
             } else {
-              transferReportModel.updateTemporaryRecord(widget.edit, Strings.role2, GlobalFunctions.encryptString(val), widget.jobId);
+              transferReportModel.updateTemporaryRecord(widget.edit, Strings.role2, GlobalFunctions.encryptString(val), widget.jobId, widget.saved, widget.savedId);
             }
 
             FocusScope.of(context).unfocus();
@@ -1432,9 +1420,9 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
           onChanged: (val) => setState(() {
             role3 = val;
             if(val == 'Select One'){
-              transferReportModel.updateTemporaryRecord(widget.edit, Strings.role3, null, widget.jobId);
+              transferReportModel.updateTemporaryRecord(widget.edit, Strings.role3, null, widget.jobId, widget.saved, widget.savedId);
             } else {
-              transferReportModel.updateTemporaryRecord(widget.edit, Strings.role3, GlobalFunctions.encryptString(val), widget.jobId);
+              transferReportModel.updateTemporaryRecord(widget.edit, Strings.role3, GlobalFunctions.encryptString(val), widget.jobId, widget.saved, widget.savedId);
             }
 
             FocusScope.of(context).unfocus();
@@ -1459,9 +1447,9 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
           onChanged: (val) => setState(() {
             role4 = val;
             if(val == 'Select One'){
-              transferReportModel.updateTemporaryRecord(widget.edit, Strings.role4, null, widget.jobId);
+              transferReportModel.updateTemporaryRecord(widget.edit, Strings.role4, null, widget.jobId, widget.saved, widget.savedId);
             } else {
-              transferReportModel.updateTemporaryRecord(widget.edit, Strings.role4, GlobalFunctions.encryptString(val), widget.jobId);
+              transferReportModel.updateTemporaryRecord(widget.edit, Strings.role4, GlobalFunctions.encryptString(val), widget.jobId, widget.saved, widget.savedId);
             }
 
             FocusScope.of(context).unfocus();
@@ -1486,9 +1474,9 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
           onChanged: (val) => setState(() {
             role5 = val;
             if(val == 'Select One'){
-              transferReportModel.updateTemporaryRecord(widget.edit, Strings.role5, null, widget.jobId);
+              transferReportModel.updateTemporaryRecord(widget.edit, Strings.role5, null, widget.jobId, widget.saved, widget.savedId);
             } else {
-              transferReportModel.updateTemporaryRecord(widget.edit, Strings.role5, GlobalFunctions.encryptString(val), widget.jobId);
+              transferReportModel.updateTemporaryRecord(widget.edit, Strings.role5, GlobalFunctions.encryptString(val), widget.jobId, widget.saved, widget.savedId);
             }
 
             FocusScope.of(context).unfocus();
@@ -1514,10 +1502,10 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
   //           role6 = val;
   //           if(val == 'Select One'){
   //             _databaseHelper.updateTemporaryTransferReportField(widget.edit,
-  //                 {Strings.role6 : null}, user.uid, widget.jobId);
+  //                 {Strings.role6 : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
   //           } else {
   //             _databaseHelper.updateTemporaryTransferReportField(widget.edit,
-  //                 {Strings.role6 : GlobalFunctions.encryptString(val)}, user.uid, widget.jobId);
+  //                 {Strings.role6 : GlobalFunctions.encryptString(val)}, user.uid, widget.jobId, widget.saved, widget.savedId);
   //           }
   //
   //           FocusScope.of(context).unfocus();
@@ -1543,10 +1531,10 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
   //           role7 = val;
   //           if(val == 'Select One'){
   //             _databaseHelper.updateTemporaryTransferReportField(widget.edit,
-  //                 {Strings.role7 : null}, user.uid, widget.jobId);
+  //                 {Strings.role7 : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
   //           } else {
   //             _databaseHelper.updateTemporaryTransferReportField(widget.edit,
-  //                 {Strings.role7 : GlobalFunctions.encryptString(val)}, user.uid, widget.jobId);
+  //                 {Strings.role7 : GlobalFunctions.encryptString(val)}, user.uid, widget.jobId, widget.saved, widget.savedId);
   //           }
   //
   //           FocusScope.of(context).unfocus();
@@ -1572,10 +1560,10 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
   //           role8 = val;
   //           if(val == 'Select One'){
   //             _databaseHelper.updateTemporaryTransferReportField(widget.edit,
-  //                 {Strings.role8 : null}, user.uid, widget.jobId);
+  //                 {Strings.role8 : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
   //           } else {
   //             _databaseHelper.updateTemporaryTransferReportField(widget.edit,
-  //                 {Strings.role8 : GlobalFunctions.encryptString(val)}, user.uid, widget.jobId);
+  //                 {Strings.role8 : GlobalFunctions.encryptString(val)}, user.uid, widget.jobId, widget.saved, widget.savedId);
   //           }
   //
   //           FocusScope.of(context).unfocus();
@@ -1601,10 +1589,10 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
   //           role9 = val;
   //           if(val == 'Select One'){
   //             _databaseHelper.updateTemporaryTransferReportField(widget.edit,
-  //                 {Strings.role9 : null}, user.uid, widget.jobId);
+  //                 {Strings.role9 : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
   //           } else {
   //             _databaseHelper.updateTemporaryTransferReportField(widget.edit,
-  //                 {Strings.role9 : GlobalFunctions.encryptString(val)}, user.uid, widget.jobId);
+  //                 {Strings.role9 : GlobalFunctions.encryptString(val)}, user.uid, widget.jobId, widget.saved, widget.savedId);
   //           }
   //
   //           FocusScope.of(context).unfocus();
@@ -1630,10 +1618,10 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
   //           role10 = val;
   //           if(val == 'Select One'){
   //             _databaseHelper.updateTemporaryTransferReportField(widget.edit,
-  //                 {Strings.role10 : null}, user.uid, widget.jobId);
+  //                 {Strings.role10 : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
   //           } else {
   //             _databaseHelper.updateTemporaryTransferReportField(widget.edit,
-  //                 {Strings.role10 : GlobalFunctions.encryptString(val)}, user.uid, widget.jobId);
+  //                 {Strings.role10 : GlobalFunctions.encryptString(val)}, user.uid, widget.jobId, widget.saved, widget.savedId);
   //           }
   //
   //           FocusScope.of(context).unfocus();
@@ -1659,10 +1647,10 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
   //           role11 = val;
   //           if(val == 'Select One'){
   //             _databaseHelper.updateTemporaryTransferReportField(widget.edit,
-  //                 {Strings.role11 : null}, user.uid, widget.jobId);
+  //                 {Strings.role11 : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
   //           } else {
   //             _databaseHelper.updateTemporaryTransferReportField(widget.edit,
-  //                 {Strings.role11 : GlobalFunctions.encryptString(val)}, user.uid, widget.jobId);
+  //                 {Strings.role11 : GlobalFunctions.encryptString(val)}, user.uid, widget.jobId, widget.saved, widget.savedId);
   //           }
   //
   //           FocusScope.of(context).unfocus();
@@ -1767,8 +1755,8 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
                                 onPressed: () {
                                   collectionSignature
                                       .clear();
-                                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.collectionSignaturePoints, null, widget.jobId);
-                                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.collectionSignature, null, widget.jobId);
+                                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.collectionSignaturePoints, null, widget.jobId, widget.saved, widget.savedId);
+                                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.collectionSignature, null, widget.jobId, widget.saved, widget.savedId);
                                   setState(() {
                                     collectionSignaturePoints = [];
                                     collectionImageBytes =
@@ -1816,7 +1804,7 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
                                     String encryptedPoints = GlobalFunctions
                                         .encryptString(encodedPoints);
 
-                                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.collectionSignaturePoints, encryptedPoints, widget.jobId);
+                                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.collectionSignaturePoints, encryptedPoints, widget.jobId, widget.saved, widget.savedId);
 
 
                                     Uint8List signatureBytes = await collectionSignature
@@ -1830,7 +1818,7 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
                                     Uint8List encryptedSignature = await GlobalFunctions
                                         .encryptSignature(collectionImageBytes);
 
-                                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.collectionSignature, encryptedSignature, widget.jobId);
+                                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.collectionSignature, encryptedSignature, widget.jobId, widget.saved, widget.savedId);
 
 
                                   }
@@ -1949,8 +1937,8 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
                                   destinationSignature
                                       .clear();
 
-                                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.destinationSignaturePoints, null, widget.jobId);
-                                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.destinationSignature, null, widget.jobId);
+                                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.destinationSignaturePoints, null, widget.jobId, widget.saved, widget.savedId);
+                                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.destinationSignature, null, widget.jobId, widget.saved, widget.savedId);
                                   setState(() {
                                     destinationSignaturePoints = [];
                                     destinationImageBytes =
@@ -1998,7 +1986,7 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
                                     String encryptedPoints = GlobalFunctions
                                         .encryptString(encodedPoints);
 
-                                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.destinationSignaturePoints, encryptedPoints, widget.jobId);
+                                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.destinationSignaturePoints, encryptedPoints, widget.jobId, widget.saved, widget.savedId);
 
                                     Uint8List signatureBytes = await destinationSignature
                                         .exportBytes();
@@ -2011,7 +1999,7 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
                                     Uint8List encryptedSignature = await GlobalFunctions
                                         .encryptSignature(destinationImageBytes);
 
-                                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.destinationSignature, encryptedSignature, widget.jobId);
+                                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.destinationSignature, encryptedSignature, widget.jobId, widget.saved, widget.savedId);
 
                                   }
                                   Navigator.of(context).pop();
@@ -2133,8 +2121,8 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
                   setState(() {
                     startTime.clear();
                     totalHours.clear();
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.startTime, null, widget.jobId);
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.totalHours, null, widget.jobId);
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.startTime, null, widget.jobId, widget.saved, widget.savedId);
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.totalHours, null, widget.jobId, widget.saved, widget.savedId);
                   });
                 }),
             IconButton(
@@ -2170,10 +2158,10 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
                             startTime.text = dateTime;
                           });
 
-                          await transferReportModel.updateTemporaryRecord(widget.edit, Strings.startTime, DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String(), widget.jobId);
+                          await transferReportModel.updateTemporaryRecord(widget.edit, Strings.startTime, DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String(), widget.jobId, widget.saved, widget.savedId);
 
 
-                          Map<String, dynamic> transferReport = await transferReportModel.getTemporaryRecord(widget.edit, widget.jobId);
+                          Map<String, dynamic> transferReport = await transferReportModel.getTemporaryRecord(widget.edit, widget.jobId, widget.saved, widget.savedId);
 
                               if(transferReport[Strings.finishTime] != null){
 
@@ -2193,7 +2181,7 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
                                 setState(() {
                                   totalHours.text = totalHoursString;
                                 });
-                                await transferReportModel.updateTemporaryRecord(widget.edit, Strings.totalHours, totalHoursString, widget.jobId);
+                                await transferReportModel.updateTemporaryRecord(widget.edit, Strings.totalHours, totalHoursString, widget.jobId, widget.saved, widget.savedId);
                               }
                         }
                     }
@@ -2250,8 +2238,8 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
                   setState(() {
                     finishTime.clear();
                     totalHours.clear();
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.finishTime, null, widget.jobId);
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.totalHours, null, widget.jobId);
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.finishTime, null, widget.jobId, widget.saved, widget.savedId);
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.totalHours, null, widget.jobId, widget.saved, widget.savedId);
                   });
                 }),
             IconButton(
@@ -2287,10 +2275,10 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
                         finishTime.text = dateTime;
                       });
 
-                      await transferReportModel.updateTemporaryRecord(widget.edit, Strings.finishTime, DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String(), widget.jobId);
+                      await transferReportModel.updateTemporaryRecord(widget.edit, Strings.finishTime, DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String(), widget.jobId, widget.saved, widget.savedId);
 
 
-                      Map<String, dynamic> transferReport = await transferReportModel.getTemporaryRecord(widget.edit, widget.jobId);
+                      Map<String, dynamic> transferReport = await transferReportModel.getTemporaryRecord(widget.edit, widget.jobId, widget.saved, widget.savedId);
 
                       if(transferReport[Strings.startTime] != null){
 
@@ -2311,7 +2299,7 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
                           totalHours.text = totalHoursString;
                         });
 
-                        await transferReportModel.updateTemporaryRecord(widget.edit, Strings.totalHours, totalHoursString, widget.jobId);
+                        await transferReportModel.updateTemporaryRecord(widget.edit, Strings.totalHours, totalHoursString, widget.jobId, widget.saved, widget.savedId);
                       }
                     }
                   }
@@ -2368,7 +2356,7 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
                 onPressed: () {
                   setState(() {
                     controller.clear();
-                    transferReportModel.updateTemporaryRecord(widget.edit, value, null, widget.jobId);
+                    transferReportModel.updateTemporaryRecord(widget.edit, value, null, widget.jobId, widget.saved, widget.savedId);
                   });
                 }),
             IconButton(
@@ -2398,9 +2386,9 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
                       setState(() {
                         controller.text = dateTime;
                         if(encrypt){
-                          transferReportModel.updateTemporaryRecord(widget.edit, value, GlobalFunctions.encryptString(DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String()), widget.jobId);
+                          transferReportModel.updateTemporaryRecord(widget.edit, value, GlobalFunctions.encryptString(DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String()), widget.jobId, widget.saved, widget.savedId);
                         } else {
-                          transferReportModel.updateTemporaryRecord(widget.edit, value, DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String(), widget.jobId);
+                          transferReportModel.updateTemporaryRecord(widget.edit, value, DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String(), widget.jobId, widget.saved, widget.savedId);
                         }
 
 
@@ -2457,7 +2445,7 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
                 onPressed: () {
                   setState(() {
                     controller.clear();
-                    transferReportModel.updateTemporaryRecord(widget.edit, value, null, widget.jobId);
+                    transferReportModel.updateTemporaryRecord(widget.edit, value, null, widget.jobId, widget.saved, widget.savedId);
                   });
                 }),
             IconButton(
@@ -2488,9 +2476,9 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
                       setState(() {
                         controller.text = dateTime;
                         if(encrypt){
-                          transferReportModel.updateTemporaryRecord(widget.edit, value, GlobalFunctions.encryptString(DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String()), widget.jobId);
+                          transferReportModel.updateTemporaryRecord(widget.edit, value, GlobalFunctions.encryptString(DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String()), widget.jobId, widget.saved, widget.savedId);
                         } else {
-                          transferReportModel.updateTemporaryRecord(widget.edit, value, DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String(), widget.jobId);
+                          transferReportModel.updateTemporaryRecord(widget.edit, value, DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String(), widget.jobId, widget.saved, widget.savedId);
                         }
                       });
                     }

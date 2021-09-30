@@ -5,7 +5,6 @@ import 'package:pegasus_medical_1808/pages/settings/profile_picture_edit.dart';
 import 'package:pegasus_medical_1808/services/secure_storage.dart';
 import 'package:pegasus_medical_1808/shared/strings.dart';
 import 'package:pegasus_medical_1808/widgets/app_bar_gradient.dart';
-import 'package:pegasus_medical_1808/widgets/dropdown_form_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:pegasus_medical_1808/widgets/gradient_button.dart';
@@ -17,7 +16,6 @@ import '../../models/observation_booking_model.dart';
 import '../../widgets/side_drawer.dart';
 import '../../shared/global_config.dart';
 import '../../shared/global_functions.dart';
-import '../../utils/database_helper.dart';
 import 'package:provider/provider.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -408,8 +406,6 @@ class _SettingsPageState extends State<SettingsPage>{
 
   void _clearAppData(){
 
-    //DatabaseHelper _databaseHelper = DatabaseHelper();
-
     showDialog(
         context: context,
         builder: (BuildContext context) {
@@ -498,7 +494,6 @@ class _SettingsPageState extends State<SettingsPage>{
     }
 
     bool success = await context.read<AuthenticationModel>().changePassword(_newPasswordFieldController.text);
-    print(success);
     if(success) {
       setState(() {
         _currentPasswordFieldController.clear();

@@ -1,22 +1,30 @@
 import 'package:pegasus_medical_1808/pages/booking_form/booking_form.dart';
 import 'package:pegasus_medical_1808/pages/booking_form/booking_form_list.dart';
 import 'package:pegasus_medical_1808/pages/booking_form/booking_form_search.dart';
+import 'package:pegasus_medical_1808/pages/booking_form/saved_booking_form_list.dart';
 import 'package:pegasus_medical_1808/pages/chat/chat_page.dart';
 import 'package:pegasus_medical_1808/pages/incident_report/incident_report.dart';
 import 'package:pegasus_medical_1808/pages/incident_report/incident_report_list.dart';
 import 'package:pegasus_medical_1808/pages/incident_report/incident_report_search.dart';
+import 'package:pegasus_medical_1808/pages/incident_report/saved_incident_report_list.dart';
 import 'package:pegasus_medical_1808/pages/login_page/change_password_page.dart';
 import 'package:pegasus_medical_1808/pages/login_page/terms_conditions_page.dart';
-import 'package:pegasus_medical_1808/pages/messaging/messaging.dart';
+import 'package:pegasus_medical_1808/pages/chat/messaging.dart';
 import 'package:pegasus_medical_1808/pages/observation_booking/observation_booking.dart';
 import 'package:pegasus_medical_1808/pages/observation_booking/observation_booking_list.dart';
 import 'package:pegasus_medical_1808/pages/observation_booking/observation_booking_search.dart';
+import 'package:pegasus_medical_1808/pages/observation_booking/saved_observation_booking_list.dart';
+import 'package:pegasus_medical_1808/pages/patient_observation/patient_observation.dart';
+import 'package:pegasus_medical_1808/pages/patient_observation/patient_observation_list.dart';
+import 'package:pegasus_medical_1808/pages/patient_observation/patient_observation_search.dart';
+import 'package:pegasus_medical_1808/pages/patient_observation/saved_patient_observation_list.dart';
 import 'package:pegasus_medical_1808/pages/settings/settings_page.dart';
 import 'package:flutter/material.dart';
 import 'package:pegasus_medical_1808/constants/route_paths.dart' as routes;
 import 'package:pegasus_medical_1808/pages/spot_checks/spot_checks.dart';
 import 'package:pegasus_medical_1808/pages/spot_checks/spot_checks_list.dart';
 import 'package:pegasus_medical_1808/pages/spot_checks/spot_checks_search.dart';
+import 'package:pegasus_medical_1808/pages/transfer_report/saved_transfer_report_list.dart';
 import 'package:pegasus_medical_1808/pages/transfer_report/transfer_report_list.dart';
 import 'package:pegasus_medical_1808/pages/transfer_report/transfer_report_overall.dart';
 import 'package:pegasus_medical_1808/pages/transfer_report/transfer_report_search.dart';
@@ -34,13 +42,20 @@ Route<dynamic> generateRoute(RouteSettings settings){
     case routes.TransferReportPageRoute:
       var argument = settings.arguments;
       return MaterialPageRoute(builder: (context) => TransferReportOverall());
+    case routes.PatientObservationPageRoute:
+      var argument = settings.arguments;
+      return MaterialPageRoute(builder: (context) => PatientObservation());
     case routes.IncidentReportPageRoute:
       var argument = settings.arguments;
       return MaterialPageRoute(builder: (context) => IncidentReport());
     case routes.TransferReportListPageRoute:
       return MaterialPageRoute(builder: (context) => CompletedTransferReportsListPage());
+    case routes.PatientObservationListPageRoute:
+      return MaterialPageRoute(builder: (context) => CompletedPatientObservationsListPage());
       case routes.TransferReportSearchPageRoute:
       return MaterialPageRoute(builder: (context) => TransferReportSearch());
+    case routes.PatientObservationSearchPageRoute:
+      return MaterialPageRoute(builder: (context) => PatientObservationSearch());
     case routes.IncidentReportListPageRoute:
       return MaterialPageRoute(builder: (context) => CompletedIncidentReportsListPage());
     case routes.IncidentReportSearchPageRoute:
@@ -62,6 +77,16 @@ Route<dynamic> generateRoute(RouteSettings settings){
     case routes.BookingFormPageRoute:
       var argument = settings.arguments;
       return MaterialPageRoute(builder: (context) => BookingForm());
+    case routes.SavedBookingFormListPageRoute:
+      return MaterialPageRoute(builder: (context) => SavedBookingFormsListPage());
+    case routes.SavedIncidentReportListPageRoute:
+      return MaterialPageRoute(builder: (context) => SavedIncidentReportsListPage());
+    case routes.SavedObservationBookingListPageRoute:
+      return MaterialPageRoute(builder: (context) => SavedObservationBookingsListPage());
+    case routes.SavedTransferReportListPageRoute:
+      return MaterialPageRoute(builder: (context) => SavedTransferReportsListPage());
+    case routes.SavedPatientObservationListPageRoute:
+      return MaterialPageRoute(builder: (context) => SavedPatientObservationsListPage());
     case routes.BookingFormListPageRoute:
       return MaterialPageRoute(builder: (context) => CompletedBookingFormsListPage());
     case routes.BookingFormSearchPageRoute:

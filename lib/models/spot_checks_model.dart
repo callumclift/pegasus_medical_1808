@@ -97,9 +97,15 @@ class SpotChecksModel extends ChangeNotifier {
 
 
   Future<void> setupTemporaryRecord() async {
-    int count = await _temporarySpotChecksStore.count(await _db);
 
-    if(count == 0){
+    final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
+        [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, '1')]
+    ));
+    List records = await _temporarySpotChecksStore.find(
+      await _db,
+      finder: finder,
+    );
+    if(records.length == 0){
       // Generate a random ID based on the date and a random string for virtual zero chance of duplicates
       int _id = DateTime.now().millisecondsSinceEpoch + int.parse(random_string.randomNumeric(2));
       await _temporarySpotChecksStore.record(_id).put(await _db,
@@ -765,7 +771,6 @@ class SpotChecksModel extends ChangeNotifier {
         try {
 
           await FirebaseFirestore.instance.collection('spot_checks').doc(spotChecks[Strings.documentId]).update({
-            Strings.uid: user.uid,
             Strings.jobId: '1',
             Strings.formVersion: '1',
             Strings.jobRef: GlobalFunctions.databaseValueString(spotChecks[Strings.jobRef]),
@@ -813,21 +818,20 @@ class SpotChecksModel extends ChangeNotifier {
             Strings.scGoodPractice: spotChecks[Strings.scGoodPractice],
             Strings.scName: spotChecks[Strings.scName],
             Strings.scDate: spotChecks[Strings.scDate] == null ? null : DateTime.parse(spotChecks[Strings.scDate]),
-            Strings.timestamp: FieldValue.serverTimestamp(),
             Strings.serverUploaded: 1,
           });
 
           //Sembast
 
           final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
-              [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, jobId)]
+              [Db.Filter.equals(Strings.documentId, selectedSpotChecks[Strings.documentId]), Db.Filter.equals(Strings.jobId, jobId)]
           ));
 
-
-          await _spotChecksStore.delete(await _db,
+          await _editedSpotChecksStore.delete(await _db,
               finder: finder);
           message = 'Spot Checks uploaded successfully';
           success = true;
+          getSpotChecks();
 
         } on TimeoutException catch (_) {
           // A timeout occurred.

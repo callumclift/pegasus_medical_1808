@@ -1,13 +1,12 @@
 import 'package:pegasus_medical_1808/models/booking_form_model.dart';
 import 'package:pegasus_medical_1808/models/incident_report_model.dart';
 import 'package:pegasus_medical_1808/models/observation_booking_model.dart';
+import 'package:pegasus_medical_1808/models/patient_observation_model.dart';
 import 'package:pegasus_medical_1808/models/spot_checks_model.dart';
 import 'package:pegasus_medical_1808/models/transfer_report_model.dart';
 import 'package:pegasus_medical_1808/shared/global_functions.dart';
-import 'package:pegasus_medical_1808/shared/strings.dart';
 import 'package:pegasus_medical_1808/utils/database_helper.dart';
 import 'package:flutter/material.dart';
-import 'package:pegasus_medical_1808/widgets/app_bar_gradient.dart';
 import 'package:provider/provider.dart';
 import '../models/authentication_model.dart';
 import '../shared/global_config.dart';
@@ -25,7 +24,6 @@ class SideDrawer extends StatefulWidget {
 class _SideDrawerState extends State<SideDrawer> {
 
   final NavigationService _navigationService = locator<NavigationService>();
-  DatabaseHelper _databaseHelper = DatabaseHelper();
   bool _pendingItems = false;
 
 
@@ -68,6 +66,12 @@ class _SideDrawerState extends State<SideDrawer> {
         _pendingItems = true;
       });
     }
+    bool hasPatientObservations = await context.read<PatientObservationModel>().checkPendingRecordExists();
+    if(hasPatientObservations){
+      setState(() {
+        _pendingItems = true;
+      });
+    }
   }
 
   _uploadPendingItems() async{
@@ -78,6 +82,7 @@ class _SideDrawerState extends State<SideDrawer> {
     bool successfulObservationBookingUploads = true;
     bool successfulBookingFormUploads = true;
     bool successfulSpotChecksUploads = true;
+    bool successfulPatientObservationsUploads = true;
     String message;
 
 
@@ -90,6 +95,8 @@ class _SideDrawerState extends State<SideDrawer> {
       bool pendingObservationBooking = await context.read<ObservationBookingModel>().checkPendingRecordExists();
       bool pendingBookingForm = await context.read<BookingFormModel>().checkPendingRecordExists();
       bool pendingSpotChecks = await context.read<SpotChecksModel>().checkPendingRecordExists();
+      bool pendingPatientObservations = await context.read<PatientObservationModel>().checkPendingRecordExists();
+
 
       if(pendingIncidentReport){
         Map<String, dynamic> uploadIncidentReports = await context.read<IncidentReportModel>().uploadPendingIncidentReports();
@@ -117,12 +124,17 @@ class _SideDrawerState extends State<SideDrawer> {
         successfulSpotChecksUploads = uploadSpotChecks['success'];
         message = uploadSpotChecks['message'];
       }
+      if (pendingPatientObservations) {
+        Map<String, dynamic> uploadPatientObservations = await context.read<PatientObservationModel>().uploadPendingPatientObservations();
+        successfulPatientObservationsUploads = uploadPatientObservations['success'];
+        message = uploadPatientObservations['message'];
+      }
 
 
       GlobalFunctions.dismissLoadingDialog();
       GlobalFunctions.showToast(message);
 
-      if(successfulTransferReportUploads && successfulIncidentReportUploads && successfulObservationBookingUploads && successfulBookingFormUploads && successfulSpotChecksUploads){
+      if(successfulTransferReportUploads && successfulIncidentReportUploads && successfulObservationBookingUploads && successfulBookingFormUploads && successfulSpotChecksUploads && successfulPatientObservationsUploads){
         setState(() {
           _pendingItems = false;
         });
@@ -134,95 +146,6 @@ class _SideDrawerState extends State<SideDrawer> {
       GlobalFunctions.showToast('No data connection, please try again when you have a valid connection');
     }
   }
-
-
-  // _checkPendingItems() async{
-  //   _databaseHelper.checkExistsTwoArguments(Strings.transferReportTable, Strings.serverUploaded, 0, Strings.uid, user.uid).then((int value) {
-  //     if (value == 1) {
-  //       setState(() {
-  //         _pendingItems = true;
-  //       });
-  //     }
-  //   });
-  //   _databaseHelper.checkExistsTwoArguments(Strings.incidentReportTable, Strings.serverUploaded, 0, Strings.uid, user.uid).then((int value) {
-  //     if (value == 1) {
-  //       setState(() {
-  //         _pendingItems = true;
-  //       });
-  //     }
-  //   });
-  //   _databaseHelper.checkExistsTwoArguments(Strings.observationBookingTable, Strings.serverUploaded, 0, Strings.uid, user.uid).then((int value) {
-  //     if (value == 1) {
-  //       setState(() {
-  //         _pendingItems = true;
-  //       });
-  //     }
-  //   });
-  //   _databaseHelper.checkExistsTwoArguments(Strings.bookingFormTable, Strings.serverUploaded, 0, Strings.uid, user.uid).then((int value) {
-  //     if (value == 1) {
-  //       setState(() {
-  //         _pendingItems = true;
-  //       });
-  //     }
-  //   });
-  // }
-
-  // _uploadPendingItems() async{
-  //
-  //   bool hasConnection = await GlobalFunctions.hasDataConnection();
-  //   bool successfulTransferReportUploads = true;
-  //   bool successfulIncidentReportUploads = true;
-  //   bool successfulObservationBookingUploads = true;
-  //   bool successfulBookingFormUploads = true;
-  //   String message;
-  //
-  //
-  //   if(hasConnection){
-  //
-  //     GlobalFunctions.showLoadingDialog('Uploading data...');
-  //     int pendingTransferReport = await _databaseHelper.checkExistsTwoArguments(Strings.transferReportTable, Strings.serverUploaded, 0, Strings.uid, user.uid);
-  //     int pendingIncidentReport = await _databaseHelper.checkExistsTwoArguments(Strings.incidentReportTable, Strings.serverUploaded, 0, Strings.uid, user.uid);
-  //     int pendingObservationBooking = await _databaseHelper.checkExistsTwoArguments(Strings.observationBookingTable, Strings.serverUploaded, 0, Strings.uid, user.uid);
-  //     int pendingBookingForm = await _databaseHelper.checkExistsTwoArguments(Strings.bookingFormTable, Strings.serverUploaded, 0, Strings.uid, user.uid);
-  //
-  //
-  //     if (pendingTransferReport == 1) {
-  //       Map<String, dynamic> uploadTransferReports = await context.read<TransferReportModel>().uploadPendingTransferReports();
-  //       successfulTransferReportUploads = uploadTransferReports['success'];
-  //       message = uploadTransferReports['message'];
-  //     }
-  //     if (pendingIncidentReport == 1) {
-  //       Map<String, dynamic> uploadIncidentReports = await context.read<IncidentReportModel>().uploadPendingIncidentReports();
-  //       successfulIncidentReportUploads = uploadIncidentReports['success'];
-  //       message = uploadIncidentReports['message'];
-  //     }
-  //     if (pendingObservationBooking == 1) {
-  //       Map<String, dynamic> uploadObservationBookings = await context.read<ObservationBookingModel>().uploadPendingObservationBookings();
-  //       successfulObservationBookingUploads = uploadObservationBookings['success'];
-  //       message = uploadObservationBookings['message'];
-  //     }
-  //     if (pendingBookingForm == 1) {
-  //       Map<String, dynamic> uploadBookingForms = await context.read<BookingFormModel>().uploadPendingBookingForms();
-  //       successfulBookingFormUploads = uploadBookingForms['success'];
-  //       message = uploadBookingForms['message'];
-  //     }
-  //
-  //
-  //     GlobalFunctions.dismissLoadingDialog();
-  //     GlobalFunctions.showToast(message);
-  //
-  //     if(successfulTransferReportUploads && successfulIncidentReportUploads && successfulObservationBookingUploads && successfulBookingFormUploads){
-  //       setState(() {
-  //         _pendingItems = false;
-  //       });
-  //     }
-  //
-  //
-  //
-  //   } else {
-  //     GlobalFunctions.showToast('No data connection, please try again when you have a valid connection');
-  //   }
-  // }
 
 
   @override
@@ -253,9 +176,14 @@ class _SideDrawerState extends State<SideDrawer> {
                       title: Text('Create Transfer Report', style: TextStyle(color: bluePurple),),
                       onTap: () => _navigationService.navigateToReplacement(routes.TransferReportPageRoute),
                     ),
+                    ListTile(
+                      leading: Icon(Icons.watch_later_outlined, color: bluePurple,),
+                      title: Text('Saved Transfer Reports', style: TextStyle(color: bluePurple),),
+                      onTap: () => _navigationService.navigateToReplacement(routes.SavedTransferReportListPageRoute),
+                    ),
                     user.role == 'Super User' ? ListTile(
                       leading: Icon(Icons.library_books_sharp, color: bluePurple,),
-                      title: Text('Transfer Report List', style: TextStyle(color: bluePurple),),
+                      title: Text('Completed Transfer Reports', style: TextStyle(color: bluePurple),),
                       onTap: () => _navigationService.navigateToReplacement(routes.TransferReportListPageRoute),
                     ) : Container(),
                     user.role == 'Super User' ? ListTile(
@@ -274,9 +202,14 @@ class _SideDrawerState extends State<SideDrawer> {
                       title: Text('Create Incident Report', style: TextStyle(color: bluePurple),),
                       onTap: () => _navigationService.navigateToReplacement(routes.IncidentReportPageRoute),
                     ),
+                    ListTile(
+                      leading: Icon(Icons.watch_later_outlined, color: bluePurple,),
+                      title: Text('Saved Incident Reports', style: TextStyle(color: bluePurple),),
+                      onTap: () => _navigationService.navigateToReplacement(routes.SavedIncidentReportListPageRoute),
+                    ),
                     user.role == 'Super User' ? ListTile(
                       leading: Icon(Icons.library_books_sharp, color: bluePurple,),
-                      title: Text('Incident Report List', style: TextStyle(color: bluePurple),),
+                      title: Text('Completed Incident Reports', style: TextStyle(color: bluePurple),),
                       onTap: () => _navigationService.navigateToReplacement(routes.IncidentReportListPageRoute),
                     ) : Container(),
                     user.role == 'Super User' ? ListTile(
@@ -297,8 +230,13 @@ class _SideDrawerState extends State<SideDrawer> {
                         onTap: () => _navigationService.navigateToReplacement(routes.ObservationBookingPageRoute),
                       ),
                       ListTile(
+                        leading: Icon(Icons.watch_later_outlined, color: bluePurple,),
+                        title: Text('Saved Observation Bookings', style: TextStyle(color: bluePurple),),
+                        onTap: () => _navigationService.navigateToReplacement(routes.SavedObservationBookingListPageRoute),
+                      ),
+                      ListTile(
                         leading: Icon(Icons.library_books_sharp, color: bluePurple,),
-                        title: Text('Observation Booking List', style: TextStyle(color: bluePurple),),
+                        title: Text('Completed Observation Bookings', style: TextStyle(color: bluePurple),),
                         onTap: () => _navigationService.navigateToReplacement(routes.ObservationBookingListPageRoute),
                       ),
                       ListTile(
@@ -318,8 +256,13 @@ class _SideDrawerState extends State<SideDrawer> {
                         onTap: () => _navigationService.navigateToReplacement(routes.BookingFormPageRoute),
                       ),
                       ListTile(
+                        leading: Icon(Icons.watch_later_outlined, color: bluePurple,),
+                        title: Text('Saved Transport Bookings', style: TextStyle(color: bluePurple),),
+                        onTap: () => _navigationService.navigateToReplacement(routes.SavedBookingFormListPageRoute),
+                      ),
+                      ListTile(
                         leading: Icon(Icons.library_books_sharp, color: bluePurple,),
-                        title: Text('Transport Booking List', style: TextStyle(color: bluePurple),),
+                        title: Text('Completed Transport Bookings', style: TextStyle(color: bluePurple),),
                         onTap: () => _navigationService.navigateToReplacement(routes.BookingFormListPageRoute),
                       ),
                       ListTile(
@@ -327,6 +270,32 @@ class _SideDrawerState extends State<SideDrawer> {
                         title: Text('Search Transport Bookings', style: TextStyle(color: bluePurple),),
                         onTap: () => _navigationService.navigateToReplacement(routes.BookingFormSearchPageRoute),
                       ),
+                    ],),
+                  Divider(),
+                  ExpansionTile(
+                    leading: Icon(Icons.content_paste, color: bluePurple,),
+                    title: Text('Patient Observation Timesheet', style: TextStyle(fontWeight: FontWeight.bold, color: bluePurple),),
+                    children: <Widget>[
+                      ListTile(
+                        leading: Icon(Icons.create, color: bluePurple,),
+                        title: Text('Create Patient Observation Timesheet', style: TextStyle(color: bluePurple),),
+                        onTap: () => _navigationService.navigateToReplacement(routes.PatientObservationPageRoute),
+                      ),
+                      ListTile(
+                        leading: Icon(Icons.watch_later_outlined, color: bluePurple,),
+                        title: Text('Saved Patient Observation Timesheets', style: TextStyle(color: bluePurple),),
+                        onTap: () => _navigationService.navigateToReplacement(routes.SavedPatientObservationListPageRoute),
+                      ),
+                      user.role == 'Super User' || user.role == 'Enhanced User' ? ListTile(
+                        leading: Icon(Icons.library_books_sharp, color: bluePurple,),
+                        title: Text('Completed Patient Observation Timesheets', style: TextStyle(color: bluePurple),),
+                        onTap: () => _navigationService.navigateToReplacement(routes.PatientObservationListPageRoute),
+                      ) : Container(),
+                      user.role == 'Super User' || user.role == 'Enhanced User' ? ListTile(
+                        leading: Icon(Icons.search, color: bluePurple,),
+                        title: Text('Search Patient Observation Timesheets', style: TextStyle(color: bluePurple),),
+                        onTap: () => _navigationService.navigateToReplacement(routes.PatientObservationSearchPageRoute),
+                      ) : Container(),
                     ],),
                   Divider(),
                 ],) : Container(),
@@ -341,7 +310,7 @@ class _SideDrawerState extends State<SideDrawer> {
                     ),
                     user.role == 'Super User' ? ListTile(
                       leading: Icon(Icons.library_books_sharp, color: bluePurple,),
-                      title: Text('Spot Checks List', style: TextStyle(color: bluePurple),),
+                      title: Text('Completed Spot Checks', style: TextStyle(color: bluePurple),),
                       onTap: () => _navigationService.navigateToReplacement(routes.SpotChecksListPageRoute),
                     ) : Container(),
                     user.role == 'Super User' ? ListTile(

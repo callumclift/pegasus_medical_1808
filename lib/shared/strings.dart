@@ -322,6 +322,7 @@ class Strings {
   static String bfEthnicity = 'bf_ethnicity';
   static String bfCovidStatus = 'bf_covid_status';
   static String bfRmn = 'bf_rmn';
+  static String bfRmn1 = 'bf_rmn1';
   static String bfHca = 'bf_hca';
   static String bfHca1 = 'bf_hca1';
   static String bfHca2 = 'bf_hca2';
@@ -363,8 +364,21 @@ class Strings {
   static String incidentSignatureDate = 'incident_signature_date';
   static String incidentPrintName = 'incident_print_name';
 
-
-
+  //Patient Observation Timesheet
+  static String patientObservationTable = 'patient_observation_table';
+  static String temporaryPatientObservationTable = 'temporary_patient_observation_table';
+  static String editedPatientObservationTable = 'edited_patient_observation_table';
+  static String patientObservationDate = 'patient_observation_date';
+  static String patientObservationHospital = 'patient_observation_hospital';
+  static String patientObservationWard = 'patient_observation_ward';
+  static String patientObservationStartTime = 'patient_observation_start_time';
+  static String patientObservationFinishTime = 'patient_observation_finish_time';
+  static String patientObservationTotalHours = 'patient_observation_total_hours';
+  static String patientObservationName = 'patient_observation_name';
+  static String patientObservationPosition = 'patient_observation_position';
+  static String patientObservationAuthorisedDate = 'patient_observation_authorised_date';
+  static String patientObservationSignature = 'patient_observation_signature';
+  static String patientObservationSignaturePoints = 'patient_observation_signature_points';
 
   //Transfer Report
   static String transferReportTable = 'transfer_report_table';
