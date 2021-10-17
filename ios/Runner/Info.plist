@@ -27,7 +27,7 @@
 	<key>NSCalendarsUsageDescription</key>
 	<string>Allow Pegasus Medical to access your calendar?</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Allow Pegasus Medical to use your camera?</string>
+	<string>Allow Pegasus Medical to use your camera for attaching photos to messages and updating your profile?</string>
 	<key>NSContactsUsageDescription</key>
 	<string>Allow Pegasus Medical to access your contacts?</string>
 	<key>NSLocationAlwaysUsageDescription</key>
@@ -41,7 +41,7 @@
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Allow Pegasus Medical to save images to your library?</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Allow Pegasus Medical to access your photo library?</string>
+	<string>Allow Pegasus Medical to access your photo library for attaching images to messages and updating your profile?</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Allow Pegasus Medical to use your microphone?</string>
 	<key>UIBackgroundModes</key>
