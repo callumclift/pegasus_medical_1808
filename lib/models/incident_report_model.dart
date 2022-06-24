@@ -243,7 +243,7 @@ class IncidentReportModel extends ChangeNotifier {
 
     if(edit){
       final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
-          [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, selectedJobId)]
+          [Db.Filter.equals(Strings.documentId, selectedIncidentReport[Strings.documentId]), Db.Filter.equals(Strings.jobId, selectedJobId)]
       ));
       await _editedIncidentReportsStore.update(await _db, {field: value},
           finder: finder);
@@ -304,6 +304,8 @@ class IncidentReportModel extends ChangeNotifier {
       Strings.jobId: '1',
       Strings.formVersion: '1',
       Strings.jobRef: incidentReport[Strings.jobRef],
+      Strings.jobRefRef: incidentReport[Strings.jobRefRef],
+      Strings.jobRefNo: incidentReport[Strings.jobRefNo],
       Strings.incidentDate: incidentReport[Strings.incidentDate],
       Strings.incidentTime: incidentReport[Strings.incidentTime],
       Strings.incidentDetails: incidentReport[Strings.incidentDetails],
@@ -336,6 +338,7 @@ class IncidentReportModel extends ChangeNotifier {
   Future<void> getSavedRecordsList() async{
 
     _isLoading = true;
+    _incidentReports = [];
     notifyListeners();
     String message = '';
 
@@ -352,7 +355,7 @@ class IncidentReportModel extends ChangeNotifier {
 
         _incidentReports = List.from(_fetchedRecordList.reversed);
       } else {
-        message = 'No saved records available';
+        //message = 'No saved records available';
       }
 
     } catch(e){
@@ -382,6 +385,8 @@ class IncidentReportModel extends ChangeNotifier {
       await _temporaryIncidentReportsStore.update(await _db, {
         Strings.formVersion: 1,
         Strings.jobRef: null,
+        Strings.jobRefRef: null,
+        Strings.jobRefNo: null,
         Strings.incidentDate: null,
         Strings.incidentTime: null,
         Strings.incidentDetails: null,
@@ -417,7 +422,9 @@ class IncidentReportModel extends ChangeNotifier {
       Strings.uid: user.uid,
       Strings.jobId: '1',
       Strings.formVersion: '1',
-      Strings.jobRef: incidentReport[Strings.jobRef],
+      Strings.jobRef: incidentReport[Strings.jobRefRef] + incidentReport[Strings.jobRefNo],
+      Strings.jobRefRef: incidentReport[Strings.jobRefRef],
+      Strings.jobRefNo: incidentReport[Strings.jobRefNo],
       Strings.incidentDate: incidentReport[Strings.incidentDate],
       Strings.incidentTime: incidentReport[Strings.incidentTime],
       Strings.incidentDetails: incidentReport[Strings.incidentDetails],
@@ -457,8 +464,10 @@ class IncidentReportModel extends ChangeNotifier {
             Strings.uid: user.uid,
             Strings.jobId: '1',
             Strings.formVersion: '1',
-            Strings.jobRef: GlobalFunctions.databaseValueString(incidentReport[Strings.jobRef]),
-            Strings.jobRefLowercase: GlobalFunctions.databaseValueString(incidentReport[Strings.jobRef]).toLowerCase(),
+            Strings.jobRef: GlobalFunctions.databaseValueString(incidentReport[Strings.jobRefRef]) + GlobalFunctions.databaseValueString(incidentReport[Strings.jobRefNo]),
+            Strings.jobRefLowercase: GlobalFunctions.databaseValueString(incidentReport[Strings.jobRefRef]).toLowerCase() + GlobalFunctions.databaseValueString(incidentReport[Strings.jobRefNo]).toLowerCase(),
+            Strings.jobRefRef: GlobalFunctions.databaseValueString(incidentReport[Strings.jobRefRef]),
+            Strings.jobRefNo:  int.parse(incidentReport[Strings.jobRefNo]),
             Strings.incidentDate: incidentReport[Strings.incidentDate] == null ? null : DateTime.parse(incidentReport[Strings.incidentDate]),
             Strings.incidentTime: incidentReport[Strings.incidentTime],
             Strings.incidentDetails: incidentReport[Strings.incidentDetails],
@@ -581,8 +590,10 @@ class IncidentReportModel extends ChangeNotifier {
           await FirebaseFirestore.instance.collection('incident_reports').doc(incidentReport[Strings.documentId]).update({
             Strings.jobId: '1',
             Strings.formVersion: '1',
-            Strings.jobRef: GlobalFunctions.databaseValueString(incidentReport[Strings.jobRef]),
-            Strings.jobRefLowercase: GlobalFunctions.databaseValueString(incidentReport[Strings.jobRef]).toLowerCase(),
+            Strings.jobRef: GlobalFunctions.databaseValueString(incidentReport[Strings.jobRefRef]) + GlobalFunctions.databaseValueString(incidentReport[Strings.jobRefNo]),
+            Strings.jobRefLowercase: GlobalFunctions.databaseValueString(incidentReport[Strings.jobRefRef]).toLowerCase() + GlobalFunctions.databaseValueString(incidentReport[Strings.jobRefNo]).toLowerCase(),
+            Strings.jobRefRef: GlobalFunctions.databaseValueString(incidentReport[Strings.jobRefRef]),
+            Strings.jobRefNo:  int.parse(incidentReport[Strings.jobRefNo]),
             Strings.incidentDate: incidentReport[Strings.incidentDate] == null ? null : DateTime.parse(incidentReport[Strings.incidentDate]),
             Strings.incidentTime: incidentReport[Strings.incidentTime],
             Strings.incidentDetails: incidentReport[Strings.incidentDetails],
@@ -673,14 +684,14 @@ class IncidentReportModel extends ChangeNotifier {
 
           if(user.role == 'Super User'){
             try{
-              snapshot = await FirebaseFirestore.instance.collection('incident_reports').orderBy('timestamp', descending: true).limit(10).get().timeout(Duration(seconds: 90));
+              snapshot = await FirebaseFirestore.instance.collection('incident_reports').orderBy('job_ref_no', descending: true).limit(10).get().timeout(Duration(seconds: 90));
             } catch(e){
               print(e);
             }
           } else {
             try{
               snapshot = await FirebaseFirestore.instance.collection('incident_reports').where(
-                  'uid', isEqualTo: user.uid).orderBy('timestamp', descending: true).limit(10).get().timeout(Duration(seconds: 90));
+                  'uid', isEqualTo: user.uid).orderBy('job_ref_no', descending: true).limit(10).get().timeout(Duration(seconds: 90));
             } catch(e){
               print(e);
             }
@@ -770,13 +781,13 @@ class IncidentReportModel extends ChangeNotifier {
 
           QuerySnapshot snapshot;
           int currentLength = _incidentReports.length;
-          DateTime latestDate = DateTime.parse(_incidentReports[currentLength - 1][Strings.timestamp]);
+          int latestNo = int.parse(_incidentReports[currentLength - 1][Strings.jobRefNo]);
+
 
           if(user.role == 'Super User'){
             try {
-              snapshot = await FirebaseFirestore.instance.collection('incident_reports').orderBy(
-                  'timestamp', descending: true).startAfter(
-                  [Timestamp.fromDate(latestDate)]).limit(10)
+              snapshot = await FirebaseFirestore.instance.collection('incident_reports').where(Strings.jobRefNo, isLessThan: latestNo).orderBy(
+                  'job_ref_no', descending: true).limit(10)
                   .get()
                   .timeout(Duration(seconds: 90));
             } catch(e) {
@@ -786,9 +797,8 @@ class IncidentReportModel extends ChangeNotifier {
           } else {
             try {
               snapshot = await FirebaseFirestore.instance.collection('incident_reports').where(
-                  'uid', isEqualTo: user.uid).orderBy(
-                  'timestamp', descending: true).startAfter(
-                  [Timestamp.fromDate(latestDate)]).limit(10)
+                  'uid', isEqualTo: user.uid).where(Strings.jobRefNo, isLessThan: latestNo).orderBy(
+                  'job_ref_no', descending: true).limit(10)
                   .get()
                   .timeout(Duration(seconds: 90));
             } catch(e) {
@@ -849,7 +859,7 @@ class IncidentReportModel extends ChangeNotifier {
 
   }
 
-  Future<bool> searchIncidentReports(DateTime dateFrom, DateTime dateTo, String jobRef, String selectedUser) async{
+  Future<bool> searchIncidentReports(DateTime dateFrom, DateTime dateTo, String jobRefRef, int jobRefNo, String selectedUser) async{
 
     _isLoading = true;
     notifyListeners();
@@ -886,15 +896,14 @@ class IncidentReportModel extends ChangeNotifier {
             if(dateFrom != null && dateTo != null){
 
 
-              if(jobRef == null || jobRef.trim() == ''){
+              if(jobRefRef == 'Select One' && (jobRefNo == null)){
 
 
                 if(selectedUser != null){
                   try{
                     snapshot =
-                    await FirebaseFirestore.instance.collection('incident_reports')
-                        .where(Strings.uid, isEqualTo: selectedUser).orderBy('timestamp', descending: true)
-                        .startAt([dateTo]).endAt([dateFrom]).get()
+                    await FirebaseFirestore.instance.collection('incident_reports').where(Strings.uid, isEqualTo: selectedUser).where(Strings.incidentDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.incidentDate, isLessThanOrEqualTo: dateTo)
+                        .get()
                         .timeout(Duration(seconds: 90));
                   } catch(e){
                     print(e);
@@ -902,8 +911,8 @@ class IncidentReportModel extends ChangeNotifier {
                 } else {
                   try{
                     snapshot =
-                    await FirebaseFirestore.instance.collection('incident_reports').orderBy('timestamp', descending: true)
-                        .startAt([dateTo]).endAt([dateFrom]).get()
+                    await FirebaseFirestore.instance.collection('incident_reports').where(Strings.incidentDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.incidentDate, isLessThanOrEqualTo: dateTo)
+                        .get()
                         .timeout(Duration(seconds: 90));
                   } catch(e){
                     print(e);
@@ -911,14 +920,13 @@ class IncidentReportModel extends ChangeNotifier {
                 }
 
 
-              } else {
+              } else if(jobRefRef != 'Select One' && jobRefNo != null) {
 
                 if(selectedUser != null){
                   try{
                     snapshot =
-                    await FirebaseFirestore.instance.collection('incident_reports').where(Strings.uid, isEqualTo: selectedUser).
-                    where(Strings.jobRefLowercase, isEqualTo: jobRef.toLowerCase()).orderBy('timestamp', descending: true)
-                        .startAt([dateTo]).endAt([dateFrom]).get()
+                    await FirebaseFirestore.instance.collection('incident_reports').where(Strings.uid, isEqualTo: selectedUser).where(Strings.incidentDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.incidentDate, isLessThanOrEqualTo: dateTo)
+                        .where(Strings.jobRefRef, isEqualTo: jobRefRef).where(Strings.jobRefNo, isEqualTo: jobRefNo).get()
                         .timeout(Duration(seconds: 90));
                   } catch(e){
                     print(e);
@@ -926,57 +934,72 @@ class IncidentReportModel extends ChangeNotifier {
                 } else {
                   try{
                     snapshot =
-                    await FirebaseFirestore.instance.collection('incident_reports')
-                        .where(Strings.jobRefLowercase, isEqualTo: jobRef.toLowerCase()).orderBy('timestamp', descending: true)
-                        .startAt([dateTo]).endAt([dateFrom]).get()
+                    await FirebaseFirestore.instance.collection('incident_reports').where(Strings.incidentDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.incidentDate, isLessThanOrEqualTo: dateTo)
+                        .where(Strings.jobRefRef, isEqualTo: jobRefRef).where(Strings.jobRefNo, isEqualTo: jobRefNo)
+                        .get()
                         .timeout(Duration(seconds: 90));
                   } catch(e){
                     print(e);
                   }
                 }
 
+              } else if(jobRefRef != 'Select One' && (jobRefNo == null)) {
 
+                if(selectedUser != null){
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('incident_reports').where(Strings.uid, isEqualTo: selectedUser).where(Strings.incidentDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.incidentDate, isLessThanOrEqualTo: dateTo)
+                        .where(Strings.jobRefRef, isEqualTo: jobRefRef).get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                } else {
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('incident_reports').where(Strings.incidentDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.incidentDate, isLessThanOrEqualTo: dateTo)
+                        .where(Strings.jobRefRef, isEqualTo: jobRefRef)
+                        .get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                }
 
+              } else if(jobRefRef == 'Select One' && jobRefNo != null) {
 
+                if(selectedUser != null){
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('incident_reports').where(Strings.uid, isEqualTo: selectedUser).where(Strings.incidentDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.incidentDate, isLessThanOrEqualTo: dateTo)
+                        .where(Strings.jobRefNo, isEqualTo: jobRefNo).get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                } else {
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('incident_reports').where(Strings.incidentDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.incidentDate, isLessThanOrEqualTo: dateTo)
+                        .where(Strings.jobRefNo, isEqualTo: jobRefNo)
+                        .get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                }
               }
 
             } else {
 
 
-              if(jobRef == null || jobRef.trim() == ''){
+              if(jobRefRef == 'Select One' && (jobRefNo == null)){
+
 
                 if(selectedUser != null){
                   try{
                     snapshot =
-                    await FirebaseFirestore.instance.collection('incident_reports')
-                        .where(Strings.uid, isEqualTo: selectedUser).orderBy('timestamp', descending: true)
-                        .get()
-                        .timeout(Duration(seconds: 90));
-                  } catch(e){
-                    print(e);
-                  }
-                } else {
-                  try{
-                    snapshot =
-                    await FirebaseFirestore.instance.collection('incident_reports').orderBy('timestamp', descending: true)
-                        .get()
-                        .timeout(Duration(seconds: 90));
-                  } catch(e){
-                    print(e);
-                  }
-                }
-
-
-
-
-              } else {
-
-                if(selectedUser != null){
-                  try{
-                    snapshot =
-                    await FirebaseFirestore.instance.collection('incident_reports')
-                        .where(Strings.jobRefLowercase, isEqualTo: jobRef.toLowerCase())
-                        .where(Strings.uid, isEqualTo: selectedUser).orderBy('timestamp', descending: true)
+                    await FirebaseFirestore.instance.collection('incident_reports').where(Strings.uid, isEqualTo: selectedUser)
                         .get()
                         .timeout(Duration(seconds: 90));
                   } catch(e){
@@ -986,8 +1009,28 @@ class IncidentReportModel extends ChangeNotifier {
                   try{
                     snapshot =
                     await FirebaseFirestore.instance.collection('incident_reports')
-                        .where(Strings.jobRefLowercase, isEqualTo: jobRef.toLowerCase())
-                        .orderBy('timestamp', descending: true)
+                        .get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                }
+              } else if(jobRefRef != 'Select One' && jobRefNo != null) {
+
+                if(selectedUser != null){
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('incident_reports').where(Strings.uid, isEqualTo: selectedUser)
+                        .where(Strings.jobRefRef, isEqualTo: jobRefRef).where(Strings.jobRefNo, isEqualTo: jobRefNo).get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                } else {
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('incident_reports')
+                        .where(Strings.jobRefRef, isEqualTo: jobRefRef).where(Strings.jobRefNo, isEqualTo: jobRefNo)
                         .get()
                         .timeout(Duration(seconds: 90));
                   } catch(e){
@@ -995,7 +1038,51 @@ class IncidentReportModel extends ChangeNotifier {
                   }
                 }
 
+              } else if(jobRefRef != 'Select One' && (jobRefNo == null)) {
 
+                if(selectedUser != null){
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('incident_reports').where(Strings.uid, isEqualTo: selectedUser)
+                        .where(Strings.jobRefRef, isEqualTo: jobRefRef).get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                } else {
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('incident_reports')
+                        .where(Strings.jobRefRef, isEqualTo: jobRefRef)
+                        .get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                }
+
+              } else if(jobRefRef == 'Select One' && jobRefNo != null) {
+
+                if(selectedUser != null){
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('incident_reports').where(Strings.uid, isEqualTo: selectedUser)
+                        .where(Strings.jobRefNo, isEqualTo: jobRefNo).get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                } else {
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('incident_reports')
+                        .where(Strings.jobRefNo, isEqualTo: jobRefNo)
+                        .get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                }
 
               }
 
@@ -1003,74 +1090,110 @@ class IncidentReportModel extends ChangeNotifier {
 
           } else {
 
-
             if(dateFrom != null && dateTo != null){
 
 
-              if(jobRef == null || jobRef.trim() == ''){
+              if(jobRefRef == 'Select One' && (jobRefNo == null)){
+
 
                 try{
                   snapshot =
-                  await FirebaseFirestore.instance.collection('incident_reports')
-                      .where(Strings.uid, isEqualTo: user.uid).orderBy('timestamp', descending: true)
-                      .startAt([dateTo]).endAt([dateFrom]).get()
+                  await FirebaseFirestore.instance.collection('incident_reports').where(Strings.uid, isEqualTo: user.uid).where(Strings.incidentDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.incidentDate, isLessThanOrEqualTo: dateTo)
+                      .get()
+                      .timeout(Duration(seconds: 90));
+                } catch(e){
+                  print(e);
+                }
+              } else if(jobRefRef != 'Select One' && jobRefNo != null) {
+
+                try{
+                  snapshot =
+                  await FirebaseFirestore.instance.collection('incident_reports').where(Strings.uid, isEqualTo: user.uid).where(Strings.incidentDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.incidentDate, isLessThanOrEqualTo: dateTo)
+                      .where(Strings.jobRefRef, isEqualTo: jobRefRef).where(Strings.jobRefNo, isEqualTo: jobRefNo)
+                      .get()
+                      .timeout(Duration(seconds: 90));
+                } catch(e){
+                  print(e);
+                }
+              } else if(jobRefRef != 'Select One' && (jobRefNo == null)) {
+
+
+                try{
+                  snapshot =
+                  await FirebaseFirestore.instance.collection('incident_reports').where(Strings.uid, isEqualTo: user.uid).where(Strings.incidentDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.incidentDate, isLessThanOrEqualTo: dateTo)
+                      .where(Strings.jobRefRef, isEqualTo: jobRefRef)
+                      .get()
                       .timeout(Duration(seconds: 90));
                 } catch(e){
                   print(e);
                 }
 
-
-              } else {
-
+              } else if(jobRefRef == 'Select One' && jobRefNo != null) {
 
                 try{
                   snapshot =
-                  await FirebaseFirestore.instance.collection('incident_reports')
-                      .where(Strings.jobRefLowercase, isEqualTo: jobRef.toLowerCase())
-                      .where(Strings.uid, isEqualTo: user.uid).orderBy('timestamp', descending: true)
-                      .startAt([dateTo]).endAt([dateFrom]).get()
+                  await FirebaseFirestore.instance.collection('incident_reports').where(Strings.uid, isEqualTo: user.uid).where(Strings.incidentDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.incidentDate, isLessThanOrEqualTo: dateTo)
+                      .where(Strings.jobRefNo, isEqualTo: jobRefNo)
+                      .get()
                       .timeout(Duration(seconds: 90));
                 } catch(e){
                   print(e);
                 }
+
               }
-
 
             } else {
 
 
-              if(jobRef == null || jobRef.trim() == ''){
+              if(jobRefRef == 'Select One' && (jobRefNo == null)){
 
                 try{
                   snapshot =
-                  await FirebaseFirestore.instance.collection('incident_reports')
-                      .where(Strings.uid, isEqualTo: user.uid).orderBy('timestamp', descending: true)
+                  await FirebaseFirestore.instance.collection('incident_reports').where(Strings.uid, isEqualTo: user.uid)
+                      .get()
+                      .timeout(Duration(seconds: 90));
+                } catch(e){
+                  print(e);
+                }
+              } else if(jobRefRef != 'Select One' && jobRefNo != null) {
+
+
+                try{
+                  snapshot =
+                  await FirebaseFirestore.instance.collection('incident_reports').where(Strings.uid, isEqualTo: user.uid)
+                      .where(Strings.jobRefRef, isEqualTo: jobRefRef).where(Strings.jobRefNo, isEqualTo: jobRefNo)
                       .get()
                       .timeout(Duration(seconds: 90));
                 } catch(e){
                   print(e);
                 }
 
-
-              } else {
+              } else if(jobRefRef != 'Select One' && (jobRefNo == null)) {
 
                 try{
                   snapshot =
-                  await FirebaseFirestore.instance.collection('incident_reports')
-                      .where(Strings.jobRefLowercase, isEqualTo: jobRef.toLowerCase())
-                      .where(Strings.uid, isEqualTo: user.uid).orderBy('timestamp', descending: true)
+                  await FirebaseFirestore.instance.collection('incident_reports').where(Strings.uid, isEqualTo: user.uid)
+                      .where(Strings.jobRefRef, isEqualTo: jobRefRef)
                       .get()
                       .timeout(Duration(seconds: 90));
                 } catch(e){
                   print(e);
                 }
+
+              } else if(jobRefRef == 'Select One' && jobRefNo != null) {
+                try{
+                  snapshot =
+                  await FirebaseFirestore.instance.collection('incident_reports').where(Strings.uid, isEqualTo: user.uid)
+                      .where(Strings.jobRefNo, isEqualTo: jobRefNo)
+                      .get()
+                      .timeout(Duration(seconds: 90));
+                } catch(e){
+                  print(e);
+                }
+
               }
 
             }
-
-
-
-
           }
 
           Map<String, dynamic> snapshotData = {};
@@ -1078,7 +1201,10 @@ class IncidentReportModel extends ChangeNotifier {
           if(snapshot.docs.length < 1){
             message = 'No Incident Reports found';
           } else {
-            for (DocumentSnapshot snap in snapshot.docs) {
+            List<QueryDocumentSnapshot> snapDocs = snapshot.docs;
+            snapDocs.sort((a, b) => (b.get('job_ref_no')).compareTo(a.get('job_ref_no')));
+
+            for (DocumentSnapshot snap in snapDocs) {
 
               snapshotData = snap.data();
 
@@ -1129,117 +1255,6 @@ class IncidentReportModel extends ChangeNotifier {
   }
 
 
-  Future<bool> searchMoreIncidentReports(DateTime dateFrom, DateTime dateTo) async{
-
-    _isLoading = true;
-    notifyListeners();
-    bool success = false;
-    String message = '';
-    GlobalFunctions.showLoadingDialog('Searching Forms');
-    List<Map<String, dynamic>> _fetchedIncidentReportList = [];
-
-    try {
-
-      bool hasDataConnection = await GlobalFunctions.hasDataConnection();
-
-      if(!hasDataConnection){
-
-        message = 'No Data Connection, unable to search Incident Reports';
-
-      } else {
-
-
-        bool isTokenExpired = GlobalFunctions.isTokenExpired();
-        bool authenticated = true;
-
-        if(isTokenExpired) authenticated = await authenticationModel.reAuthenticate();
-
-        if(authenticated){
-
-
-          QuerySnapshot snapshot;
-          int currentLength = _incidentReports.length;
-          DateTime latestDate = DateTime.parse(_incidentReports[currentLength - 1]['timestamp']);
-
-          if(user.role == 'Super User'){
-            try{
-              snapshot =
-              await FirebaseFirestore.instance.collection('incident_reports').orderBy('timestamp', descending: true)
-                  .startAfter([Timestamp.fromDate(latestDate)]).endAt([dateFrom]).limit(10).get()
-                  .timeout(Duration(seconds: 90));
-            } catch(e){
-              print(e);
-            }
-
-          } else {
-
-            try{
-              snapshot =
-              await FirebaseFirestore.instance.collection('incident_reports').where('uid', isEqualTo: user.uid).orderBy('timestamp', descending: true)
-                  .startAfter([Timestamp.fromDate(latestDate)]).endAt([dateFrom]).limit(10).get()
-                  .timeout(Duration(seconds: 90));
-            } catch(e){
-              print(e);
-            }
-
-          }
-
-          Map<String, dynamic> snapshotData = {};
-
-          if(snapshot.docs.length < 1){
-            message = 'No Incident Reports found';
-          } else {
-            for (DocumentSnapshot snap in snapshot.docs) {
-
-              snapshotData = snap.data();
-
-              Uint8List incidentSignature;
-
-              if (snapshotData[Strings.incidentSignature] != null) {
-                Reference storageRef =
-                FirebaseStorage.instance.ref().child('incidentReportImages/' + snap.id + '/incidentSignature.jpg');
-
-                if(kIsWeb){
-                  storageRef = FirebaseStorage.instance.ref().child(firebaseStorageBucket + '/incidentReportImages/' + snap.id + '/incidentSignature.jpg');
-                }
-                incidentSignature = await storageRef.getData(dataLimit);
-              }
-
-              final Map<String, dynamic> incidentReport = onlineIncidentReport(snapshotData, snap.id, incidentSignature);
-
-              _fetchedIncidentReportList.add(incidentReport);
-
-            }
-
-            _incidentReports.addAll(_fetchedIncidentReportList);
-            success = true;
-          }
-
-
-        }
-
-      }
-
-
-    } on TimeoutException catch (_) {
-      // A timeout occurred.
-      message = 'Network Timeout communicating with the server, unable to search Incident Reports';
-    } catch(e){
-      print(e);
-      message = 'Something went wrong. Please try again';
-
-    }
-
-    _isLoading = false;
-    notifyListeners();
-    _selIncidentReportId = null;
-    GlobalFunctions.dismissLoadingDialog();
-    if(message != '') GlobalFunctions.showToast(message);
-    return success;
-
-  }
-
-
   Map<String, dynamic> localIncidentReport(Map<String, dynamic> localRecord){
     return {
       Strings.documentId: GlobalFunctions.databaseValueString(localRecord[Strings.documentId]),
@@ -1247,6 +1262,8 @@ class IncidentReportModel extends ChangeNotifier {
       Strings.jobId: localRecord[Strings.jobId],
       Strings.formVersion: localRecord[Strings.formVersion],
       Strings.jobRef: localRecord[Strings.jobRef],
+      Strings.jobRefRef: localRecord[Strings.jobRefRef],
+      Strings.jobRefNo: localRecord[Strings.jobRefNo],
       Strings.incidentDate: localRecord[Strings.incidentDate],
       Strings.incidentTime: localRecord[Strings.incidentTime],
       Strings.incidentDetails: localRecord[Strings.incidentDetails],
@@ -1269,6 +1286,8 @@ class IncidentReportModel extends ChangeNotifier {
       Strings.jobId: localRecord[Strings.jobId],
       Strings.formVersion: localRecord[Strings.formVersion],
       Strings.jobRef: localRecord[Strings.jobRef],
+      Strings.jobRefRef: localRecord[Strings.jobRefRef],
+      Strings.jobRefNo: localRecord[Strings.jobRefNo].toString(),
       Strings.incidentDate: localRecord[Strings.incidentDate] == null ? null : DateTime
           .fromMillisecondsSinceEpoch(
           localRecord[Strings.incidentDate].millisecondsSinceEpoch)
@@ -1296,6 +1315,8 @@ class IncidentReportModel extends ChangeNotifier {
       Strings.jobId: localRecord[Strings.jobId],
       Strings.formVersion: localRecord[Strings.formVersion],
       Strings.jobRef: localRecord[Strings.jobRef],
+      Strings.jobRefRef: localRecord[Strings.jobRefRef],
+      Strings.jobRefNo: localRecord[Strings.jobRefNo],
       Strings.incidentDate: localRecord[Strings.incidentDate],
       Strings.incidentTime: localRecord[Strings.incidentTime],
       Strings.incidentDetails: localRecord[Strings.incidentDetails],
@@ -1329,16 +1350,6 @@ class IncidentReportModel extends ChangeNotifier {
         incidentReports.add(incidentReportRecord.value);
       }
 
-
-      // List<Map<String, dynamic>> incidentReports =
-      // await _databaseHelper.getAllWhereAndWhere(
-      //     Strings.incidentReportTable,
-      //     Strings.serverUploaded,
-      //     0,
-      //     Strings.uid,
-      //     user.uid);
-
-
       bool isTokenExpired = GlobalFunctions.isTokenExpired();
       bool authenticated = true;
 
@@ -1363,8 +1374,10 @@ class IncidentReportModel extends ChangeNotifier {
             Strings.uid: user.uid,
             Strings.jobId: '1',
             Strings.formVersion: '1',
-            Strings.jobRef: GlobalFunctions.databaseValueString(incidentReport[Strings.jobRef]),
-            Strings.jobRefLowercase: GlobalFunctions.databaseValueString(incidentReport[Strings.jobRef]).toLowerCase(),
+            Strings.jobRef: GlobalFunctions.databaseValueString(incidentReport[Strings.jobRefRef]) + GlobalFunctions.databaseValueString(incidentReport[Strings.jobRefNo]),
+            Strings.jobRefLowercase: GlobalFunctions.databaseValueString(incidentReport[Strings.jobRefRef]).toLowerCase() + GlobalFunctions.databaseValueString(incidentReport[Strings.jobRefNo]).toLowerCase(),
+            Strings.jobRefRef: GlobalFunctions.databaseValueString(incidentReport[Strings.jobRefRef]),
+            Strings.jobRefNo: int.parse(incidentReport[Strings.jobRefNo]),
             Strings.incidentDate: incidentReport[Strings.incidentDate] == null ? null : DateTime.parse(incidentReport[Strings.incidentDate]),
             Strings.incidentTime: incidentReport[Strings.incidentTime],
             Strings.incidentDetails: incidentReport[Strings.incidentDetails],
@@ -1556,52 +1569,14 @@ class IncidentReportModel extends ChangeNotifier {
             width: width,
             padding: const EdgeInsets.all(5),
             decoration: BoxDecoration(
-              borderRadius: 5,
-              border: BoxBorder(
-                top: true,
-                left: true,
-                right: true,
-                bottom: true,
-                width: 1,
-                color: PdfColors.grey,
-              ),
+              borderRadius: BorderRadius.all(Radius.circular(5)),
+              border: Border.all(width: 1, color: PdfColors.grey),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(value, style: TextStyle(fontSize: 8)),
-              ],
-            ),
-          ));
-    }
-
-    Widget signatureField(FlutterImage.Image signature, PdfDocument doc) {
-
-      return ConstrainedBox(constraints: BoxConstraints(minHeight: 20),
-          child: Container(
-            width: 120,
-            padding: const EdgeInsets.all(2),
-            decoration: BoxDecoration(
-              borderRadius: 5,
-              border: BoxBorder(
-                top: true,
-                left: true,
-                right: true,
-                bottom: true,
-                width: 1,
-                color: PdfColors.grey,
-              ),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                signature == null ? Text('') : Container(height: 20, child: FittedBox(alignment: Alignment.centerLeft, child: Image(PdfImage(doc,
-                    image: signature.data.buffer
-                        .asUint8List(),
-                    width: signature.width,
-                    height: signature.height)))),
               ],
             ),
           ));
@@ -1660,15 +1635,8 @@ class IncidentReportModel extends ChangeNotifier {
                         width: 100,
                         padding: const EdgeInsets.all(3),
                         decoration: BoxDecoration(
-                          borderRadius: 5,
-                          border: BoxBorder(
-                            top: true,
-                            left: true,
-                            right: true,
-                            bottom: true,
-                            width: 1,
-                            color: PdfColors.grey,
-                          ),
+                          borderRadius: BorderRadius.all(Radius.circular(5)),
+                          border: Border.all(width: 1, color: PdfColors.grey),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -1681,15 +1649,8 @@ class IncidentReportModel extends ChangeNotifier {
                       child: Container(
                         padding: const EdgeInsets.all(3),
                         decoration: BoxDecoration(
-                          borderRadius: 5,
-                          border: BoxBorder(
-                            top: true,
-                            left: true,
-                            right: true,
-                            bottom: true,
-                            width: 1,
-                            color: PdfColors.grey,
-                          ),
+                          borderRadius: BorderRadius.all(Radius.circular(5)),
+                          border: Border.all(width: 1, color: PdfColors.grey),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -1796,25 +1757,18 @@ class IncidentReportModel extends ChangeNotifier {
                       child: Container(
                         padding: const EdgeInsets.all(3),
                         decoration: BoxDecoration(
-                          borderRadius: 5,
-                          border: BoxBorder(
-                            top: true,
-                            left: true,
-                            right: true,
-                            bottom: true,
-                            width: 1,
-                            color: PdfColors.grey,
-                          ),
+                          borderRadius: BorderRadius.all(Radius.circular(5)),
+                          border: Border.all(width: 1, color: PdfColors.grey),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            value1 == 'signature' && signature != null ? Container(height: 20, child: FittedBox(alignment: Alignment.centerLeft, child: Image(PdfImage(doc,
+                            value1 == 'signature' && signature != null ? Container(height: 20, child: FittedBox(alignment: Alignment.centerLeft, child: Image(ImageProxy(PdfImage(doc,
                                 image: signature.data.buffer
                                     .asUint8List(),
                                 width: signature.width,
-                                height: signature.height)))) : Text(value1 == null || value1 == 'signature' ? '' : value1, style: TextStyle(fontSize: 8))
+                                height: signature.height))))) : Text(value1 == null || value1 == 'signature' ? '' : value1, style: TextStyle(fontSize: 8))
                           ],
                         ),
                       ))),
@@ -1825,25 +1779,18 @@ class IncidentReportModel extends ChangeNotifier {
                       child: Container(
                         padding: const EdgeInsets.all(3),
                         decoration: BoxDecoration(
-                          borderRadius: 5,
-                          border: BoxBorder(
-                            top: true,
-                            left: true,
-                            right: true,
-                            bottom: true,
-                            width: 1,
-                            color: PdfColors.grey,
-                          ),
+                          borderRadius: BorderRadius.all(Radius.circular(5)),
+                          border: Border.all(width: 1, color: PdfColors.grey),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            value2 == 'signature' && signature != null ? Container(height: 20, child: FittedBox(alignment: Alignment.centerLeft, child: Image(PdfImage(doc,
+                            value2 == 'signature' && signature != null ? Container(height: 20, child: FittedBox(alignment: Alignment.centerLeft, child: Image(ImageProxy(PdfImage(doc,
                                 image: signature.data.buffer
                                     .asUint8List(),
                                 width: signature.width,
-                                height: signature.height)))) : Text(value2 == null || value2 == 'signature' ? '' : value2, style: TextStyle(fontSize: 8)),
+                                height: signature.height))))) : Text(value2 == null || value2 == 'signature' ? '' : value2, style: TextStyle(fontSize: 8)),
                           ],
                         ),
                       ))),
@@ -1861,7 +1808,9 @@ class IncidentReportModel extends ChangeNotifier {
       pdf = Document();
       PdfDocument pdfDoc = pdf.document;
       FlutterImage.Image incidentSignatureImage;
-      PdfImage pegasusLogo = await pdfImageFromImageProvider(pdf: pdfDoc, image: Material.AssetImage('assets/images/pegasusLogo.png'),);
+      //PdfImage pegasusLogo = await pdfImageFromImageProvider(pdf: pdfDoc, image: Material.AssetImage('assets/images/pegasusLogo.png'),);
+      final pegasusLogo = MemoryImage((await rootBundle.load('assets/images/pegasusLogo.png')).buffer.asUint8List(),);
+
 
       if (selectedIncidentReport[Strings.incidentSignature] != null) {
         Uint8List decryptedSignature = await GlobalFunctions.decryptSignature(selectedIncidentReport[Strings.incidentSignature]);
@@ -1870,7 +1819,7 @@ class IncidentReportModel extends ChangeNotifier {
 
 
       pdf.addPage(MultiPage(
-          theme: Theme.withFont(base: ttf, bold: ttfBold),
+          theme: ThemeData.withFont(base: ttf, bold: ttfBold),
           pageFormat: PdfPageFormat.a4,
           crossAxisAlignment: CrossAxisAlignment.start,
           margin: EdgeInsets.all(40),
@@ -1900,7 +1849,8 @@ class IncidentReportModel extends ChangeNotifier {
                       ]
                   ),
 
-                  Container(height: 50, child: Image(pegasusLogo)),
+                  Container(height: 50, child: Image(pegasusLogo)
+),
 
                 ]
             ),
@@ -1943,7 +1893,7 @@ class IncidentReportModel extends ChangeNotifier {
       if(kIsWeb){
 
         if(option == ShareOption.Download){
-          List<int> pdfList = pdf.save();
+          List<int> pdfList = await pdf.save();
           Uint8List pdfInBytes = Uint8List.fromList(pdfList);
 
 //Create blob and link from bytes
@@ -1972,14 +1922,13 @@ class IncidentReportModel extends ChangeNotifier {
         final File file = File('$pdfPath/incident_report_form_${formDate}_$id.pdf');
 
         if(option == ShareOption.Email){
-          file.writeAsBytesSync(pdf.save());
-        }
+await file.writeAsBytes(await pdf.save());}
 
         ConnectivityResult connectivityResult = await Connectivity().checkConnectivity();
 
         if(connectivityResult != ConnectivityResult.none) {
 
-          if(option == ShareOption.Share) Printing.sharePdf(bytes: pdf.save(),filename: 'incident_report_form_${formDate}_$id.pdf');
+          if(option == ShareOption.Share) Printing.sharePdf(bytes: await pdf.save(),filename: 'incident_report_form_${formDate}_$id.pdf');
           if(option == ShareOption.Print) await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save());
 
           if(option == ShareOption.Email) {

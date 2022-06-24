@@ -25,7 +25,6 @@ import 'package:mailer/smtp_server/gmail.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:printing/printing.dart';
 import 'package:image/image.dart' as FlutterImage;
-import 'package:flutter/material.dart' as Material;
 import '../models/share_option.dart';
 import '../models/text_option.dart';
 import '../utils/database.dart';
@@ -242,7 +241,7 @@ class ObservationBookingModel extends ChangeNotifier {
 
     if(edit){
       final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
-          [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, selectedJobId)]
+          [Db.Filter.equals(Strings.documentId, selectedObservationBooking[Strings.documentId]), Db.Filter.equals(Strings.jobId, selectedJobId)]
       ));
       await _editedObservationBookingsStore.update(await _db, {field: value},
           finder: finder);
@@ -303,6 +302,8 @@ class ObservationBookingModel extends ChangeNotifier {
       Strings.jobId: '1',
       Strings.formVersion: '1',
       Strings.jobRef: observationBooking[Strings.jobRef],
+      Strings.jobRefRef: observationBooking[Strings.jobRefRef],
+      Strings.jobRefNo: observationBooking[Strings.jobRefNo],
       Strings.obRequestedBy: observationBooking[Strings.obRequestedBy],
       Strings.obJobTitle: observationBooking[Strings.obJobTitle],
       Strings.obJobContact: observationBooking[Strings.obJobContact],
@@ -478,6 +479,7 @@ class ObservationBookingModel extends ChangeNotifier {
   Future<void> getSavedRecordsList() async{
 
     _isLoading = true;
+    _observationBookings = [];
     notifyListeners();
     String message = '';
 
@@ -494,7 +496,7 @@ class ObservationBookingModel extends ChangeNotifier {
 
         _observationBookings = List.from(_fetchedRecordList.reversed);
       } else {
-        message = 'No saved records available';
+        //message = 'No saved records available';
       }
 
     } catch(e){
@@ -524,6 +526,8 @@ class ObservationBookingModel extends ChangeNotifier {
     await _temporaryObservationBookingsStore.update(await _db, {
       Strings.formVersion: 1,
       Strings.jobRef: null,
+      Strings.jobRefRef: null,
+      Strings.jobRefNo: null,
       Strings.obRequestedBy: null,
       Strings.obJobTitle: null,
       Strings.obJobContact: null,
@@ -690,7 +694,11 @@ class ObservationBookingModel extends ChangeNotifier {
     Map<String, dynamic> observationBooking = await getTemporaryRecord(edit, jobId, saved, savedId);
 
 
-    if(observationBooking[Strings.jobRef]== null || observationBooking[Strings.jobRef].toString().trim() == ''){
+    if(observationBooking[Strings.jobRefNo]== null || observationBooking[Strings.jobRefNo].toString().trim() == ''){
+      success = false;
+    }
+
+    if(observationBooking[Strings.jobRefRef]== null || observationBooking[Strings.jobRefRef]== 'Select One'){
       success = false;
     }
 
@@ -930,7 +938,9 @@ class ObservationBookingModel extends ChangeNotifier {
       Strings.uid: user.uid,
       Strings.jobId: '1',
       Strings.formVersion: '1',
-      Strings.jobRef: observationBooking[Strings.jobRef],
+      Strings.jobRef: observationBooking[Strings.jobRefRef] + observationBooking[Strings.jobRefNo],
+      Strings.jobRefRef: observationBooking[Strings.jobRefRef],
+      Strings.jobRefNo: observationBooking[Strings.jobRefNo],
       Strings.obRequestedBy: observationBooking[Strings.obRequestedBy],
       Strings.obJobTitle: observationBooking[Strings.obJobTitle],
       Strings.obJobContact: observationBooking[Strings.obJobContact],
@@ -1110,8 +1120,10 @@ class ObservationBookingModel extends ChangeNotifier {
             Strings.uid: user.uid,
             Strings.jobId: '1',
             Strings.formVersion: '1',
-            Strings.jobRef: GlobalFunctions.databaseValueString(observationBooking[Strings.jobRef]),
-            Strings.jobRefLowercase: GlobalFunctions.databaseValueString(observationBooking[Strings.jobRef]).toLowerCase(),
+            Strings.jobRef: GlobalFunctions.databaseValueString(observationBooking[Strings.jobRefRef]) + GlobalFunctions.databaseValueString(observationBooking[Strings.jobRefNo]),
+            Strings.jobRefLowercase: GlobalFunctions.databaseValueString(observationBooking[Strings.jobRefRef]).toLowerCase() + GlobalFunctions.databaseValueString(observationBooking[Strings.jobRefNo]).toLowerCase(),
+            Strings.jobRefRef: GlobalFunctions.databaseValueString(observationBooking[Strings.jobRefRef]),
+            Strings.jobRefNo:  int.parse(observationBooking[Strings.jobRefNo]),
             Strings.obRequestedBy: observationBooking[Strings.obRequestedBy],
             Strings.obJobTitle: observationBooking[Strings.obJobTitle],
             Strings.obJobContact: observationBooking[Strings.obJobContact],
@@ -1340,8 +1352,10 @@ class ObservationBookingModel extends ChangeNotifier {
           await FirebaseFirestore.instance.collection('observation_bookings').doc(observationBooking[Strings.documentId]).update({
             Strings.jobId: '1',
             Strings.formVersion: '1',
-            Strings.jobRef: GlobalFunctions.databaseValueString(observationBooking[Strings.jobRef]),
-            Strings.jobRefLowercase: GlobalFunctions.databaseValueString(observationBooking[Strings.jobRef]).toLowerCase(),
+            Strings.jobRef: GlobalFunctions.databaseValueString(observationBooking[Strings.jobRefRef]) + GlobalFunctions.databaseValueString(observationBooking[Strings.jobRefNo]),
+            Strings.jobRefLowercase: GlobalFunctions.databaseValueString(observationBooking[Strings.jobRefRef]).toLowerCase() + GlobalFunctions.databaseValueString(observationBooking[Strings.jobRefNo]).toLowerCase(),
+            Strings.jobRefRef: GlobalFunctions.databaseValueString(observationBooking[Strings.jobRefRef]),
+            Strings.jobRefNo:  int.parse(observationBooking[Strings.jobRefNo]),
             Strings.obRequestedBy: observationBooking[Strings.obRequestedBy],
             Strings.obJobTitle: observationBooking[Strings.obJobTitle],
             Strings.obJobContact: observationBooking[Strings.obJobContact],
@@ -1571,14 +1585,14 @@ class ObservationBookingModel extends ChangeNotifier {
 
           if(user.role == 'Super User'){
             try{
-              snapshot = await FirebaseFirestore.instance.collection('observation_bookings').orderBy('timestamp', descending: true).limit(10).get().timeout(Duration(seconds: 90));
+              snapshot = await FirebaseFirestore.instance.collection('observation_bookings').orderBy('job_ref_no', descending: true).limit(10).get().timeout(Duration(seconds: 90));
             } catch(e){
               print(e);
             }
           } else {
             try{
               snapshot = await FirebaseFirestore.instance.collection('observation_bookings').where(
-                  'uid', isEqualTo: user.uid).orderBy('timestamp', descending: true).limit(10).get().timeout(Duration(seconds: 90));
+                  'uid', isEqualTo: user.uid).orderBy('job_ref_no', descending: true).limit(10).get().timeout(Duration(seconds: 90));
             } catch(e){
               print(e);
             }
@@ -1655,13 +1669,13 @@ class ObservationBookingModel extends ChangeNotifier {
 
           QuerySnapshot snapshot;
           int currentLength = _observationBookings.length;
-          DateTime latestDate = DateTime.parse(_observationBookings[currentLength - 1][Strings.timestamp]);
+          int latestNo = int.parse(_observationBookings[currentLength - 1][Strings.jobRefNo]);
+
 
           if(user.role == 'Super User'){
             try {
-              snapshot = await FirebaseFirestore.instance.collection('observation_bookings').orderBy(
-                  'timestamp', descending: true).startAfter(
-                  [Timestamp.fromDate(latestDate)]).limit(10)
+              snapshot = await FirebaseFirestore.instance.collection('observation_bookings').where(Strings.jobRefNo, isLessThan: latestNo).orderBy(
+                  'job_ref_no', descending: true).limit(10)
                   .get()
                   .timeout(Duration(seconds: 90));
             } catch(e) {
@@ -1671,9 +1685,8 @@ class ObservationBookingModel extends ChangeNotifier {
           } else {
             try {
               snapshot = await FirebaseFirestore.instance.collection('observation_bookings').where(
-                  'uid', isEqualTo: user.uid).orderBy(
-                  'timestamp', descending: true).startAfter(
-                  [Timestamp.fromDate(latestDate)]).limit(10)
+                  'uid', isEqualTo: user.uid).where(Strings.jobRefNo, isLessThan: latestNo).orderBy(
+                  'job_ref_no', descending: true).limit(10)
                   .get()
                   .timeout(Duration(seconds: 90));
             } catch(e) {
@@ -1722,7 +1735,7 @@ class ObservationBookingModel extends ChangeNotifier {
 
   }
 
-  Future<bool> searchObservationBookings(DateTime dateFrom, DateTime dateTo, String jobRef, String selectedUser) async{
+  Future<bool> searchObservationBookings(DateTime dateFrom, DateTime dateTo, String jobRefRef, int jobRefNo, String selectedUser) async{
 
     _isLoading = true;
     notifyListeners();
@@ -1759,15 +1772,14 @@ class ObservationBookingModel extends ChangeNotifier {
             if(dateFrom != null && dateTo != null){
 
 
-              if(jobRef == null || jobRef.trim() == ''){
+              if(jobRefRef == 'Select One' && (jobRefNo == null)){
 
 
                 if(selectedUser != null){
                   try{
                     snapshot =
-                    await FirebaseFirestore.instance.collection('observation_bookings')
-                        .where(Strings.uid, isEqualTo: selectedUser).orderBy('timestamp', descending: true)
-                        .startAt([dateTo]).endAt([dateFrom]).get()
+                    await FirebaseFirestore.instance.collection('observation_bookings').where(Strings.uid, isEqualTo: selectedUser).where(Strings.obJobDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.obJobDate, isLessThanOrEqualTo: dateTo)
+                        .get()
                         .timeout(Duration(seconds: 90));
                   } catch(e){
                     print(e);
@@ -1775,8 +1787,8 @@ class ObservationBookingModel extends ChangeNotifier {
                 } else {
                   try{
                     snapshot =
-                    await FirebaseFirestore.instance.collection('observation_bookings').orderBy('timestamp', descending: true)
-                        .startAt([dateTo]).endAt([dateFrom]).get()
+                    await FirebaseFirestore.instance.collection('observation_bookings').where(Strings.obJobDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.obJobDate, isLessThanOrEqualTo: dateTo)
+                        .get()
                         .timeout(Duration(seconds: 90));
                   } catch(e){
                     print(e);
@@ -1784,14 +1796,13 @@ class ObservationBookingModel extends ChangeNotifier {
                 }
 
 
-              } else {
+              } else if(jobRefRef != 'Select One' && jobRefNo != null) {
 
                 if(selectedUser != null){
                   try{
                     snapshot =
-                    await FirebaseFirestore.instance.collection('observation_bookings').where(Strings.uid, isEqualTo: selectedUser).
-                        where(Strings.jobRefLowercase, isEqualTo: jobRef.toLowerCase()).orderBy('timestamp', descending: true)
-                        .startAt([dateTo]).endAt([dateFrom]).get()
+                    await FirebaseFirestore.instance.collection('observation_bookings').where(Strings.uid, isEqualTo: selectedUser).where(Strings.obJobDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.obJobDate, isLessThanOrEqualTo: dateTo)
+                        .where(Strings.jobRefRef, isEqualTo: jobRefRef).where(Strings.jobRefNo, isEqualTo: jobRefNo).get()
                         .timeout(Duration(seconds: 90));
                   } catch(e){
                     print(e);
@@ -1799,57 +1810,72 @@ class ObservationBookingModel extends ChangeNotifier {
                 } else {
                   try{
                     snapshot =
-                    await FirebaseFirestore.instance.collection('observation_bookings')
-                        .where(Strings.jobRefLowercase, isEqualTo: jobRef.toLowerCase()).orderBy('timestamp', descending: true)
-                        .startAt([dateTo]).endAt([dateFrom]).get()
+                    await FirebaseFirestore.instance.collection('observation_bookings').where(Strings.obJobDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.obJobDate, isLessThanOrEqualTo: dateTo)
+                        .where(Strings.jobRefRef, isEqualTo: jobRefRef).where(Strings.jobRefNo, isEqualTo: jobRefNo)
+                        .get()
                         .timeout(Duration(seconds: 90));
                   } catch(e){
                     print(e);
                   }
                 }
 
+              } else if(jobRefRef != 'Select One' && (jobRefNo == null)) {
 
+                if(selectedUser != null){
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('observation_bookings').where(Strings.uid, isEqualTo: selectedUser).where(Strings.obJobDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.obJobDate, isLessThanOrEqualTo: dateTo)
+                        .where(Strings.jobRefRef, isEqualTo: jobRefRef).get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                } else {
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('observation_bookings').where(Strings.obJobDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.obJobDate, isLessThanOrEqualTo: dateTo)
+                        .where(Strings.jobRefRef, isEqualTo: jobRefRef)
+                        .get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                }
 
+              } else if(jobRefRef == 'Select One' && jobRefNo != null) {
 
+                if(selectedUser != null){
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('observation_bookings').where(Strings.uid, isEqualTo: selectedUser).where(Strings.obJobDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.obJobDate, isLessThanOrEqualTo: dateTo)
+                        .where(Strings.jobRefNo, isEqualTo: jobRefNo).get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                } else {
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('observation_bookings').where(Strings.obJobDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.obJobDate, isLessThanOrEqualTo: dateTo)
+                        .where(Strings.jobRefNo, isEqualTo: jobRefNo)
+                        .get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                }
               }
 
             } else {
 
 
-              if(jobRef == null || jobRef.trim() == ''){
+              if(jobRefRef == 'Select One' && (jobRefNo == null)){
+
 
                 if(selectedUser != null){
                   try{
                     snapshot =
-                    await FirebaseFirestore.instance.collection('observation_bookings')
-                        .where(Strings.uid, isEqualTo: selectedUser).orderBy('timestamp', descending: true)
-                        .get()
-                        .timeout(Duration(seconds: 90));
-                  } catch(e){
-                    print(e);
-                  }
-                } else {
-                  try{
-                    snapshot =
-                    await FirebaseFirestore.instance.collection('observation_bookings').orderBy('timestamp', descending: true)
-                        .get()
-                        .timeout(Duration(seconds: 90));
-                  } catch(e){
-                    print(e);
-                  }
-                }
-
-
-
-
-              } else {
-
-                if(selectedUser != null){
-                  try{
-                    snapshot =
-                    await FirebaseFirestore.instance.collection('observation_bookings')
-                        .where(Strings.jobRefLowercase, isEqualTo: jobRef.toLowerCase())
-                        .where(Strings.uid, isEqualTo: selectedUser).orderBy('timestamp', descending: true)
+                    await FirebaseFirestore.instance.collection('observation_bookings').where(Strings.uid, isEqualTo: selectedUser)
                         .get()
                         .timeout(Duration(seconds: 90));
                   } catch(e){
@@ -1859,8 +1885,28 @@ class ObservationBookingModel extends ChangeNotifier {
                   try{
                     snapshot =
                     await FirebaseFirestore.instance.collection('observation_bookings')
-                        .where(Strings.jobRefLowercase, isEqualTo: jobRef.toLowerCase())
-                        .orderBy('timestamp', descending: true)
+                        .get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                }
+              } else if(jobRefRef != 'Select One' && jobRefNo != null) {
+
+                if(selectedUser != null){
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('observation_bookings').where(Strings.uid, isEqualTo: selectedUser)
+                        .where(Strings.jobRefRef, isEqualTo: jobRefRef).where(Strings.jobRefNo, isEqualTo: jobRefNo).get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                } else {
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('observation_bookings')
+                        .where(Strings.jobRefRef, isEqualTo: jobRefRef).where(Strings.jobRefNo, isEqualTo: jobRefNo)
                         .get()
                         .timeout(Duration(seconds: 90));
                   } catch(e){
@@ -1868,7 +1914,51 @@ class ObservationBookingModel extends ChangeNotifier {
                   }
                 }
 
+              } else if(jobRefRef != 'Select One' && (jobRefNo == null)) {
 
+                if(selectedUser != null){
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('observation_bookings').where(Strings.uid, isEqualTo: selectedUser)
+                        .where(Strings.jobRefRef, isEqualTo: jobRefRef).get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                } else {
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('observation_bookings')
+                        .where(Strings.jobRefRef, isEqualTo: jobRefRef)
+                        .get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                }
+
+              } else if(jobRefRef == 'Select One' && jobRefNo != null) {
+
+                if(selectedUser != null){
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('observation_bookings').where(Strings.uid, isEqualTo: selectedUser)
+                        .where(Strings.jobRefNo, isEqualTo: jobRefNo).get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                } else {
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('observation_bookings')
+                        .where(Strings.jobRefNo, isEqualTo: jobRefNo)
+                        .get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                }
 
               }
 
@@ -1876,74 +1966,110 @@ class ObservationBookingModel extends ChangeNotifier {
 
           } else {
 
-
             if(dateFrom != null && dateTo != null){
 
 
-              if(jobRef == null || jobRef.trim() == ''){
+              if(jobRefRef == 'Select One' && (jobRefNo == null)){
+
 
                 try{
                   snapshot =
-                  await FirebaseFirestore.instance.collection('observation_bookings')
-                      .where(Strings.uid, isEqualTo: user.uid).orderBy('timestamp', descending: true)
-                      .startAt([dateTo]).endAt([dateFrom]).get()
+                  await FirebaseFirestore.instance.collection('observation_bookings').where(Strings.uid, isEqualTo: user.uid).where(Strings.obJobDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.obJobDate, isLessThanOrEqualTo: dateTo)
+                      .get()
+                      .timeout(Duration(seconds: 90));
+                } catch(e){
+                  print(e);
+                }
+              } else if(jobRefRef != 'Select One' && jobRefNo != null) {
+
+                try{
+                  snapshot =
+                  await FirebaseFirestore.instance.collection('observation_bookings').where(Strings.uid, isEqualTo: user.uid).where(Strings.obJobDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.obJobDate, isLessThanOrEqualTo: dateTo)
+                      .where(Strings.jobRefRef, isEqualTo: jobRefRef).where(Strings.jobRefNo, isEqualTo: jobRefNo)
+                      .get()
+                      .timeout(Duration(seconds: 90));
+                } catch(e){
+                  print(e);
+                }
+              } else if(jobRefRef != 'Select One' && (jobRefNo == null)) {
+
+
+                try{
+                  snapshot =
+                  await FirebaseFirestore.instance.collection('observation_bookings').where(Strings.uid, isEqualTo: user.uid).where(Strings.obJobDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.obJobDate, isLessThanOrEqualTo: dateTo)
+                      .where(Strings.jobRefRef, isEqualTo: jobRefRef)
+                      .get()
                       .timeout(Duration(seconds: 90));
                 } catch(e){
                   print(e);
                 }
 
-
-              } else {
-
+              } else if(jobRefRef == 'Select One' && jobRefNo != null) {
 
                 try{
                   snapshot =
-                  await FirebaseFirestore.instance.collection('observation_bookings')
-                      .where(Strings.jobRefLowercase, isEqualTo: jobRef.toLowerCase())
-                      .where(Strings.uid, isEqualTo: user.uid).orderBy('timestamp', descending: true)
-                      .startAt([dateTo]).endAt([dateFrom]).get()
+                  await FirebaseFirestore.instance.collection('observation_bookings').where(Strings.uid, isEqualTo: user.uid).where(Strings.obJobDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.obJobDate, isLessThanOrEqualTo: dateTo)
+                      .where(Strings.jobRefNo, isEqualTo: jobRefNo)
+                      .get()
                       .timeout(Duration(seconds: 90));
                 } catch(e){
                   print(e);
                 }
+
               }
-
 
             } else {
 
 
-              if(jobRef == null || jobRef.trim() == ''){
+              if(jobRefRef == 'Select One' && (jobRefNo == null)){
 
                 try{
                   snapshot =
-                  await FirebaseFirestore.instance.collection('observation_bookings')
-                      .where(Strings.uid, isEqualTo: user.uid).orderBy('timestamp', descending: true)
+                  await FirebaseFirestore.instance.collection('observation_bookings').where(Strings.uid, isEqualTo: user.uid)
+                      .get()
+                      .timeout(Duration(seconds: 90));
+                } catch(e){
+                  print(e);
+                }
+              } else if(jobRefRef != 'Select One' && jobRefNo != null) {
+
+
+                try{
+                  snapshot =
+                  await FirebaseFirestore.instance.collection('observation_bookings').where(Strings.uid, isEqualTo: user.uid)
+                      .where(Strings.jobRefRef, isEqualTo: jobRefRef).where(Strings.jobRefNo, isEqualTo: jobRefNo)
                       .get()
                       .timeout(Duration(seconds: 90));
                 } catch(e){
                   print(e);
                 }
 
-
-              } else {
+              } else if(jobRefRef != 'Select One' && (jobRefNo == null)) {
 
                 try{
                   snapshot =
-                  await FirebaseFirestore.instance.collection('observation_bookings')
-                      .where(Strings.jobRefLowercase, isEqualTo: jobRef.toLowerCase())
-                      .where(Strings.uid, isEqualTo: user.uid).orderBy('timestamp', descending: true)
+                  await FirebaseFirestore.instance.collection('observation_bookings').where(Strings.uid, isEqualTo: user.uid)
+                      .where(Strings.jobRefRef, isEqualTo: jobRefRef)
                       .get()
                       .timeout(Duration(seconds: 90));
                 } catch(e){
                   print(e);
                 }
+
+              } else if(jobRefRef == 'Select One' && jobRefNo != null) {
+                try{
+                  snapshot =
+                  await FirebaseFirestore.instance.collection('observation_bookings').where(Strings.uid, isEqualTo: user.uid)
+                      .where(Strings.jobRefNo, isEqualTo: jobRefNo)
+                      .get()
+                      .timeout(Duration(seconds: 90));
+                } catch(e){
+                  print(e);
+                }
+
               }
 
             }
-
-
-
-
           }
 
           Map<String, dynamic> snapshotData = {};
@@ -1951,7 +2077,10 @@ class ObservationBookingModel extends ChangeNotifier {
           if(snapshot.docs.length < 1){
             message = 'No Observation Bookings found';
           } else {
-            for (DocumentSnapshot snap in snapshot.docs) {
+            List<QueryDocumentSnapshot> snapDocs = snapshot.docs;
+            snapDocs.sort((a, b) => (b.get('job_ref_no')).compareTo(a.get('job_ref_no')));
+
+            for (DocumentSnapshot snap in snapDocs) {
 
               snapshotData = snap.data();
 
@@ -1990,105 +2119,6 @@ class ObservationBookingModel extends ChangeNotifier {
   }
 
 
-  Future<bool> searchMoreObservationBookings(DateTime dateFrom, DateTime dateTo) async{
-
-    _isLoading = true;
-    notifyListeners();
-    bool success = false;
-    String message = '';
-    GlobalFunctions.showLoadingDialog('Searching Forms');
-    List<Map<String, dynamic>> _fetchedObservationBookingList = [];
-
-    try {
-
-      bool hasDataConnection = await GlobalFunctions.hasDataConnection();
-
-      if(!hasDataConnection){
-
-        message = 'No Data Connection, unable to search Observation Bookings';
-
-      } else {
-
-
-        bool isTokenExpired = GlobalFunctions.isTokenExpired();
-        bool authenticated = true;
-
-        if(isTokenExpired) authenticated = await authenticationModel.reAuthenticate();
-
-        if(authenticated){
-
-
-          QuerySnapshot snapshot;
-          int currentLength = _observationBookings.length;
-          DateTime latestDate = DateTime.parse(_observationBookings[currentLength - 1]['timestamp']);
-
-          if(user.role == 'Super User'){
-            try{
-              snapshot =
-              await FirebaseFirestore.instance.collection('observation_bookings').orderBy('timestamp', descending: true)
-                  .startAfter([Timestamp.fromDate(latestDate)]).endAt([dateFrom]).limit(10).get()
-                  .timeout(Duration(seconds: 90));
-            } catch(e){
-              print(e);
-            }
-
-          } else {
-
-            try{
-              snapshot =
-              await FirebaseFirestore.instance.collection('observation_bookings').where('uid', isEqualTo: user.uid).orderBy('timestamp', descending: true)
-                  .startAfter([Timestamp.fromDate(latestDate)]).endAt([dateFrom]).limit(10).get()
-                  .timeout(Duration(seconds: 90));
-            } catch(e){
-              print(e);
-            }
-
-          }
-
-          Map<String, dynamic> snapshotData = {};
-
-          if(snapshot.docs.length < 1){
-            message = 'No Observation Bookings found';
-          } else {
-            for (DocumentSnapshot snap in snapshot.docs) {
-
-              snapshotData = snap.data();
-
-              final Map<String, dynamic> observationBooking = onlineObservationBooking(snapshotData, snap.id);
-
-              _fetchedObservationBookingList.add(observationBooking);
-
-            }
-
-            _observationBookings.addAll(_fetchedObservationBookingList);
-            success = true;
-          }
-
-
-        }
-
-      }
-
-
-    } on TimeoutException catch (_) {
-      // A timeout occurred.
-      message = 'Network Timeout communicating with the server, unable to search Observation Bookings';
-    } catch(e){
-      print(e);
-      message = 'Something went wrong. Please try again';
-
-    }
-
-    _isLoading = false;
-    notifyListeners();
-    _selObservationBookingId = null;
-    GlobalFunctions.dismissLoadingDialog();
-    if(message != '') GlobalFunctions.showToast(message);
-    return success;
-
-  }
-
-
   Map<String, dynamic> localObservationBooking(Map<String, dynamic> localRecord){
     return {
       Strings.documentId: GlobalFunctions.databaseValueString(localRecord[Strings.documentId]),
@@ -2096,6 +2126,8 @@ class ObservationBookingModel extends ChangeNotifier {
       Strings.jobId: localRecord[Strings.jobId],
       Strings.formVersion: localRecord[Strings.formVersion],
       Strings.jobRef: localRecord[Strings.jobRef],
+      Strings.jobRefRef: localRecord[Strings.jobRefRef],
+      Strings.jobRefNo: localRecord[Strings.jobRefNo],
       Strings.obRequestedBy: localRecord[Strings.obRequestedBy],
       Strings.obJobTitle: localRecord[Strings.obJobTitle],
       Strings.obJobContact: localRecord[Strings.obJobContact],
@@ -2261,6 +2293,8 @@ class ObservationBookingModel extends ChangeNotifier {
       Strings.jobId: localRecord[Strings.jobId],
       Strings.formVersion: localRecord[Strings.formVersion],
       Strings.jobRef: localRecord[Strings.jobRef],
+      Strings.jobRefRef: localRecord[Strings.jobRefRef],
+      Strings.jobRefNo: localRecord[Strings.jobRefNo].toString(),
       Strings.obRequestedBy: localRecord[Strings.obRequestedBy],
       Strings.obJobTitle: localRecord[Strings.obJobTitle],
       Strings.obJobContact: localRecord[Strings.obJobContact],
@@ -2435,6 +2469,8 @@ class ObservationBookingModel extends ChangeNotifier {
       Strings.jobId: localRecord[Strings.jobId],
       Strings.formVersion: localRecord[Strings.formVersion],
       Strings.jobRef: localRecord[Strings.jobRef],
+      Strings.jobRefRef: localRecord[Strings.jobRefRef],
+      Strings.jobRefNo: localRecord[Strings.jobRefNo],
       Strings.obRequestedBy: localRecord[Strings.obRequestedBy],
       Strings.obJobTitle: localRecord[Strings.obJobTitle],
       Strings.obJobContact: localRecord[Strings.obJobContact],
@@ -2609,15 +2645,6 @@ class ObservationBookingModel extends ChangeNotifier {
         observationBookings.add(observationBookingRecord.value);
       }
 
-      // List<Map<String, dynamic>> observationBookings =
-      // await _databaseHelper.getAllWhereAndWhere(
-      //     Strings.observationBookingTable,
-      //     Strings.serverUploaded,
-      //     0,
-      //     Strings.uid,
-      //     user.uid);
-
-
       bool isTokenExpired = GlobalFunctions.isTokenExpired();
       bool authenticated = true;
 
@@ -2632,14 +2659,14 @@ class ObservationBookingModel extends ChangeNotifier {
 
           await GlobalFunctions.checkFirebaseStorageFail(_databaseHelper);
 
-
-          DocumentReference ref =
           await FirebaseFirestore.instance.collection('observation_bookings').add({
             Strings.uid: user.uid,
             Strings.jobId: '1',
             Strings.formVersion: '1',
-            Strings.jobRef: GlobalFunctions.databaseValueString(observationBooking[Strings.jobRef]),
-            Strings.jobRefLowercase: GlobalFunctions.databaseValueString(observationBooking[Strings.jobRef]).toLowerCase(),
+            Strings.jobRef: GlobalFunctions.databaseValueString(observationBooking[Strings.jobRefRef]) + GlobalFunctions.databaseValueString(observationBooking[Strings.jobRefNo]),
+            Strings.jobRefLowercase: GlobalFunctions.databaseValueString(observationBooking[Strings.jobRefRef]).toLowerCase() + GlobalFunctions.databaseValueString(observationBooking[Strings.jobRefNo]).toLowerCase(),
+            Strings.jobRefRef: GlobalFunctions.databaseValueString(observationBooking[Strings.jobRefRef]),
+            Strings.jobRefNo: int.parse(observationBooking[Strings.jobRefNo]),
             Strings.obRequestedBy: observationBooking[Strings.obRequestedBy],
             Strings.obJobTitle: observationBooking[Strings.obJobTitle],
             Strings.obJobContact: observationBooking[Strings.obJobContact],
@@ -2916,15 +2943,8 @@ class ObservationBookingModel extends ChangeNotifier {
             width: width,
             padding: const EdgeInsets.all(5),
             decoration: BoxDecoration(
-              borderRadius: 5,
-              border: BoxBorder(
-                top: true,
-                left: true,
-                right: true,
-                bottom: true,
-                width: 1,
-                color: PdfColors.grey,
-              ),
+              borderRadius: BorderRadius.all(Radius.circular(5)),
+              border: Border.all(width: 1, color: PdfColors.grey),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -2948,15 +2968,8 @@ class ObservationBookingModel extends ChangeNotifier {
                         width: 100,
                         padding: const EdgeInsets.all(5),
                         decoration: BoxDecoration(
-                          borderRadius: 5,
-                          border: BoxBorder(
-                            top: true,
-                            left: true,
-                            right: true,
-                            bottom: true,
-                            width: 1,
-                            color: PdfColors.grey,
-                          ),
+                          borderRadius: BorderRadius.all(Radius.circular(5)),
+                          border: Border.all(width: 1, color: PdfColors.grey),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -3026,15 +3039,8 @@ class ObservationBookingModel extends ChangeNotifier {
                         width: 100,
                         padding: const EdgeInsets.all(5),
                         decoration: BoxDecoration(
-                          borderRadius: 5,
-                          border: BoxBorder(
-                            top: true,
-                            left: true,
-                            right: true,
-                            bottom: true,
-                            width: 1,
-                            color: PdfColors.grey,
-                          ),
+                          borderRadius: BorderRadius.all(Radius.circular(5)),
+                          border: Border.all(width: 1, color: PdfColors.grey),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -3047,15 +3053,8 @@ class ObservationBookingModel extends ChangeNotifier {
                       child: Container(
                         padding: const EdgeInsets.all(5),
                         decoration: BoxDecoration(
-                          borderRadius: 5,
-                          border: BoxBorder(
-                            top: true,
-                            left: true,
-                            right: true,
-                            bottom: true,
-                            width: 1,
-                            color: PdfColors.grey,
-                          ),
+                          borderRadius: BorderRadius.all(Radius.circular(5)),
+                          border: Border.all(width: 1, color: PdfColors.grey),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -3162,25 +3161,18 @@ class ObservationBookingModel extends ChangeNotifier {
                       child: Container(
                         padding: const EdgeInsets.all(3),
                         decoration: BoxDecoration(
-                          borderRadius: 5,
-                          border: BoxBorder(
-                            top: true,
-                            left: true,
-                            right: true,
-                            bottom: true,
-                            width: 1,
-                            color: PdfColors.grey,
-                          ),
+                          borderRadius: BorderRadius.all(Radius.circular(5)),
+                          border: Border.all(width: 1, color: PdfColors.grey),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            value1 == 'signature' && signature != null ? Container(height: 20, child: FittedBox(alignment: Alignment.centerLeft, child: Image(PdfImage(doc,
+                            value1 == 'signature' && signature != null ? Container(height: 20, child: FittedBox(alignment: Alignment.centerLeft, child: Image(ImageProxy(PdfImage(doc,
                                 image: signature.data.buffer
                                     .asUint8List(),
                                 width: signature.width,
-                                height: signature.height)))) : Text(value1 == null || value1 == 'signature' ? '' : value1, style: TextStyle(fontSize: 8))
+                                height: signature.height))))) : Text(value1 == null || value1 == 'signature' ? '' : value1, style: TextStyle(fontSize: 8))
                           ],
                         ),
                       ))),
@@ -3191,25 +3183,18 @@ class ObservationBookingModel extends ChangeNotifier {
                       child: Container(
                         padding: const EdgeInsets.all(3),
                         decoration: BoxDecoration(
-                          borderRadius: 5,
-                          border: BoxBorder(
-                            top: true,
-                            left: true,
-                            right: true,
-                            bottom: true,
-                            width: 1,
-                            color: PdfColors.grey,
-                          ),
+                          borderRadius: BorderRadius.all(Radius.circular(5)),
+                          border: Border.all(width: 1, color: PdfColors.grey),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            value2 == 'signature' && signature != null ? Container(height: 20, child: FittedBox(alignment: Alignment.centerLeft, child: Image(PdfImage(doc,
+                            value2 == 'signature' && signature != null ? Container(height: 20, child: FittedBox(alignment: Alignment.centerLeft, child: Image(ImageProxy(PdfImage(doc,
                                 image: signature.data.buffer
                                     .asUint8List(),
                                 width: signature.width,
-                                height: signature.height)))) : Text(value2 == null || value2 == 'signature' ? '' : value2, style: TextStyle(fontSize: 8)),
+                                height: signature.height))))) : Text(value2 == null || value2 == 'signature' ? '' : value2, style: TextStyle(fontSize: 8)),
                           ],
                         ),
                       ))),
@@ -3348,15 +3333,8 @@ class ObservationBookingModel extends ChangeNotifier {
                       child: Container(
                         padding: const EdgeInsets.all(3),
                         decoration: BoxDecoration(
-                          borderRadius: 5,
-                          border: BoxBorder(
-                            top: true,
-                            left: true,
-                            right: true,
-                            bottom: true,
-                            width: 1,
-                            color: PdfColors.grey,
-                          ),
+                          borderRadius: BorderRadius.all(Radius.circular(5)),
+                          border: Border.all(width: 1, color: PdfColors.grey),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -3373,25 +3351,18 @@ class ObservationBookingModel extends ChangeNotifier {
                       child: Container(
                         padding: const EdgeInsets.all(3),
                         decoration: BoxDecoration(
-                          borderRadius: 5,
-                          border: BoxBorder(
-                            top: true,
-                            left: true,
-                            right: true,
-                            bottom: true,
-                            width: 1,
-                            color: PdfColors.grey,
-                          ),
+                          borderRadius: BorderRadius.all(Radius.circular(5)),
+                          border: Border.all(width: 1, color: PdfColors.grey),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            signature == null ? Text(value2 == null ? '' : value2, style: TextStyle(fontSize: 8)) : signature == null ? Text('') : Container(height: 20, child: FittedBox(alignment: Alignment.centerLeft, child: Image(PdfImage(doc,
+                            signature == null ? Text(value2 == null ? '' : value2, style: TextStyle(fontSize: 8)) : signature == null ? Text('') : Container(height: 20, child: FittedBox(alignment: Alignment.centerLeft, child: Image(ImageProxy(PdfImage(doc,
                                 image: signature.data.buffer
                                     .asUint8List(),
                                 width: signature.width,
-                                height: signature.height)))),
+                                height: signature.height))))),
                           ],
                         ),
                       ))),
@@ -3402,25 +3373,18 @@ class ObservationBookingModel extends ChangeNotifier {
                       child: Container(
                         padding: const EdgeInsets.all(3),
                         decoration: BoxDecoration(
-                          borderRadius: 5,
-                          border: BoxBorder(
-                            top: true,
-                            left: true,
-                            right: true,
-                            bottom: true,
-                            width: 1,
-                            color: PdfColors.grey,
-                          ),
+                          borderRadius: BorderRadius.all(Radius.circular(5)),
+                          border: Border.all(width: 1, color: PdfColors.grey),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            signature == null ? Text(value3 == null ? '' : value3, style: TextStyle(fontSize: 8)) : signature == null ? Text('') : Container(height: 20, child: FittedBox(alignment: Alignment.centerLeft, child: Image(PdfImage(doc,
+                            signature == null ? Text(value3 == null ? '' : value3, style: TextStyle(fontSize: 8)) : signature == null ? Text('') : Container(height: 20, child: FittedBox(alignment: Alignment.centerLeft, child: Image(ImageProxy(PdfImage(doc,
                                 image: signature.data.buffer
                                     .asUint8List(),
                                 width: signature.width,
-                                height: signature.height)))),
+                                height: signature.height))))),
                           ],
                         ),
                       ))),
@@ -3443,27 +3407,13 @@ class ObservationBookingModel extends ChangeNotifier {
                   Text('Yes', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
                   Container(width: 5),
                   Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                        top: true,
-                        left: true,
-                        right: true,
-                        bottom: true,
-                        width: 1,
-                        color: PdfColors.grey,
-                      )),
+                      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                       child: Center(child: Text(selectedObservationBooking[yesString] == null || selectedObservationBooking[yesString] == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
                   Container(width: 10),
                   Text('No', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
                   Container(width: 5),
                   Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                        top: true,
-                        left: true,
-                        right: true,
-                        bottom: true,
-                        width: 1,
-                        color: PdfColors.grey,
-                      )),
+                      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                       child: Center(child: Text(selectedObservationBooking[noString] == null || selectedObservationBooking[noString] == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
                 ]
             ),
@@ -3505,15 +3455,8 @@ class ObservationBookingModel extends ChangeNotifier {
                         width: 60,
                         padding: const EdgeInsets.all(5),
                         decoration: BoxDecoration(
-                          borderRadius: 5,
-                          border: BoxBorder(
-                            top: true,
-                            left: true,
-                            right: true,
-                            bottom: true,
-                            width: 1,
-                            color: PdfColors.grey,
-                          ),
+                          borderRadius: BorderRadius.all(Radius.circular(5)),
+                          border: Border.all(width: 1, color: PdfColors.grey),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -3529,15 +3472,8 @@ class ObservationBookingModel extends ChangeNotifier {
                         width: 60,
                         padding: const EdgeInsets.all(5),
                         decoration: BoxDecoration(
-                          borderRadius: 5,
-                          border: BoxBorder(
-                            top: true,
-                            left: true,
-                            right: true,
-                            bottom: true,
-                            width: 1,
-                            color: PdfColors.grey,
-                          ),
+                          borderRadius: BorderRadius.all(Radius.circular(5)),
+                          border: Border.all(width: 1, color: PdfColors.grey),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -3553,15 +3489,8 @@ class ObservationBookingModel extends ChangeNotifier {
                         width: 60,
                         padding: const EdgeInsets.all(5),
                         decoration: BoxDecoration(
-                          borderRadius: 5,
-                          border: BoxBorder(
-                            top: true,
-                            left: true,
-                            right: true,
-                            bottom: true,
-                            width: 1,
-                            color: PdfColors.grey,
-                          ),
+                          borderRadius: BorderRadius.all(Radius.circular(5)),
+                          border: Border.all(width: 1, color: PdfColors.grey),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -3576,15 +3505,8 @@ class ObservationBookingModel extends ChangeNotifier {
                       child: Container(
                         padding: const EdgeInsets.all(5),
                         decoration: BoxDecoration(
-                          borderRadius: 5,
-                          border: BoxBorder(
-                            top: true,
-                            left: true,
-                            right: true,
-                            bottom: true,
-                            width: 1,
-                            color: PdfColors.grey,
-                          ),
+                          borderRadius: BorderRadius.all(Radius.circular(5)),
+                          border: Border.all(width: 1, color: PdfColors.grey),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -3600,15 +3522,8 @@ class ObservationBookingModel extends ChangeNotifier {
                         width: 60,
                         padding: const EdgeInsets.all(5),
                         decoration: BoxDecoration(
-                          borderRadius: 5,
-                          border: BoxBorder(
-                            top: true,
-                            left: true,
-                            right: true,
-                            bottom: true,
-                            width: 1,
-                            color: PdfColors.grey,
-                          ),
+                          borderRadius: BorderRadius.all(Radius.circular(5)),
+                          border: Border.all(width: 1, color: PdfColors.grey),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -3634,15 +3549,8 @@ class ObservationBookingModel extends ChangeNotifier {
                       child: Container(
                         padding: const EdgeInsets.all(3),
                         decoration: BoxDecoration(
-                          borderRadius: 5,
-                          border: BoxBorder(
-                            top: true,
-                            left: true,
-                            right: true,
-                            bottom: true,
-                            width: 1,
-                            color: PdfColors.grey,
-                          ),
+                          borderRadius: BorderRadius.all(Radius.circular(5)),
+                          border: Border.all(width: 1, color: PdfColors.grey),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -3657,15 +3565,8 @@ class ObservationBookingModel extends ChangeNotifier {
                       child: Container(
                         padding: const EdgeInsets.all(3),
                         decoration: BoxDecoration(
-                          borderRadius: 5,
-                          border: BoxBorder(
-                            top: true,
-                            left: true,
-                            right: true,
-                            bottom: true,
-                            width: 1,
-                            color: PdfColors.grey,
-                          ),
+                          borderRadius: BorderRadius.all(Radius.circular(5)),
+                          border: Border.all(width: 1, color: PdfColors.grey),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -3680,15 +3581,8 @@ class ObservationBookingModel extends ChangeNotifier {
                       child: Container(
                         padding: const EdgeInsets.all(3),
                         decoration: BoxDecoration(
-                          borderRadius: 5,
-                          border: BoxBorder(
-                            top: true,
-                            left: true,
-                            right: true,
-                            bottom: true,
-                            width: 1,
-                            color: PdfColors.grey,
-                          ),
+                          borderRadius: BorderRadius.all(Radius.circular(5)),
+                          border: Border.all(width: 1, color: PdfColors.grey),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -3716,27 +3610,13 @@ class ObservationBookingModel extends ChangeNotifier {
                   Text('Yes', style: TextStyle(fontSize: 8)),
                   Container(width: 5),
                   Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                        top: true,
-                        left: true,
-                        right: true,
-                        bottom: true,
-                        width: 1,
-                        color: PdfColors.grey,
-                      )),
+                      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                       child: Center(child: Text(value1 == null || value1 == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
                   Container(width: 10),
                   Text('No', style: TextStyle(fontSize: 8)),
                   Container(width: 5),
                   Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                        top: true,
-                        left: true,
-                        right: true,
-                        bottom: true,
-                        width: 1,
-                        color: PdfColors.grey,
-                      )),
+                      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                       child: Center(child: Text(value2 == null || value2 == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
                 ]
             ),
@@ -3904,11 +3784,11 @@ class ObservationBookingModel extends ChangeNotifier {
       Document pdf;
       pdf = Document();
       PdfDocument pdfDoc = pdf.document;
-      PdfImage pegasusLogo = await pdfImageFromImageProvider(pdf: pdfDoc, image: Material.AssetImage('assets/images/pegasusLogo.png'),);
+      final pegasusLogo = MemoryImage((await rootBundle.load('assets/images/pegasusLogo.png')).buffer.asUint8List(),);
 
 
       pdf.addPage(MultiPage(
-          theme: Theme.withFont(base: ttf, bold: ttfBold),
+          theme: ThemeData.withFont(base: ttf, bold: ttfBold),
           pageFormat: PdfPageFormat.a4,
           crossAxisAlignment: CrossAxisAlignment.start,
           margin: EdgeInsets.all(40),
@@ -3938,7 +3818,8 @@ class ObservationBookingModel extends ChangeNotifier {
                       ]
                   ),
 
-                  Container(height: 50, child: Image(pegasusLogo)),
+                  Container(height: 50, child: Image(pegasusLogo)
+),
 
                 ]
             ),
@@ -4148,7 +4029,7 @@ class ObservationBookingModel extends ChangeNotifier {
       if(kIsWeb){
 
         if(option == ShareOption.Download){
-          List<int> pdfList = pdf.save();
+          List<int> pdfList = await pdf.save();
           Uint8List pdfInBytes = Uint8List.fromList(pdfList);
 
 //Create blob and link from bytes
@@ -4176,14 +4057,13 @@ class ObservationBookingModel extends ChangeNotifier {
         final File file = File('$pdfPath/observation_booking_${formDate}_$id.pdf');
 
         if(option == ShareOption.Email){
-          file.writeAsBytesSync(pdf.save());
-        }
+await file.writeAsBytes(await pdf.save());}
 
         ConnectivityResult connectivityResult = await Connectivity().checkConnectivity();
 
         if(connectivityResult != ConnectivityResult.none) {
 
-          if(option == ShareOption.Share) Printing.sharePdf(bytes: pdf.save(),filename: 'observation_booking_${formDate}_$id.pdf');
+          if(option == ShareOption.Share) await Printing.sharePdf(bytes: await pdf.save(),filename: 'observation_booking_${formDate}_$id.pdf');
           if(option == ShareOption.Print) await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save());
 
           if(option == ShareOption.Email) {

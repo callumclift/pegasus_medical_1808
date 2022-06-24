@@ -5,7 +5,6 @@ import 'package:pegasus_medical_1808/widgets/app_bar_gradient.dart';
 import '../../shared/global_config.dart';
 import '../../shared/global_functions.dart';
 import 'package:provider/provider.dart';
-import 'package:pegasus_medical_1808/widgets/gradient_button.dart';
 import 'completed_transfer_report_overall.dart';
 
 
@@ -28,26 +27,12 @@ class TransferReportSearchResults extends StatefulWidget {
 class _TransferReportSearchResultsState extends State<TransferReportSearchResults> {
 
   TransferReportModel transferReportModel;
-  bool _loadingMore = false;
-
 
 
   @override
   initState() {
     transferReportModel = Provider.of<TransferReportModel>(context, listen: false);
     super.initState();
-  }
-
-
-  void loadMore() async {
-    setState(() {
-      _loadingMore = true;
-
-    });
-    await transferReportModel.searchMoreTransferReports(widget.dateFrom, widget.dateTo);
-    setState(() {
-      _loadingMore = false;
-    });
   }
 
 
@@ -64,19 +49,6 @@ class _TransferReportSearchResultsState extends State<TransferReportSearchResult
   Widget _buildListTile(int index, List<Map<String, dynamic>> transferReports) {
     final dateFormat = DateFormat("dd/MM/yyyy HH:mm");
     Widget returnedWidget;
-
-    // if (transferReports.length >= 10 && index == transferReports.length) {
-    //   if (_loadingMore) {
-    //     returnedWidget = Center(child: Center(child: CircularProgressIndicator(
-    //       valueColor: AlwaysStoppedAnimation<Color>(
-    //           bluePurple),
-    //     ),),);
-    //   } else {
-    //     returnedWidget = Container(
-    //       child: Center(child: Container(width: MediaQuery.of(context).size.width * 0.5, child: GradientButton('Load More', loadMore),),),
-    //     );
-    //   }
-    // } else {
       returnedWidget = Column(
         children: <Widget>[
           InkWell(onTap: () => _viewTransferReport(index),
@@ -103,7 +75,7 @@ class _TransferReportSearchResultsState extends State<TransferReportSearchResult
       itemBuilder: (BuildContext context, int index) {
         return _buildListTile(index, transferReports);
       },
-      itemCount: transferReports.length >= 10 ? transferReports.length + 1 : transferReports.length,
+      itemCount: transferReports.length,
     );
   }
 

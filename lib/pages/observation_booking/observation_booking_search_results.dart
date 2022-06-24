@@ -5,7 +5,6 @@ import 'package:pegasus_medical_1808/widgets/app_bar_gradient.dart';
 import '../../shared/global_config.dart';
 import '../../shared/global_functions.dart';
 import 'package:provider/provider.dart';
-import 'package:pegasus_medical_1808/widgets/gradient_button.dart';
 import 'completed_observation_booking.dart';
 
 
@@ -28,26 +27,12 @@ class ObservationBookingSearchResults extends StatefulWidget {
 class _ObservationBookingSearchResultsState extends State<ObservationBookingSearchResults> {
 
   ObservationBookingModel observationBookingModel;
-  bool _loadingMore = false;
-
 
 
   @override
   initState() {
     observationBookingModel = Provider.of<ObservationBookingModel>(context, listen: false);
     super.initState();
-  }
-
-
-  void loadMore() async {
-    setState(() {
-      _loadingMore = true;
-
-    });
-    await observationBookingModel.searchMoreObservationBookings(widget.dateFrom, widget.dateTo);
-    setState(() {
-      _loadingMore = false;
-    });
   }
 
 
@@ -64,19 +49,6 @@ class _ObservationBookingSearchResultsState extends State<ObservationBookingSear
   Widget _buildListTile(int index, List<Map<String, dynamic>> observationBookings) {
     final dateFormat = DateFormat("dd/MM/yyyy HH:mm");
     Widget returnedWidget;
-
-    // if (observationBookings.length >= 10 && index == observationBookings.length) {
-    //   if (_loadingMore) {
-    //     returnedWidget = Center(child: Center(child: CircularProgressIndicator(
-    //       valueColor: AlwaysStoppedAnimation<Color>(
-    //           bluePurple),
-    //     ),),);
-    //   } else {
-    //     returnedWidget = Container(
-    //       child: Center(child: Container(width: MediaQuery.of(context).size.width * 0.5, child: GradientButton('Load More', loadMore),),),
-    //     );
-    //   }
-    // } else {
     returnedWidget = Column(
       children: <Widget>[
         InkWell(onTap: () => _viewObservationBooking(index),
@@ -103,7 +75,7 @@ class _ObservationBookingSearchResultsState extends State<ObservationBookingSear
       itemBuilder: (BuildContext context, int index) {
         return _buildListTile(index, observationBookings);
       },
-      itemCount: observationBookings.length >= 10 ? observationBookings.length + 1 : observationBookings.length,
+      itemCount: observationBookings.length,
     );
   }
 

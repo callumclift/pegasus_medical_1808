@@ -1,5 +1,6 @@
 import 'package:after_layout/after_layout.dart';
 import 'package:flutter/material.dart';
+import 'package:pegasus_medical_1808/pages/patient_observation/patient_observation.dart';
 import 'package:pegasus_medical_1808/pages/transfer_report/transfer_report_overall.dart';
 import 'package:pegasus_medical_1808/widgets/app_bar_gradient.dart';
 import '../../models/authentication_model.dart';
@@ -21,13 +22,26 @@ class _HomePageState extends State<HomePage> with AfterLayoutMixin<HomePage> {
 
   @override
   void afterFirstLayout(BuildContext context) async {
-    Navigator.pushReplacement(
-      context,
-      PageRouteBuilder(
-        pageBuilder: (context, animation1, animation2) => TransferReportOverall(),
-        transitionDuration: Duration(seconds: 0),
-      ),
-    );
+    if(user.role == 'Normal User'){
+      Navigator.pushReplacement(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (context, animation1, animation2) =>
+              PatientObservation(),
+          transitionDuration: Duration(seconds: 0),
+        ),
+      );
+
+    } else {
+      Navigator.pushReplacement(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (context, animation1, animation2) =>
+              TransferReportOverall(),
+          transitionDuration: Duration(seconds: 0),
+        ),
+      );
+    }
   }
 
   @override

@@ -113,7 +113,7 @@ class _SavedBookingFormsListPageState extends State<SavedBookingFormsListPage> {
           child: ListTile(
             leading: Icon(Icons.library_books_sharp, color: bluePurple,),
             trailing: IconButton(icon: Icon(Icons.delete, color: bluePurple,), onPressed: () => _deleteForm(bookingForms[index][Strings.localId]),),
-            title: GlobalFunctions.boldTitleText('Job Ref: ', bookingForms[index]['job_ref'], context),
+            title: GlobalFunctions.boldTitleText('Job Ref: ', GlobalFunctions.buildJobRef(bookingForms[index]['job_ref_ref'], bookingForms[index]['job_ref_no']), context),
             subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
               GlobalFunctions.boldTitleText('Date: ', bookingForms[index][Strings.bfJobDate] == null ? '' : dateFormat.format(
                   DateTime.parse(bookingForms[index][Strings.bfJobDate])), context),

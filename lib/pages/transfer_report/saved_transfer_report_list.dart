@@ -102,6 +102,8 @@ class _SavedTransferReportsListPageState extends State<SavedTransferReportsListP
 
 
 
+
+
   Widget _buildListTile(int index, List<Map<String, dynamic>> transferReports) {
     final dateFormat = DateFormat("dd/MM/yyyy");
 
@@ -111,7 +113,7 @@ class _SavedTransferReportsListPageState extends State<SavedTransferReportsListP
           child: ListTile(
             leading: Icon(Icons.library_books_sharp, color: bluePurple,),
             trailing: IconButton(icon: Icon(Icons.delete, color: bluePurple,), onPressed: () => _deleteForm(transferReports[index][Strings.localId]),),
-            title: GlobalFunctions.boldTitleText('Job Ref: ', transferReports[index]['job_ref'], context),
+            title: GlobalFunctions.boldTitleText('Job Ref: ', GlobalFunctions.buildJobRef(transferReports[index]['job_ref_ref'], transferReports[index]['job_ref_no']), context),
             subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
               GlobalFunctions.boldTitleText('Date: ', transferReports[index][Strings.bfJobDate] == null ? '' : dateFormat.format(
                   DateTime.parse(transferReports[index][Strings.bfJobDate])), context),

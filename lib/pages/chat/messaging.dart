@@ -58,11 +58,18 @@ class _MessagesPageState extends State<MessagesPage> {
 
   _getGroups() async{
 
+
+
     DocumentSnapshot currentUserSnapShot = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-    dynamic currentUserCurrentGroups = currentUserSnapShot.data()[Strings.groups];
+    Map<String, dynamic> userSnapshotMap = currentUserSnapShot.data() as Map<String, dynamic>;
+    dynamic currentUserCurrentGroups;
     List<String> currentUserCurrentGroupsListString = [];
+    if(userSnapshotMap.containsKey('groups')){
+      currentUserCurrentGroups = currentUserSnapShot.get(Strings.groups);
+    }
+
     if(currentUserCurrentGroups != null){
-      List<dynamic> currentUserCurrentGroupsListDynamic = currentUserSnapShot.data()[Strings.groups];
+      List<dynamic> currentUserCurrentGroupsListDynamic = currentUserSnapShot.get(Strings.groups);
       currentUserCurrentGroupsListString = currentUserCurrentGroupsListDynamic.map((value) => value as String).toList();
 
     }
@@ -78,7 +85,7 @@ class _MessagesPageState extends State<MessagesPage> {
           DocumentSnapshot snapshot = await FirebaseFirestore.instance.collection('chat_groups').doc(group).get();
 
           if(snapshot.exists){
-            userGroups.add({'id': group, 'modified_at': snapshot.data()['modified_at']});
+            userGroups.add({'id': group, 'modified_at': snapshot.get('modified_at')});
           }
 
         } on TimeoutException catch (_) {
@@ -476,7 +483,7 @@ class _MessagesPageState extends State<MessagesPage> {
 
                            if (userSnapshot.hasData) {
 
-                             return userSnapshot.data[Strings.profilePicture] == null ? CircleAvatar(
+                             return userSnapshot.data[Strings.profilePicture] == null || userSnapshot.data[Strings.profilePicture] == '' ? CircleAvatar(
                                backgroundColor: bluePurple,
                                child: Text(userSnapshot.data['name'][0]),
                              ) : CircleAvatar(
@@ -677,7 +684,7 @@ class _MessagesPageState extends State<MessagesPage> {
   Widget _buildListTileStartGroup(int index,  List<QueryDocumentSnapshot> userSnapshots) {
     Widget returnedWidget;
 
-    if (userSnapshots[index].data()[Strings.uid] == user.uid){
+    if (userSnapshots[index].get(Strings.uid) == user.uid){
 
       return Container();
 
@@ -699,7 +706,7 @@ class _MessagesPageState extends State<MessagesPage> {
               // }
             },
             leading: Icon(Icons.person, color: bluePurple,),
-            title: Text(userSnapshots[index].data()[Strings.name]),
+            title: Text(userSnapshots[index].get(Strings.name)),
           ),
           Divider(),
         ],
@@ -754,7 +761,7 @@ class _MessagesPageState extends State<MessagesPage> {
               // ],),),
               Divider(),
               StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance.collection('users').orderBy(Strings.nameLowercase, descending: false).snapshots(),
+                stream: FirebaseFirestore.instance.collection('users').where('deleted', isEqualTo: false).orderBy(Strings.nameLowercase, descending: false).snapshots(),
                 builder: (context, snapshot) {
 
 
@@ -793,7 +800,7 @@ class _MessagesPageState extends State<MessagesPage> {
                                 }
                               },
                               leading: Icon(Icons.person, color: bluePurple,),
-                              title: Text(snapshot.data.docs[index].data()[Strings.name]),
+                              title: Text(snapshot.data.docs[index].get(Strings.name)),
                             ),
                             Divider(),
                           ],
@@ -1027,7 +1034,7 @@ class _GroupBottomSheetState extends State<GroupBottomSheet> {
             ],
           ),
           StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance.collection('users').orderBy(Strings.nameLowercase, descending: false).snapshots(),
+            stream: FirebaseFirestore.instance.collection('users').where('deleted', isEqualTo: false).orderBy(Strings.nameLowercase, descending: false).snapshots(),
             builder: (context, snapshot) {
 
 
@@ -1050,7 +1057,8 @@ class _GroupBottomSheetState extends State<GroupBottomSheet> {
                           onChanged: (bool value) => setState(() {
                           if(value == true){
                             for(QueryDocumentSnapshot snap in snapshot.data.docs){
-                              participants.add({'id': snap.id, 'name': snap.data()['name'], 'groups': snap.data()['groups']});
+                              Map<String, dynamic> userSnapshotMap = snap.data() as Map<String, dynamic>;
+                              participants.add({'id': snap.id, 'name': snap.get('name'), 'groups': userSnapshotMap.containsKey('groups') ? snap.get('groups') : []});
                             }
                             selectAll = true;
                           } else {
@@ -1076,13 +1084,14 @@ class _GroupBottomSheetState extends State<GroupBottomSheet> {
                           children: <Widget>[
                             user == null ? Container() : ListTile(
                               leading: Icon(Icons.person, color: bluePurple,),
-                              title: Text(snapshot.data.docs[index].data()[Strings.name]),
+                              title: Text(snapshot.data.docs[index].get(Strings.name)),
                               trailing: Checkbox(
                                   activeColor: bluePurple,
                                   value: inList,
                                   onChanged: (bool value) => setState(() {
                                     if(value == true){
-                                      participants.add({'id': snapshot.data.docs[index].id, 'name': snapshot.data.docs[index].data()['name'], 'groups': snapshot.data.docs[index].data()['groups']});
+                                      Map<String, dynamic> userSnapshotMap = snapshot.data.docs[index] as Map<String, dynamic>;
+                                      participants.add({'id': snapshot.data.docs[index].id, 'name': snapshot.data.docs[index].get('name'), 'groups': userSnapshotMap.containsKey('groups') ? snapshot.data.docs[index].get('groups') : []});
                                       inList = true;
                                     } else {
                                       participants.removeWhere((element) => element['id'] == snapshot.data.docs[index].id);

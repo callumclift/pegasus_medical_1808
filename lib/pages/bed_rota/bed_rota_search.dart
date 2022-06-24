@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:pegasus_medical_1808/models/booking_form_model.dart';
+import 'package:pegasus_medical_1808/models/bed_rota_model.dart';
 import 'package:pegasus_medical_1808/models/job_refs_model.dart';
 import 'package:pegasus_medical_1808/widgets/dropdown_form_field.dart';
 import '../../shared/global_config.dart';
@@ -13,23 +13,23 @@ import '../../widgets/side_drawer.dart';
 import 'package:pegasus_medical_1808/widgets/gradient_button.dart';
 import 'package:provider/provider.dart';
 
-import 'booking_form_search_results.dart';
+import 'bed_rota_search_results.dart';
 
 
 
 
 
-class BookingFormSearch extends StatefulWidget {
+class BedRotaSearch extends StatefulWidget {
 
   @override
   State<StatefulWidget> createState() {
     // TODO: implement createState
-    return _BookingFormSearchState();
+    return _BedRotaSearchState();
   }
 }
 
-class _BookingFormSearchState
-    extends State<BookingFormSearch> {
+class _BedRotaSearchState
+    extends State<BedRotaSearch> {
 
   final dateFormat = DateFormat("dd/MM/yyyy");
   final timeFormat = DateFormat("HH:mm");
@@ -50,7 +50,7 @@ class _BookingFormSearchState
 
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  String infoText = 'Use the below filters to search for completed Transport Bookings. Dates are based upon the day a report was originally submitted';
+  String infoText = 'Use the below filters to search for completed Bed Watch Rotas. Dates are based upon the day a report was originally submitted';
 
   @override
   initState() {
@@ -80,6 +80,8 @@ class _BookingFormSearchState
       _loadingJobRefs = false;
     });
   }
+
+
 
   Widget _buildJobRefDrop() {
     return DropdownFormField(
@@ -316,7 +318,7 @@ class _BookingFormSearchState
 
   void _submitForm() async{
 
-    if((selectedUser == null && jobRefRef == 'Select One' && jobRef.text.isEmpty && dateFromController.text.isEmpty && dateToController.text.isEmpty) || (dateFromController.text.isEmpty && dateToController.text.isNotEmpty) || (dateToController.text.isEmpty && dateFromController.text.isNotEmpty) || (dateFrom != null &&  dateTo != null && dateFrom.isAfter(dateTo))){
+    if((selectedUser == null &&  jobRefRef == 'Select One' && jobRef.text.isEmpty && dateFromController.text.isEmpty && dateToController.text.isEmpty) || (dateFromController.text.isEmpty && dateToController.text.isNotEmpty) || (dateToController.text.isEmpty && dateFromController.text.isNotEmpty) || (dateFrom != null &&  dateTo != null && dateFrom.isAfter(dateTo))){
       showDialog(
           context: context,
           builder: (BuildContext context) {
@@ -354,11 +356,11 @@ class _BookingFormSearchState
           });
     } else {
 
-      bool success = await context.read<BookingFormModel>().searchBookingForms(dateFrom, dateTo, jobRefRef, jobRef.text.isNotEmpty ? int.parse(jobRef.text) : null, selectedUser);
+      bool success = await context.read<BedRotaModel>().searchBedRotas(dateFrom, dateTo, jobRefRef, jobRef.text.isNotEmpty ? int.parse(jobRef.text) : null, selectedUser);
 
       if(success) Navigator.of(context)
           .push(MaterialPageRoute(builder: (BuildContext context) {
-        return BookingFormSearchResults(dateFrom, dateTo);
+        return BedRotaSearchResults(dateFrom, dateTo);
       }));
 
     }
@@ -369,9 +371,6 @@ class _BookingFormSearchState
     final double deviceWidth = MediaQuery.of(context).size.width;
     final double targetWidth = deviceWidth > 768.0 ? 600.0 : deviceWidth * 0.95;
     final double targetPadding = deviceWidth - targetWidth;
-
-    print('building page content');
-
     return GestureDetector(
       onTap: () {
         FocusScope.of(context).requestFocus(FocusNode());
@@ -473,15 +472,12 @@ class _BookingFormSearchState
 
   @override
   Widget build(BuildContext context) {
-
-    print('[Search Forms] - build page');
-
     // TODO: implement build
     return Scaffold(drawer: SideDrawer(),
       appBar: AppBar(
         flexibleSpace: AppBarGradient(),
         title: FittedBox(fit:BoxFit.fitWidth,
-            child: Text('Transport Booking Search', style: TextStyle(fontWeight: FontWeight.bold),)),
+            child: Text('Bed Watch Rota Search', style: TextStyle(fontWeight: FontWeight.bold),)),
         actions: <Widget>[IconButton(icon: Icon(Icons.refresh), onPressed: _resetFormSearch)],
       ),
       body: _loadingJobRefs

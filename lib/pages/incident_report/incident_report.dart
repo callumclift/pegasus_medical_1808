@@ -5,11 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:pegasus_medical_1808/models/incident_report_model.dart';
+import 'package:pegasus_medical_1808/models/job_refs_model.dart';
 import 'package:pegasus_medical_1808/shared/global_config.dart';
 import 'package:pegasus_medical_1808/shared/global_functions.dart';
 import 'package:pegasus_medical_1808/shared/strings.dart';
 import 'package:pegasus_medical_1808/utils/database_helper.dart';
 import 'package:pegasus_medical_1808/widgets/app_bar_gradient.dart';
+import 'package:pegasus_medical_1808/widgets/dropdown_form_field.dart';
 import 'package:pegasus_medical_1808/widgets/gradient_button.dart';
 import 'package:pegasus_medical_1808/widgets/side_drawer.dart';
 import 'package:provider/provider.dart';
@@ -44,8 +46,8 @@ class IncidentReport extends StatefulWidget {
 class _IncidentReportState extends State<IncidentReport> with AfterLayoutMixin<IncidentReport> {
 
   bool _loadingTemporary = false;
-  DatabaseHelper _databaseHelper = DatabaseHelper();
   IncidentReportModel incidentReportModel;
+  JobRefsModel jobRefsModel;
   final dateFormat = DateFormat("dd/MM/yyyy");
   final timeFormat = DateFormat("HH:mm");
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
@@ -64,15 +66,18 @@ class _IncidentReportState extends State<IncidentReport> with AfterLayoutMixin<I
   Signature incidentSignature;
   Uint8List incidentImageBytes;
 
+  String jobRefRef = 'Select One';
 
-
-
+  List<String> jobRefDrop = [
+    'Select One',
+  ];
 
   @override
   void initState() {
     // TODO: implement initState
     _loadingTemporary = true;
     incidentReportModel = Provider.of<IncidentReportModel>(context, listen: false);
+    jobRefsModel = context.read<JobRefsModel>();
     _setUpTextControllerListeners();
     _getTemporaryIncidentReport();
     super.initState();
@@ -138,7 +143,7 @@ class _IncidentReportState extends State<IncidentReport> with AfterLayoutMixin<I
 
   _setUpTextControllerListeners() {
 
-    _addListener(jobRef, Strings.jobRef, false, true);
+    _addListener(jobRef, Strings.jobRefNo, false, true);
     _addListener(incidentDetails, Strings.incidentDetails);
     _addListener(incidentLocation, Strings.incidentLocation);
     _addListener(incidentAction, Strings.incidentAction);
@@ -151,6 +156,14 @@ class _IncidentReportState extends State<IncidentReport> with AfterLayoutMixin<I
 
     //Sembast
     if (mounted) {
+
+      await jobRefsModel.getJobRefs();
+
+      if(jobRefsModel.allJobRefs.isNotEmpty){
+        for(Map<String, dynamic> jobRefMap in jobRefsModel.allJobRefs){
+          jobRefDrop.add(jobRefMap['job_ref']);
+        }
+      }
 
       await incidentReportModel.setupTemporaryRecord();
 
@@ -194,11 +207,21 @@ class _IncidentReportState extends State<IncidentReport> with AfterLayoutMixin<I
 
         }
 
-        if (incidentReport[Strings.jobRef] != null) {
+        if (incidentReport[Strings.jobRefNo] != null) {
           jobRef.text = GlobalFunctions.databaseValueString(
-              incidentReport[Strings.jobRef]);
+              incidentReport[Strings.jobRefNo]);
         } else {
           jobRef.text = '';
+        }
+
+        if (incidentReport[Strings.jobRefRef] != null) {
+
+          if(jobRefDrop.contains(GlobalFunctions.databaseValueString(incidentReport[Strings.jobRefRef]))){
+            jobRefRef = GlobalFunctions.databaseValueString(incidentReport[Strings.jobRefRef]);
+          } else {
+            jobRefRef = 'Select One';
+          }
+
         }
         if (incidentReport[Strings.incidentDate] != null) {
           incidentDate.text =
@@ -233,84 +256,49 @@ class _IncidentReportState extends State<IncidentReport> with AfterLayoutMixin<I
       }
 
     }
+  }
 
-    //Sqlflite
+  Widget _buildJobRefDrop() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        RichText(
+          text: TextSpan(
+              text: 'Reference',
+              style: TextStyle(
+                  fontSize: 16.0, fontFamily: 'Open Sans', color: bluePurple),
+              children:
+              [
+                TextSpan(
+                  text: ' *',
+                  style: TextStyle(
+                      color: Colors.red,
+                      fontSize: 16.0),
+                ),                                           ]
+          ),
+        ),
+        Container(
+          color: jobRefRef == 'Select One' ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: DropdownFormField(
+            expanded: false,
+            value: jobRefRef,
+            items: jobRefDrop.toList(),
+            onChanged: (val) => setState(() {
+              jobRefRef = val;
+              if(val == 'Select One'){
+                incidentReportModel.updateTemporaryRecord(widget.edit, Strings.jobRefRef, null, widget.jobId, widget.saved, widget.savedId);
+              } else {
+                incidentReportModel.updateTemporaryRecord(widget.edit, Strings.jobRefRef, val, widget.jobId, widget.saved, widget.savedId);
+              }
 
-    // if (mounted) {
-    //   int result = await _databaseHelper.checkTemporaryIncidentReportExists(widget.edit,
-    //       user.uid, widget.jobId, widget.saved, widget.savedId);
-    //   if (result != 0) {
-    //     Map<String, dynamic> incidentReport = await _databaseHelper
-    //         .getTemporaryIncidentReport(widget.edit, user.uid, widget.jobId, widget.saved, widget.savedId);
-    //
-    //     if (incidentReport[Strings.incidentSignature] != null) {
-    //       if (mounted) {
-    //         Uint8List decryptedSignature = await GlobalFunctions.decryptSignature(incidentReport[Strings.incidentSignature]);
-    //         setState(() {
-    //           incidentImageBytes = decryptedSignature;
-    //         });
-    //       }
-    //     } else {
-    //       incidentSignature = null;
-    //       incidentImageBytes = null;
-    //     }
-    //     if (incidentReport[Strings.incidentSignaturePoints] != null) {
-    //       if (mounted) {
-    //         String decryptedPoints = GlobalFunctions.decryptString(incidentReport[Strings.incidentSignaturePoints]);
-    //         setState(() {
-    //           List<dynamic> fetchedSignaturePoints = jsonDecode(decryptedPoints);
-    //           fetchedSignaturePoints.forEach((dynamic pointMap) {
-    //             if (pointMap['pointType'] == 'tap') {
-    //               incidentSignaturePoints.add(Point(
-    //                   Offset(pointMap['dx'], pointMap['dy']),
-    //                   PointType.tap));
-    //             } else if (pointMap['pointType'] == 'move') {
-    //               incidentSignaturePoints.add(Point(
-    //                   Offset(pointMap['dx'], pointMap['dy']),
-    //                   PointType.move));
-    //             }
-    //           });
-    //         });
-    //       }
-    //     } else {
-    //       incidentSignaturePoints = [];
-    //
-    //     }
-    //
-    //     if (incidentReport[Strings.jobRef] != null) {
-    //       jobRef.text = GlobalFunctions.databaseValueString(
-    //           incidentReport[Strings.jobRef]);
-    //     } else {
-    //       jobRef.text = '';
-    //     }
-    //     if (incidentReport[Strings.incidentDate] != null) {
-    //       incidentDate.text =
-    //           dateFormat.format(DateTime.parse(incidentReport[Strings.incidentDate]));
-    //     } else {
-    //       incidentDate.text = '';
-    //     }
-    //     GlobalFunctions.getTemporaryValueTime(incidentReport, incidentTime, Strings.incidentTime);
-    //     GlobalFunctions.getTemporaryValue(incidentReport, incidentDetails, Strings.incidentDetails);
-    //     GlobalFunctions.getTemporaryValue(incidentReport, incidentLocation, Strings.incidentLocation);
-    //     GlobalFunctions.getTemporaryValue(incidentReport, incidentAction, Strings.incidentAction);
-    //     GlobalFunctions.getTemporaryValue(incidentReport, incidentStaffInvolved, Strings.incidentStaffInvolved);
-    //     GlobalFunctions.getTemporaryValue(incidentReport, incidentPrintName, Strings.incidentPrintName);
-    //     GlobalFunctions.getTemporaryValueDate(incidentReport, incidentSignatureDate, Strings.incidentSignatureDate);
-    //
-    //
-    //     if (mounted) {
-    //       setState(() {
-    //         _loadingTemporary = false;
-    //       });
-    //     }
-    //   } else {
-    //     if (mounted) {
-    //       setState(() {
-    //         _loadingTemporary = false;
-    //       });
-    //     }
-    //   }
-    // }
+              FocusScope.of(context).unfocus();
+            }),
+            initialValue: jobRefRef,
+          ),
+        ),
+        SizedBox(height: 15,),
+      ],
+    );
   }
 
   Widget _buildIncidentSignatureRow() {
@@ -348,7 +336,8 @@ class _IncidentReportState extends State<IncidentReport> with AfterLayoutMixin<I
           height: 10.0,
         ),
         Container(
-          child: Center(
+          color: incidentImageBytes == null ? Color(0xFF0000).withOpacity(0.3) : null,
+child: Center(
             child: GestureDetector(
               onTap: () {
                 FocusScope.of(context).unfocus();
@@ -548,6 +537,9 @@ class _IncidentReportState extends State<IncidentReport> with AfterLayoutMixin<I
         ),
         TextFormField(
           keyboardType: textInputType,
+          inputFormatters: textInputType == TextInputType.number ? <TextInputFormatter>[
+            FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
+          ] : null,
           validator: (String value) {
             String message;
             if(required){
@@ -559,6 +551,8 @@ class _IncidentReportState extends State<IncidentReport> with AfterLayoutMixin<I
           },
           maxLines: lines,
           decoration: InputDecoration(
+              filled: required && controller.text.isEmpty ? true : false, fillColor: Color(0xFF0000).withOpacity(0.3),
+
               suffixIcon: controller.text == ''
                   ? null
                   : IconButton(
@@ -602,6 +596,8 @@ class _IncidentReportState extends State<IncidentReport> with AfterLayoutMixin<I
             Flexible(
               child: IgnorePointer(
                 child: TextFormField(
+                  decoration: InputDecoration(              filled: required && controller.text.isEmpty ? true : false, fillColor: Color(0xFF0000).withOpacity(0.3),
+                  ),
                   enabled: true,
                   initialValue: null,
                   controller: controller,
@@ -708,6 +704,8 @@ class _IncidentReportState extends State<IncidentReport> with AfterLayoutMixin<I
             Flexible(
               child: IgnorePointer(
                 child: TextFormField(
+                  decoration: InputDecoration(              filled: required && controller.text.isEmpty ? true : false, fillColor: Color(0xFF0000).withOpacity(0.3),
+                  ),
                   enabled: true,
                   initialValue: null,
                   controller: controller,
@@ -829,6 +827,7 @@ class _IncidentReportState extends State<IncidentReport> with AfterLayoutMixin<I
                   FocusScope.of(context).requestFocus(new FocusNode());
                   setState(() {
                     jobRef.clear();
+                    jobRefRef = 'Select One';
                     incidentDate.clear();
                     incidentTime.clear();
                     incidentDetails.clear();
@@ -915,6 +914,7 @@ class _IncidentReportState extends State<IncidentReport> with AfterLayoutMixin<I
       if (success) {
         setState(() {
           jobRef.clear();
+          jobRefRef = 'Select One';
           incidentDate.clear();
           incidentTime.clear();
           incidentDetails.clear();
@@ -936,7 +936,7 @@ class _IncidentReportState extends State<IncidentReport> with AfterLayoutMixin<I
   void _submitForm() async {
 
     FocusScope.of(context).unfocus();
-    if (incidentImageBytes == null || incidentDate.text.isEmpty || incidentTime.text.isEmpty || incidentDetails.text.isEmpty || incidentSignatureDate.text.isEmpty || incidentPrintName.text.isEmpty) {
+    if (jobRefRef == 'Select One' || jobRef.text.isEmpty || incidentImageBytes == null || incidentDate.text.isEmpty || incidentTime.text.isEmpty || incidentDetails.text.isEmpty || incidentSignatureDate.text.isEmpty || incidentPrintName.text.isEmpty) {
       showDialog(
           context: context,
           builder: (BuildContext context) {
@@ -1056,6 +1056,7 @@ class _IncidentReportState extends State<IncidentReport> with AfterLayoutMixin<I
         if(success){
           setState(() {
             jobRef.clear();
+            jobRefRef = 'Select One';
             incidentDate.clear();
             incidentTime.clear();
             incidentDetails.clear();
@@ -1102,7 +1103,13 @@ class _IncidentReportState extends State<IncidentReport> with AfterLayoutMixin<I
                     Text('INCIDENT REPORT FORM', style: TextStyle(color: bluePurple, fontWeight: FontWeight.bold, fontSize: 18),),
                   ],),
                   SizedBox(height: 20,),
-                  _textFormField('Job Ref', jobRef, 1, true),
+                  Row(
+                    children: [
+                      Flexible(child: _buildJobRefDrop()),
+                      Container(width: 10,),
+                      Flexible(child: _textFormField('', jobRef, 1, true, TextInputType.number),),
+                    ],
+                  ),
                   _buildDateField('Date', incidentDate, Strings.incidentDate, true, false),
                   _buildTimeField('Time', incidentTime, Strings.incidentTime, true),
                   _textFormField('Incident Details', incidentDetails, 4, true, TextInputType.multiline),

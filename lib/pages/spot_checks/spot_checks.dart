@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
+import 'package:pegasus_medical_1808/models/job_refs_model.dart';
 import 'package:pegasus_medical_1808/models/observation_booking_model.dart';
 import 'package:pegasus_medical_1808/models/spot_checks_model.dart';
 import 'package:pegasus_medical_1808/shared/global_config.dart';
@@ -39,6 +40,7 @@ class _SpotChecksState extends State<SpotChecks> {
   bool _loadingTemporary = false;
   //DatabaseHelper _databaseHelper = DatabaseHelper();
   SpotChecksModel spotChecksModel;
+  JobRefsModel jobRefsModel;
   final dateFormat = DateFormat("dd/MM/yyyy");
   final dateTimeFormat = DateFormat("dd/MM/yyyy HH:mm");
   final timeFormat = DateFormat("HH:mm");
@@ -96,11 +98,18 @@ class _SpotChecksState extends State<SpotChecks> {
   int rowCount = 1;
   int roleCount = 1;
 
+  String jobRefRef = 'Select One';
+
+  List<String> jobRefDrop = [
+    'Select One',
+  ];
+
   @override
   void initState() {
     // TODO: implement initState
     _loadingTemporary = true;
     spotChecksModel = Provider.of<SpotChecksModel>(context, listen: false);
+    jobRefsModel = context.read<JobRefsModel>();
     _setUpTextControllerListeners();
     _getTemporarySpotChecks();
     super.initState();
@@ -169,7 +178,7 @@ class _SpotChecksState extends State<SpotChecks> {
 
   _setUpTextControllerListeners() {
 
-    _addListener(jobRef, Strings.jobRef, false, true);
+    _addListener(jobRef, Strings.jobRefNo, false, true);
     _addListener(scStaff1, Strings.scStaff1, true, false, true);
     _addListener(scStaff2, Strings.scStaff2, true, false, true);
     _addListener(scStaff3, Strings.scStaff3, true, false, true);
@@ -189,6 +198,18 @@ class _SpotChecksState extends State<SpotChecks> {
   _getTemporarySpotChecks() async {
 
     if (mounted) {
+
+      await jobRefsModel.getJobRefs();
+
+      if(jobRefsModel.allJobRefs.isNotEmpty){
+        for(Map<String, dynamic> jobRefMap in jobRefsModel.allJobRefs){
+          jobRefDrop.add(jobRefMap['job_ref']);
+        }
+      }
+
+
+
+
 
       await spotChecksModel.setupTemporaryRecord();
 
@@ -235,11 +256,21 @@ class _SpotChecksState extends State<SpotChecks> {
 
 
 
-        if (spotChecks[Strings.jobRef] != null) {
+        if (spotChecks[Strings.jobRefNo] != null) {
           jobRef.text = GlobalFunctions.databaseValueString(
-              spotChecks[Strings.jobRef]);
+              spotChecks[Strings.jobRefNo]);
         } else {
           jobRef.text = '';
+        }
+
+        if (spotChecks[Strings.jobRefRef] != null) {
+
+          if(jobRefDrop.contains(GlobalFunctions.databaseValueString(spotChecks[Strings.jobRefRef]))){
+            jobRefRef = GlobalFunctions.databaseValueString(spotChecks[Strings.jobRefRef]);
+          } else {
+            jobRefRef = 'Select One';
+          }
+
         }
 
         GlobalFunctions.getTemporaryValue(spotChecks, scStaff1, Strings.scStaff1);
@@ -561,6 +592,49 @@ class _SpotChecksState extends State<SpotChecks> {
     }
   }
 
+  Widget _buildJobRefDrop() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        RichText(
+          text: TextSpan(
+              text: 'Reference',
+              style: TextStyle(
+                  fontSize: 16.0, fontFamily: 'Open Sans', color: bluePurple),
+              children:
+              [
+                TextSpan(
+                  text: ' *',
+                  style: TextStyle(
+                      color: Colors.red,
+                      fontSize: 16.0),
+                ),                                           ]
+          ),
+        ),
+        Container(
+          color: jobRefRef == 'Select One' ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: DropdownFormField(
+            expanded: false,
+            value: jobRefRef,
+            items: jobRefDrop.toList(),
+            onChanged: (val) => setState(() {
+              jobRefRef = val;
+              if(val == 'Select One'){
+                spotChecksModel.updateTemporaryRecord(widget.edit, Strings.jobRefRef, null, widget.jobId);
+              } else {
+                spotChecksModel.updateTemporaryRecord(widget.edit, Strings.jobRefRef, val, widget.jobId);
+              }
+
+              FocusScope.of(context).unfocus();
+            }),
+            initialValue: jobRefRef,
+          ),
+        ),
+        SizedBox(height: 15,),
+      ],
+    );
+  }
+
   Widget _buildScSignatureRow() {
     return Column(
       children: <Widget>[
@@ -596,7 +670,8 @@ class _SpotChecksState extends State<SpotChecks> {
           height: 10.0,
         ),
         Container(
-          child: Center(
+          color: scImageBytes == null ? Color(0xFF0000).withOpacity(0.3) : null,
+child: Center(
             child: GestureDetector(
               onTap: () {
                 FocusScope.of(context).unfocus();
@@ -768,6 +843,9 @@ class _SpotChecksState extends State<SpotChecks> {
         ),
         TextFormField(
           keyboardType: textInputType,
+          inputFormatters: textInputType == TextInputType.number ? <TextInputFormatter>[
+            FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
+          ] : null,
           validator: (String value) {
             String message;
             if(required){
@@ -779,6 +857,8 @@ class _SpotChecksState extends State<SpotChecks> {
           },
           maxLines: lines,
           decoration: InputDecoration(
+              filled: required && controller.text.isEmpty ? true : false, fillColor: Color(0xFF0000).withOpacity(0.3),
+
               suffixIcon: controller.text == ''
                   ? null
                   : IconButton(
@@ -822,6 +902,8 @@ class _SpotChecksState extends State<SpotChecks> {
             Flexible(
               child: IgnorePointer(
                 child: TextFormField(
+                  decoration: InputDecoration(              filled: required && controller.text.isEmpty ? true : false, fillColor: Color(0xFF0000).withOpacity(0.3),
+                  ),
                   enabled: true,
                   initialValue: null,
                   controller: controller,
@@ -925,6 +1007,8 @@ class _SpotChecksState extends State<SpotChecks> {
             Flexible(
               child: IgnorePointer(
                 child: TextFormField(
+                  decoration: InputDecoration(              filled: required && controller.text.isEmpty ? true : false, fillColor: Color(0xFF0000).withOpacity(0.3),
+                  ),
                   enabled: true,
                   initialValue: null,
                   controller: controller,
@@ -1017,39 +1101,42 @@ class _SpotChecksState extends State<SpotChecks> {
                 ),                                           ]
           ),
         ),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: scOnTimeYes,
-                onChanged: (bool value) => setState(() {
-                  scOnTimeYes = value;
-                  spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scOnTimeYes, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+        Container(
+          color: scOnTimeYes == false && scOnTimeNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: scOnTimeYes,
+                  onChanged: (bool value) => setState(() {
+                    scOnTimeYes = value;
+                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scOnTimeYes, GlobalFunctions.boolToTinyInt(value), widget.jobId);
 
-                  if (scOnTimeNo == true){
-                    scOnTimeNo = false;
-                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scOnTimeNo, null, widget.jobId);
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: scOnTimeNo,
-                onChanged: (bool value) => setState(() {
-                  scOnTimeNo = value;
-                  spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scOnTimeNo, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+                    if (scOnTimeNo == true){
+                      scOnTimeNo = false;
+                      spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scOnTimeNo, null, widget.jobId);
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: scOnTimeNo,
+                  onChanged: (bool value) => setState(() {
+                    scOnTimeNo = value;
+                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scOnTimeNo, GlobalFunctions.boolToTinyInt(value), widget.jobId);
 
-                  if (scOnTimeYes == true){
-                    scOnTimeYes = false;
-                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scOnTimeYes, null, widget.jobId);
-                  }
-                }))
-          ],
+                    if (scOnTimeYes == true){
+                      scOnTimeYes = false;
+                      spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scOnTimeYes, null, widget.jobId);
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -1075,39 +1162,42 @@ class _SpotChecksState extends State<SpotChecks> {
                 ),                                           ]
           ),
         ),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: scCorrectUniformYes,
-                onChanged: (bool value) => setState(() {
-                  scCorrectUniformYes = value;
-                  spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scCorrectUniformYes, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+        Container(
+          color: scCorrectUniformYes == false && scCorrectUniformNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: scCorrectUniformYes,
+                  onChanged: (bool value) => setState(() {
+                    scCorrectUniformYes = value;
+                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scCorrectUniformYes, GlobalFunctions.boolToTinyInt(value), widget.jobId);
 
-                  if (scCorrectUniformNo == true){
-                    scCorrectUniformNo = false;
-                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scCorrectUniformNo, null, widget.jobId);
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: scCorrectUniformNo,
-                onChanged: (bool value) => setState(() {
-                  scCorrectUniformNo = value;
-                  spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scCorrectUniformNo, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+                    if (scCorrectUniformNo == true){
+                      scCorrectUniformNo = false;
+                      spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scCorrectUniformNo, null, widget.jobId);
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: scCorrectUniformNo,
+                  onChanged: (bool value) => setState(() {
+                    scCorrectUniformNo = value;
+                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scCorrectUniformNo, GlobalFunctions.boolToTinyInt(value), widget.jobId);
 
-                  if (scCorrectUniformYes == true){
-                    scCorrectUniformYes = false;
-                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scCorrectUniformYes, null, widget.jobId);
-                  }
-                }))
-          ],
+                    if (scCorrectUniformYes == true){
+                      scCorrectUniformYes = false;
+                      spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scCorrectUniformYes, null, widget.jobId);
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -1133,39 +1223,42 @@ class _SpotChecksState extends State<SpotChecks> {
                 ),                                           ]
           ),
         ),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: scPegasusBadgeYes,
-                onChanged: (bool value) => setState(() {
-                  scPegasusBadgeYes = value;
-                  spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scPegasusBadgeYes, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+        Container(
+          color: scPegasusBadgeYes == false && scPegasusBadgeNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: scPegasusBadgeYes,
+                  onChanged: (bool value) => setState(() {
+                    scPegasusBadgeYes = value;
+                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scPegasusBadgeYes, GlobalFunctions.boolToTinyInt(value), widget.jobId);
 
-                  if (scPegasusBadgeNo == true){
-                    scPegasusBadgeNo = false;
-                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scPegasusBadgeNo, null, widget.jobId);
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: scPegasusBadgeNo,
-                onChanged: (bool value) => setState(() {
-                  scPegasusBadgeNo = value;
-                  spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scPegasusBadgeNo, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+                    if (scPegasusBadgeNo == true){
+                      scPegasusBadgeNo = false;
+                      spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scPegasusBadgeNo, null, widget.jobId);
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: scPegasusBadgeNo,
+                  onChanged: (bool value) => setState(() {
+                    scPegasusBadgeNo = value;
+                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scPegasusBadgeNo, GlobalFunctions.boolToTinyInt(value), widget.jobId);
 
-                  if (scPegasusBadgeYes == true){
-                    scPegasusBadgeYes = false;
-                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scPegasusBadgeYes, null, widget.jobId);
-                  }
-                }))
-          ],
+                    if (scPegasusBadgeYes == true){
+                      scPegasusBadgeYes = false;
+                      spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scPegasusBadgeYes, null, widget.jobId);
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -1191,39 +1284,42 @@ class _SpotChecksState extends State<SpotChecks> {
                 ),                                           ]
           ),
         ),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: scVehicleChecksYes,
-                onChanged: (bool value) => setState(() {
-                  scVehicleChecksYes = value;
-                  spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scVehicleChecksYes, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+        Container(
+          color: scVehicleChecksYes == false && scVehicleChecksNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: scVehicleChecksYes,
+                  onChanged: (bool value) => setState(() {
+                    scVehicleChecksYes = value;
+                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scVehicleChecksYes, GlobalFunctions.boolToTinyInt(value), widget.jobId);
 
-                  if (scVehicleChecksNo == true){
-                    scVehicleChecksNo = false;
-                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scVehicleChecksNo, null, widget.jobId);
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: scVehicleChecksNo,
-                onChanged: (bool value) => setState(() {
-                  scVehicleChecksNo = value;
-                  spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scVehicleChecksNo, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+                    if (scVehicleChecksNo == true){
+                      scVehicleChecksNo = false;
+                      spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scVehicleChecksNo, null, widget.jobId);
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: scVehicleChecksNo,
+                  onChanged: (bool value) => setState(() {
+                    scVehicleChecksNo = value;
+                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scVehicleChecksNo, GlobalFunctions.boolToTinyInt(value), widget.jobId);
 
-                  if (scVehicleChecksYes == true){
-                    scVehicleChecksYes = false;
-                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scVehicleChecksYes, null, widget.jobId);
-                  }
-                }))
-          ],
+                    if (scVehicleChecksYes == true){
+                      scVehicleChecksYes = false;
+                      spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scVehicleChecksYes, null, widget.jobId);
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -1249,39 +1345,42 @@ class _SpotChecksState extends State<SpotChecks> {
                 ),                                           ]
           ),
         ),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: scCollectionStaffIntroduceYes,
-                onChanged: (bool value) => setState(() {
-                  scCollectionStaffIntroduceYes = value;
-                  spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scCollectionStaffIntroduceYes, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+        Container(
+          color: scCollectionStaffIntroduceYes == false && scCollectionStaffIntroduceNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: scCollectionStaffIntroduceYes,
+                  onChanged: (bool value) => setState(() {
+                    scCollectionStaffIntroduceYes = value;
+                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scCollectionStaffIntroduceYes, GlobalFunctions.boolToTinyInt(value), widget.jobId);
 
-                  if (scCollectionStaffIntroduceNo == true){
-                    scCollectionStaffIntroduceNo = false;
-                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scCollectionStaffIntroduceNo, null, widget.jobId);
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: scCollectionStaffIntroduceNo,
-                onChanged: (bool value) => setState(() {
-                  scCollectionStaffIntroduceNo = value;
-                  spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scCollectionStaffIntroduceNo, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+                    if (scCollectionStaffIntroduceNo == true){
+                      scCollectionStaffIntroduceNo = false;
+                      spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scCollectionStaffIntroduceNo, null, widget.jobId);
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: scCollectionStaffIntroduceNo,
+                  onChanged: (bool value) => setState(() {
+                    scCollectionStaffIntroduceNo = value;
+                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scCollectionStaffIntroduceNo, GlobalFunctions.boolToTinyInt(value), widget.jobId);
 
-                  if (scCollectionStaffIntroduceYes == true){
-                    scCollectionStaffIntroduceYes = false;
-                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scCollectionStaffIntroduceYes, null, widget.jobId);
-                  }
-                }))
-          ],
+                    if (scCollectionStaffIntroduceYes == true){
+                      scCollectionStaffIntroduceYes = false;
+                      spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scCollectionStaffIntroduceYes, null, widget.jobId);
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -1307,39 +1406,42 @@ class _SpotChecksState extends State<SpotChecks> {
                 ),                                           ]
           ),
         ),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: scCollectionTransferReportYes,
-                onChanged: (bool value) => setState(() {
-                  scCollectionTransferReportYes = value;
-                  spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scCollectionTransferReportYes, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+        Container(
+          color: scCollectionTransferReportYes == false && scCollectionTransferReportNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: scCollectionTransferReportYes,
+                  onChanged: (bool value) => setState(() {
+                    scCollectionTransferReportYes = value;
+                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scCollectionTransferReportYes, GlobalFunctions.boolToTinyInt(value), widget.jobId);
 
-                  if (scCollectionTransferReportNo == true){
-                    scCollectionTransferReportNo = false;
-                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scCollectionTransferReportNo, null, widget.jobId);
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: scCollectionTransferReportNo,
-                onChanged: (bool value) => setState(() {
-                  scCollectionTransferReportNo = value;
-                  spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scCollectionTransferReportNo, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+                    if (scCollectionTransferReportNo == true){
+                      scCollectionTransferReportNo = false;
+                      spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scCollectionTransferReportNo, null, widget.jobId);
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: scCollectionTransferReportNo,
+                  onChanged: (bool value) => setState(() {
+                    scCollectionTransferReportNo = value;
+                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scCollectionTransferReportNo, GlobalFunctions.boolToTinyInt(value), widget.jobId);
 
-                  if (scCollectionTransferReportYes == true){
-                    scCollectionTransferReportYes = false;
-                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scCollectionTransferReportYes, null, widget.jobId);
-                  }
-                }))
-          ],
+                    if (scCollectionTransferReportYes == true){
+                      scCollectionTransferReportYes = false;
+                      spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scCollectionTransferReportYes, null, widget.jobId);
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -1365,39 +1467,42 @@ class _SpotChecksState extends State<SpotChecks> {
                 ),                                           ]
           ),
         ),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: scStaffEngageYes,
-                onChanged: (bool value) => setState(() {
-                  scStaffEngageYes = value;
-                  spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scStaffEngageYes, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+        Container(
+          color: scStaffEngageYes == false && scStaffEngageNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: scStaffEngageYes,
+                  onChanged: (bool value) => setState(() {
+                    scStaffEngageYes = value;
+                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scStaffEngageYes, GlobalFunctions.boolToTinyInt(value), widget.jobId);
 
-                  if (scStaffEngageNo == true){
-                    scStaffEngageNo = false;
-                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scStaffEngageNo, null, widget.jobId);
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: scStaffEngageNo,
-                onChanged: (bool value) => setState(() {
-                  scStaffEngageNo = value;
-                  spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scStaffEngageNo, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+                    if (scStaffEngageNo == true){
+                      scStaffEngageNo = false;
+                      spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scStaffEngageNo, null, widget.jobId);
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: scStaffEngageNo,
+                  onChanged: (bool value) => setState(() {
+                    scStaffEngageNo = value;
+                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scStaffEngageNo, GlobalFunctions.boolToTinyInt(value), widget.jobId);
 
-                  if (scStaffEngageYes == true){
-                    scStaffEngageYes = false;
-                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scStaffEngageYes, null, widget.jobId);
-                  }
-                }))
-          ],
+                    if (scStaffEngageYes == true){
+                      scStaffEngageYes = false;
+                      spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scStaffEngageYes, null, widget.jobId);
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -1423,39 +1528,42 @@ class _SpotChecksState extends State<SpotChecks> {
                 ),                                           ]
           ),
         ),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: scArrivalStaffIntroduceYes,
-                onChanged: (bool value) => setState(() {
-                  scArrivalStaffIntroduceYes = value;
-                  spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scArrivalStaffIntroduceYes, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+        Container(
+          color: scArrivalStaffIntroduceYes == false && scArrivalStaffIntroduceNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: scArrivalStaffIntroduceYes,
+                  onChanged: (bool value) => setState(() {
+                    scArrivalStaffIntroduceYes = value;
+                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scArrivalStaffIntroduceYes, GlobalFunctions.boolToTinyInt(value), widget.jobId);
 
-                  if (scArrivalStaffIntroduceNo == true){
-                    scArrivalStaffIntroduceNo = false;
-                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scArrivalStaffIntroduceNo, null, widget.jobId);
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: scArrivalStaffIntroduceNo,
-                onChanged: (bool value) => setState(() {
-                  scArrivalStaffIntroduceNo = value;
-                  spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scArrivalStaffIntroduceNo, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+                    if (scArrivalStaffIntroduceNo == true){
+                      scArrivalStaffIntroduceNo = false;
+                      spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scArrivalStaffIntroduceNo, null, widget.jobId);
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: scArrivalStaffIntroduceNo,
+                  onChanged: (bool value) => setState(() {
+                    scArrivalStaffIntroduceNo = value;
+                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scArrivalStaffIntroduceNo, GlobalFunctions.boolToTinyInt(value), widget.jobId);
 
-                  if (scArrivalStaffIntroduceYes == true){
-                    scArrivalStaffIntroduceYes = false;
-                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scArrivalStaffIntroduceYes, null, widget.jobId);
-                  }
-                }))
-          ],
+                    if (scArrivalStaffIntroduceYes == true){
+                      scArrivalStaffIntroduceYes = false;
+                      spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scArrivalStaffIntroduceYes, null, widget.jobId);
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -1481,39 +1589,42 @@ class _SpotChecksState extends State<SpotChecks> {
                 ),                                           ]
           ),
         ),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: scArrivalTransferReportYes,
-                onChanged: (bool value) => setState(() {
-                  scArrivalTransferReportYes = value;
-                  spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scArrivalTransferReportYes, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+        Container(
+          color: scArrivalTransferReportYes == false && scArrivalTransferReportNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: scArrivalTransferReportYes,
+                  onChanged: (bool value) => setState(() {
+                    scArrivalTransferReportYes = value;
+                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scArrivalTransferReportYes, GlobalFunctions.boolToTinyInt(value), widget.jobId);
 
-                  if (scArrivalTransferReportNo == true){
-                    scArrivalTransferReportNo = false;
-                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scArrivalTransferReportNo, null, widget.jobId);
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: scArrivalTransferReportNo,
-                onChanged: (bool value) => setState(() {
-                  scArrivalTransferReportNo = value;
-                  spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scArrivalTransferReportNo, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+                    if (scArrivalTransferReportNo == true){
+                      scArrivalTransferReportNo = false;
+                      spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scArrivalTransferReportNo, null, widget.jobId);
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: scArrivalTransferReportNo,
+                  onChanged: (bool value) => setState(() {
+                    scArrivalTransferReportNo = value;
+                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scArrivalTransferReportNo, GlobalFunctions.boolToTinyInt(value), widget.jobId);
 
-                  if (scArrivalTransferReportYes == true){
-                    scArrivalTransferReportYes = false;
-                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scArrivalTransferReportYes, null, widget.jobId);
-                  }
-                }))
-          ],
+                    if (scArrivalTransferReportYes == true){
+                      scArrivalTransferReportYes = false;
+                      spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scArrivalTransferReportYes, null, widget.jobId);
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -1539,39 +1650,42 @@ class _SpotChecksState extends State<SpotChecks> {
                 ),                                           ]
           ),
         ),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: scPhysicalInterventionYes,
-                onChanged: (bool value) => setState(() {
-                  scPhysicalInterventionYes = value;
-                  spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scPhysicalInterventionYes, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+        Container(
+          color: scPhysicalInterventionYes == false && scPhysicalInterventionNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: scPhysicalInterventionYes,
+                  onChanged: (bool value) => setState(() {
+                    scPhysicalInterventionYes = value;
+                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scPhysicalInterventionYes, GlobalFunctions.boolToTinyInt(value), widget.jobId);
 
-                  if (scPhysicalInterventionNo == true){
-                    scPhysicalInterventionNo = false;
-                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scPhysicalInterventionNo, null, widget.jobId);
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: scPhysicalInterventionNo,
-                onChanged: (bool value) => setState(() {
-                  scPhysicalInterventionNo = value;
-                  spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scPhysicalInterventionNo, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+                    if (scPhysicalInterventionNo == true){
+                      scPhysicalInterventionNo = false;
+                      spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scPhysicalInterventionNo, null, widget.jobId);
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: scPhysicalInterventionNo,
+                  onChanged: (bool value) => setState(() {
+                    scPhysicalInterventionNo = value;
+                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scPhysicalInterventionNo, GlobalFunctions.boolToTinyInt(value), widget.jobId);
 
-                  if (scPhysicalInterventionYes == true){
-                    scPhysicalInterventionYes = false;
-                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scPhysicalInterventionYes, null, widget.jobId);
-                  }
-                }))
-          ],
+                    if (scPhysicalInterventionYes == true){
+                      scPhysicalInterventionYes = false;
+                      spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scPhysicalInterventionYes, null, widget.jobId);
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -1597,39 +1711,42 @@ class _SpotChecksState extends State<SpotChecks> {
                 ),                                           ]
           ),
         ),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: scInfectionControl1Yes,
-                onChanged: (bool value) => setState(() {
-                  scInfectionControl1Yes = value;
-                  spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scInfectionControl1Yes, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+        Container(
+          color: scInfectionControl1Yes == false && scInfectionControl1No == false ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: scInfectionControl1Yes,
+                  onChanged: (bool value) => setState(() {
+                    scInfectionControl1Yes = value;
+                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scInfectionControl1Yes, GlobalFunctions.boolToTinyInt(value), widget.jobId);
 
-                  if (scInfectionControl1No == true){
-                    scInfectionControl1No = false;
-                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scInfectionControl1No, null, widget.jobId);
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: scInfectionControl1No,
-                onChanged: (bool value) => setState(() {
-                  scInfectionControl1No = value;
-                  spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scInfectionControl1No, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+                    if (scInfectionControl1No == true){
+                      scInfectionControl1No = false;
+                      spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scInfectionControl1No, null, widget.jobId);
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: scInfectionControl1No,
+                  onChanged: (bool value) => setState(() {
+                    scInfectionControl1No = value;
+                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scInfectionControl1No, GlobalFunctions.boolToTinyInt(value), widget.jobId);
 
-                  if (scInfectionControl1Yes == true){
-                    scInfectionControl1Yes = false;
-                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scInfectionControl1Yes, null, widget.jobId);
-                  }
-                }))
-          ],
+                    if (scInfectionControl1Yes == true){
+                      scInfectionControl1Yes = false;
+                      spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scInfectionControl1Yes, null, widget.jobId);
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -1655,39 +1772,42 @@ class _SpotChecksState extends State<SpotChecks> {
                 ),                                           ]
           ),
         ),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: scInfectionControl2Yes,
-                onChanged: (bool value) => setState(() {
-                  scInfectionControl2Yes = value;
-                  spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scInfectionControl2Yes, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+        Container(
+          color: scInfectionControl2Yes == false && scInfectionControl2No == false ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: scInfectionControl2Yes,
+                  onChanged: (bool value) => setState(() {
+                    scInfectionControl2Yes = value;
+                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scInfectionControl2Yes, GlobalFunctions.boolToTinyInt(value), widget.jobId);
 
-                  if (scInfectionControl2No == true){
-                    scInfectionControl2No = false;
-                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scInfectionControl2No, null, widget.jobId);
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: scInfectionControl2No,
-                onChanged: (bool value) => setState(() {
-                  scInfectionControl2No = value;
-                  spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scInfectionControl2No, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+                    if (scInfectionControl2No == true){
+                      scInfectionControl2No = false;
+                      spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scInfectionControl2No, null, widget.jobId);
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: scInfectionControl2No,
+                  onChanged: (bool value) => setState(() {
+                    scInfectionControl2No = value;
+                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scInfectionControl2No, GlobalFunctions.boolToTinyInt(value), widget.jobId);
 
-                  if (scInfectionControl2Yes == true){
-                    scInfectionControl2Yes = false;
-                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scInfectionControl2Yes, null, widget.jobId);
-                  }
-                }))
-          ],
+                    if (scInfectionControl2Yes == true){
+                      scInfectionControl2Yes = false;
+                      spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scInfectionControl2Yes, null, widget.jobId);
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -1713,39 +1833,42 @@ class _SpotChecksState extends State<SpotChecks> {
                 ),                                           ]
           ),
         ),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: scVehicleTidyYes,
-                onChanged: (bool value) => setState(() {
-                  scVehicleTidyYes = value;
-                  spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scVehicleTidyYes, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+        Container(
+          color: scVehicleTidyYes == false && scVehicleTidyNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: scVehicleTidyYes,
+                  onChanged: (bool value) => setState(() {
+                    scVehicleTidyYes = value;
+                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scVehicleTidyYes, GlobalFunctions.boolToTinyInt(value), widget.jobId);
 
-                  if (scVehicleTidyNo == true){
-                    scVehicleTidyNo = false;
-                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scVehicleTidyNo, null, widget.jobId);
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: scVehicleTidyNo,
-                onChanged: (bool value) => setState(() {
-                  scVehicleTidyNo = value;
-                  spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scVehicleTidyNo, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+                    if (scVehicleTidyNo == true){
+                      scVehicleTidyNo = false;
+                      spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scVehicleTidyNo, null, widget.jobId);
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: scVehicleTidyNo,
+                  onChanged: (bool value) => setState(() {
+                    scVehicleTidyNo = value;
+                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scVehicleTidyNo, GlobalFunctions.boolToTinyInt(value), widget.jobId);
 
-                  if (scVehicleTidyYes == true){
-                    scVehicleTidyYes = false;
-                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scVehicleTidyYes, null, widget.jobId);
-                  }
-                }))
-          ],
+                    if (scVehicleTidyYes == true){
+                      scVehicleTidyYes = false;
+                      spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scVehicleTidyYes, null, widget.jobId);
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -1771,39 +1894,42 @@ class _SpotChecksState extends State<SpotChecks> {
                 ),                                           ]
           ),
         ),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: scCompletedTransferReportYes,
-                onChanged: (bool value) => setState(() {
-                  scCompletedTransferReportYes = value;
-                  spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scCompletedTransferReportYes, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+        Container(
+          color: scCompletedTransferReportYes == false && scCompletedTransferReportNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: scCompletedTransferReportYes,
+                  onChanged: (bool value) => setState(() {
+                    scCompletedTransferReportYes = value;
+                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scCompletedTransferReportYes, GlobalFunctions.boolToTinyInt(value), widget.jobId);
 
-                  if (scCompletedTransferReportNo == true){
-                    scCompletedTransferReportNo = false;
-                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scCompletedTransferReportNo, null, widget.jobId);
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: scCompletedTransferReportNo,
-                onChanged: (bool value) => setState(() {
-                  scCompletedTransferReportNo = value;
-                  spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scCompletedTransferReportNo, GlobalFunctions.boolToTinyInt(value), widget.jobId);
+                    if (scCompletedTransferReportNo == true){
+                      scCompletedTransferReportNo = false;
+                      spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scCompletedTransferReportNo, null, widget.jobId);
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: scCompletedTransferReportNo,
+                  onChanged: (bool value) => setState(() {
+                    scCompletedTransferReportNo = value;
+                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scCompletedTransferReportNo, GlobalFunctions.boolToTinyInt(value), widget.jobId);
 
-                  if (scCompletedTransferReportYes == true){
-                    scCompletedTransferReportYes = false;
-                    spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scCompletedTransferReportYes, null, widget.jobId);
-                  }
-                }))
-          ],
+                    if (scCompletedTransferReportYes == true){
+                      scCompletedTransferReportYes = false;
+                      spotChecksModel.updateTemporaryRecord(widget.edit, Strings.scCompletedTransferReportYes, null, widget.jobId);
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -1849,6 +1975,7 @@ class _SpotChecksState extends State<SpotChecks> {
                   FocusScope.of(context).requestFocus(new FocusNode());
                   setState(() {
                     jobRef.clear();
+                    jobRefRef = 'Select One';
                     scStaff1.clear();
                     scStaff2.clear();
                     scStaff3.clear();
@@ -2037,6 +2164,7 @@ class _SpotChecksState extends State<SpotChecks> {
         if(success){
           setState(() {
             jobRef.clear();
+            jobRefRef = 'Select One';
             scStaff1.clear();
             scStaff2.clear();
             scStaff3.clear();
@@ -2115,7 +2243,13 @@ class _SpotChecksState extends State<SpotChecks> {
             child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  _textFormField('Reference', jobRef, 1, true),
+                  Row(
+                    children: [
+                      Flexible(child: _buildJobRefDrop()),
+                      Container(width: 10,),
+                      Flexible(child: _textFormField('', jobRef, 1, true, TextInputType.number),),
+                    ],
+                  ),
                   SizedBox(height: 10,),
                   Text('Staff on Duty', style: TextStyle(color: bluePurple, fontWeight: FontWeight.bold, fontSize: 18),),
                   SizedBox(height: 10,),

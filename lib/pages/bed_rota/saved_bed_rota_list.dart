@@ -1,48 +1,48 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:pegasus_medical_1808/models/patient_observation_model.dart';
-import 'package:pegasus_medical_1808/pages/patient_observation/patient_observation.dart';
+import 'package:pegasus_medical_1808/models/bed_rota_model.dart';
 import 'package:pegasus_medical_1808/shared/strings.dart';
 import 'package:pegasus_medical_1808/widgets/app_bar_gradient.dart';
 import '../../widgets/side_drawer.dart';
 import '../../shared/global_config.dart';
 import '../../shared/global_functions.dart';
 import 'package:provider/provider.dart';
+import 'bed_rota.dart';
 
-class SavedPatientObservationsListPage extends StatefulWidget {
+class SavedBedRotasListPage extends StatefulWidget {
 
 
-  SavedPatientObservationsListPage();
+  SavedBedRotasListPage();
 
   @override
   State<StatefulWidget> createState() {
     // TODO: implement createState
-    return _SavedPatientObservationsListPageState();
+    return _SavedBedRotasListPageState();
   }
 }
 
-class _SavedPatientObservationsListPageState extends State<SavedPatientObservationsListPage> {
+class _SavedBedRotasListPageState extends State<SavedBedRotasListPage> {
 
-  PatientObservationModel patientObservationModel;
+  BedRotaModel bedRotaModel;
 
   @override
   initState() {
 
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-      patientObservationModel = context.read<PatientObservationModel>();
-      patientObservationModel.getSavedRecordsList();
+      bedRotaModel = context.read<BedRotaModel>();
+      bedRotaModel.getSavedRecordsList();
     });
   }
 
 
 
-  void _viewPatientObservation(int index, int id){
+  void _viewBedRota(int index, int id){
     Navigator.of(context).push(
         MaterialPageRoute(builder: (BuildContext context) {
-          return PatientObservation(false, '1', false, false, true, id);
+          return BedRota(false, '1', false, false, true, id);
         })).then((_) {
-        patientObservationModel.getSavedRecordsList();
+        bedRotaModel.getSavedRecordsList();
     });
   }
 
@@ -97,24 +97,24 @@ class _SavedPatientObservationsListPageState extends State<SavedPatientObservati
           );
         });
 
-    if(delete) await patientObservationModel.deleteSavedRecord(id);
+    if(delete) await bedRotaModel.deleteSavedRecord(id);
   }
 
 
 
-  Widget _buildListTile(int index, List<Map<String, dynamic>> patientObservations) {
+  Widget _buildListTile(int index, List<Map<String, dynamic>> bedRotas) {
     final dateFormat = DateFormat("dd/MM/yyyy");
 
     return Column(
       children: <Widget>[
-        InkWell(onTap: () => _viewPatientObservation(index, patientObservations[index][Strings.localId]),
+        InkWell(onTap: () => _viewBedRota(index, bedRotas[index][Strings.localId]),
           child: ListTile(
             leading: Icon(Icons.library_books_sharp, color: bluePurple,),
-            trailing: IconButton(icon: Icon(Icons.delete, color: bluePurple,), onPressed: () => _deleteForm(patientObservations[index][Strings.localId]),),
-            title: GlobalFunctions.boldTitleText('Job Ref: ', GlobalFunctions.buildJobRef(patientObservations[index]['job_ref_ref'], patientObservations[index]['job_ref_no']), context),
+            trailing: IconButton(icon: Icon(Icons.delete, color: bluePurple,), onPressed: () => _deleteForm(bedRotas[index][Strings.localId]),),
+            title: GlobalFunctions.boldTitleText('Job Ref: ', GlobalFunctions.buildJobRef(bedRotas[index]['job_ref_ref'], bedRotas[index]['job_ref_no']), context),
             subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
-              GlobalFunctions.boldTitleText('Date: ', patientObservations[index][Strings.patientObservationDate] == null ? '' : dateFormat.format(
-                  DateTime.parse(patientObservations[index][Strings.patientObservationDate])), context),
+              GlobalFunctions.boldTitleText('Date: ', bedRotas[index][Strings.weekCommencing] == null ? '' : dateFormat.format(
+                  DateTime.parse(bedRotas[index][Strings.weekCommencing])), context),
             ],),
           ),),
         Divider(),
@@ -123,7 +123,7 @@ class _SavedPatientObservationsListPageState extends State<SavedPatientObservati
 
   }
 
-  Widget _buildPageContent(List<Map<String, dynamic>> patientObservations, PatientObservationModel model) {
+  Widget _buildPageContent(List<Map<String, dynamic>> bedRotas, BedRotaModel model) {
     final double deviceHeight = MediaQuery.of(context).size.height;
 
     if (model.isLoading) {
@@ -136,9 +136,9 @@ class _SavedPatientObservationsListPageState extends State<SavedPatientObservati
                       bluePurple),
                 ),
                 SizedBox(height: 20.0),
-                Text('Fetching Patient Observation Timeheets')
+                Text('Fetching Bed Watch Rotas')
               ]));
-    } else if (patientObservations.length == 0) {
+    } else if (bedRotas.length == 0) {
       return ListView(padding: EdgeInsets.all(10.0), children: <Widget>[
         Container(
             height: deviceHeight * 0.9,
@@ -146,7 +146,7 @@ class _SavedPatientObservationsListPageState extends State<SavedPatientObservati
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
                 Text(
-                  'No saved Patient Observation Timeheets available',
+                  'No saved Bed Watch Rotas available',
                   textAlign: TextAlign.center,
                 ),
                 Icon(
@@ -160,9 +160,9 @@ class _SavedPatientObservationsListPageState extends State<SavedPatientObservati
     } else {
       return ListView.builder(
         itemBuilder: (BuildContext context, int index) {
-          return _buildListTile(index, patientObservations);
+          return _buildListTile(index, bedRotas);
         },
-        itemCount: patientObservations.length,
+        itemCount: bedRotas.length,
       );
     }
   }
@@ -170,18 +170,18 @@ class _SavedPatientObservationsListPageState extends State<SavedPatientObservati
   @override
   Widget build(BuildContext context) {
     // TODO: implement build
-    return Consumer<PatientObservationModel>(
+    return Consumer<BedRotaModel>(
       builder: (context, model, child) {
-        List<Map<String, dynamic>> patientObservations = model.allPatientObservations;
+        List<Map<String, dynamic>> bedRotas = model.allBedRotas;
         return Scaffold(
             appBar: AppBar(backgroundColor: greyDesign1,
               iconTheme: IconThemeData(color: Colors.white),
               flexibleSpace: AppBarGradient(),
               title: FittedBox(fit:BoxFit.fitWidth,
-                  child: Text('Saved Patient Observation Timeheets', style: TextStyle(fontWeight: FontWeight.bold),)),
+                  child: Text('Saved Bed Watch Rotas', style: TextStyle(fontWeight: FontWeight.bold),)),
             ),
             drawer: SideDrawer(),
-            body: _buildPageContent(patientObservations, model));
+            body: _buildPageContent(bedRotas, model));
       },
     );
   }

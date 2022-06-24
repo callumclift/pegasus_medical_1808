@@ -22,8 +22,8 @@ class MessageWall extends StatelessWidget {
   bool shouldDisplayAvatar(int idx) {
     if (idx == 0) return true;
 
-    final previousId = messages[idx - 1].data()['author_id'];
-    final authorId = messages[idx].data()['author_id'];
+    final previousId = messages[idx - 1].get('author_id');
+    final authorId = messages[idx].get('author_id');
     return authorId != previousId;
   }
 
@@ -50,7 +50,7 @@ class MessageWall extends StatelessWidget {
         }
 
 
-        final data = messages[index].data();
+        final data = messages[index].data() as Map<String, dynamic>;
         final user = FirebaseAuth.instance.currentUser;
 
         if (user != null && user.uid == data['author_id']) {

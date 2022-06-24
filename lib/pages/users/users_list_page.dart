@@ -257,7 +257,7 @@ class _UsersListPageState extends State<UsersListPage> {
       returnedWidget = Column(
         children: <Widget>[
           user == null ? Container() : ListTile(
-            leading: model.allUsers[index].profilePicture == null ? CircleAvatar(
+            leading: model.allUsers[index].profilePicture == null || model.allUsers[index].profilePicture == '' ? CircleAvatar(
               backgroundColor: bluePurple,
               child: Text(model.allUsers[index].name[0]),
             ) : CircleAvatar(

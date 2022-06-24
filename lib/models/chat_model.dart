@@ -140,8 +140,14 @@ class ChatModel extends ChangeNotifier {
 
             DocumentSnapshot selectedUserSnapShot = await FirebaseFirestore.instance.collection('users').doc(selectedUser.uid).get().timeout(Duration(seconds: 60));
 
+            Map<String, dynamic> userSnapshotMap = selectedUserSnapShot.data() as Map<String, dynamic>;
+            dynamic selectedUserCurrentGroups;
             List<String> selectedUserCurrentGroupsListString = [];
-            dynamic selectedUserCurrentGroups = selectedUserSnapShot.data()[Strings.groups];
+
+            if(userSnapshotMap.containsKey('groups')){
+              selectedUserCurrentGroups = selectedUserSnapShot.get(Strings.groups);
+
+            }
 
             if(selectedUserCurrentGroups != null){
               List<dynamic> selectedUserCurrentGroupsListDynamic = selectedUserSnapShot.get(Strings.groups);
@@ -154,8 +160,16 @@ class ChatModel extends ChangeNotifier {
 
 
             DocumentSnapshot currentUserSnapShot = await FirebaseFirestore.instance.collection('users').doc(user.uid).get().timeout(Duration(seconds: 60));
-            dynamic currentUserCurrentGroups = currentUserSnapShot.data()[Strings.groups];
+
+            Map<String, dynamic> currentUserSnapshotMap = currentUserSnapShot.data() as Map<String, dynamic>;
+            dynamic currentUserCurrentGroups;
             List<String> currentUserCurrentGroupsListString = [];
+
+            if(currentUserSnapshotMap.containsKey('groups')){
+              currentUserCurrentGroups = currentUserSnapShot.get(Strings.groups);
+            }
+
+
             if(currentUserCurrentGroups != null){
               List<dynamic> currentUserCurrentGroupsListDynamic = currentUserSnapShot.get(Strings.groups);
               currentUserCurrentGroupsListString = currentUserCurrentGroupsListDynamic.map((value) => value as String).toList();
@@ -280,8 +294,16 @@ class ChatModel extends ChangeNotifier {
 
               if(participant['id'] != user.uid){
                 DocumentSnapshot selectedUserSnapShot = await FirebaseFirestore.instance.collection('users').doc(participant['id']).get().timeout(Duration(seconds: 60));
-                dynamic selectedUserCurrentGroups = selectedUserSnapShot.data()[Strings.groups];
+
+                Map<String, dynamic> userSnapshotMap = selectedUserSnapShot.data() as Map<String, dynamic>;
+                dynamic selectedUserCurrentGroups;
                 List<String> selectedUserCurrentGroupsListString = [];
+
+                if(userSnapshotMap.containsKey('groups')){
+                  selectedUserCurrentGroups = selectedUserSnapShot.get(Strings.groups);
+
+                }
+
                 if(selectedUserCurrentGroups != null){
                   List<dynamic> selectedUserCurrentGroupsListDynamic = selectedUserSnapShot.get(Strings.groups);
                   selectedUserCurrentGroupsListString = selectedUserCurrentGroupsListDynamic.map((value) => value as String).toList();
@@ -300,8 +322,16 @@ class ChatModel extends ChangeNotifier {
 
 
             DocumentSnapshot currentUserSnapShot = await FirebaseFirestore.instance.collection('users').doc(user.uid).get().timeout(Duration(seconds: 60));
-            dynamic currentUserCurrentGroups = currentUserSnapShot.data()[Strings.groups];
+
+
+            Map<String, dynamic> currentUserSnapshotMap = currentUserSnapShot.data() as Map<String, dynamic>;
+            dynamic currentUserCurrentGroups;
             List<String> currentUserCurrentGroupsListString = [];
+
+            if(currentUserSnapshotMap.containsKey('groups')){
+              currentUserCurrentGroups = currentUserSnapShot.get(Strings.groups);
+            }
+
             if(currentUserCurrentGroups != null){
               List<dynamic> currentUserCurrentGroupsListDynamic = currentUserSnapShot.get(Strings.groups);
               currentUserCurrentGroupsListString = currentUserCurrentGroupsListDynamic.map((value) => value as String).toList();

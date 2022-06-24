@@ -1,13 +1,11 @@
-import 'dart:convert';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
+import 'package:pegasus_medical_1808/models/job_refs_model.dart';
 import 'package:pegasus_medical_1808/models/observation_booking_model.dart';
 import 'package:pegasus_medical_1808/shared/global_config.dart';
 import 'package:pegasus_medical_1808/shared/global_functions.dart';
 import 'package:pegasus_medical_1808/shared/strings.dart';
-import 'package:pegasus_medical_1808/utils/database_helper.dart';
 import 'package:pegasus_medical_1808/widgets/app_bar_gradient.dart';
 import 'package:pegasus_medical_1808/widgets/dropdown_form_field.dart';
 import 'package:pegasus_medical_1808/widgets/gradient_button.dart';
@@ -42,8 +40,9 @@ class ObservationBooking extends StatefulWidget {
 class _ObservationBookingState extends State<ObservationBooking> {
 
   bool _loadingTemporary = false;
-  //DatabaseHelper _databaseHelper = DatabaseHelper();
   ObservationBookingModel observationBookingModel;
+  JobRefsModel jobRefsModel;
+
   final dateFormat = DateFormat("dd/MM/yyyy");
   final dateTimeFormat = DateFormat("dd/MM/yyyy HH:mm");
   final timeFormat = DateFormat("HH:mm");
@@ -231,11 +230,20 @@ class _ObservationBookingState extends State<ObservationBooking> {
   int rowCount = 1;
   int roleCount = 1;
 
+  String jobRefRef = 'Select One';
+
+  List<String> jobRefDrop = [
+    'Select One',
+  ];
+
+
   @override
   void initState() {
     // TODO: implement initState
     _loadingTemporary = true;
     observationBookingModel = Provider.of<ObservationBookingModel>(context, listen: false);
+    jobRefsModel = context.read<JobRefsModel>();
+
     _setUpTextControllerListeners();
     _getTemporaryObservationBooking();
     super.initState();
@@ -405,7 +413,7 @@ class _ObservationBookingState extends State<ObservationBooking> {
 
   _setUpTextControllerListeners() {
 
-    _addListener(jobRef, Strings.jobRef, false, true);
+    _addListener(jobRef, Strings.jobRefNo, false, true);
     _addListener(obRequestedBy, Strings.obRequestedBy);
     _addListener(obJobTitle, Strings.obJobTitle);
     _addListener(obJobContact, Strings.obJobContact);
@@ -463,6 +471,14 @@ class _ObservationBookingState extends State<ObservationBooking> {
 
     if (mounted) {
 
+      await jobRefsModel.getJobRefs();
+
+      if(jobRefsModel.allJobRefs.isNotEmpty){
+        for(Map<String, dynamic> jobRefMap in jobRefsModel.allJobRefs){
+          jobRefDrop.add(jobRefMap['job_ref']);
+        }
+      }
+
       await observationBookingModel.setupTemporaryRecord();
 
       bool hasRecord = await observationBookingModel.checkRecordExists(widget.edit, widget.jobId, widget.saved, widget.savedId);
@@ -473,11 +489,21 @@ class _ObservationBookingState extends State<ObservationBooking> {
 
 
 
-        if (observationBooking[Strings.jobRef] != null) {
+        if (observationBooking[Strings.jobRefNo] != null) {
           jobRef.text = GlobalFunctions.databaseValueString(
-              observationBooking[Strings.jobRef]);
+              observationBooking[Strings.jobRefNo]);
         } else {
           jobRef.text = '';
+        }
+
+        if (observationBooking[Strings.jobRefRef] != null) {
+
+          if(jobRefDrop.contains(GlobalFunctions.databaseValueString(observationBooking[Strings.jobRefRef]))){
+            jobRefRef = GlobalFunctions.databaseValueString(observationBooking[Strings.jobRefRef]);
+          } else {
+            jobRefRef = 'Select One';
+          }
+
         }
 
         GlobalFunctions.getTemporaryValue(observationBooking, obRequestedBy, Strings.obRequestedBy);
@@ -963,506 +989,6 @@ class _ObservationBookingState extends State<ObservationBooking> {
         }
       }
     }
-
-
-    // if (mounted) {
-    //   int result = await _databaseHelper.checkTemporaryObservationBookingExists(widget.edit,
-    //       user.uid, widget.jobId, widget.saved, widget.savedId);
-    //   if (result != 0) {
-    //     Map<String, dynamic> observationBooking = await _databaseHelper
-    //         .getTemporaryObservationBooking(widget.edit, user.uid, widget.jobId, widget.saved, widget.savedId);
-    //
-    //
-    //     if (observationBooking[Strings.jobRef] != null) {
-    //       jobRef.text = GlobalFunctions.databaseValueString(
-    //           observationBooking[Strings.jobRef]);
-    //     } else {
-    //       jobRef.text = '';
-    //     }
-    //
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obRequestedBy, Strings.obRequestedBy);
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obJobTitle, Strings.obJobTitle);
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obJobContact, Strings.obJobContact);
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obJobAuthorisingManager, Strings.obJobAuthorisingManager);
-    //     if (observationBooking[Strings.obJobDate] != null) {
-    //       obJobDate.text =
-    //           dateFormat.format(DateTime.parse(observationBooking[Strings.obJobDate]));
-    //     } else {
-    //       obJobDate.text = '';
-    //     }
-    //     GlobalFunctions.getTemporaryValueTime(observationBooking, obJobTime, Strings.obJobTime);
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obBookingCoordinator, Strings.obBookingCoordinator);
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obPatientLocation, Strings.obPatientLocation);
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obPostcode, Strings.obPostcode);
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obLocationTel, Strings.obLocationTel);
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obInvoiceDetails, Strings.obInvoiceDetails);
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obCostCode, Strings.obCostCode);
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obPurchaseOrder, Strings.obPurchaseOrder);
-    //     GlobalFunctions.getTemporaryValueDateTime(observationBooking, obStartDateTime, Strings.obStartDateTime);
-    //     if (observationBooking[Strings.obMhaAssessmentYes] != null) {
-    //       if (mounted) {
-    //         setState(() {
-    //           obMhaAssessmentYes = GlobalFunctions.tinyIntToBool(observationBooking[Strings.obMhaAssessmentYes]);
-    //         });
-    //       }
-    //     }
-    //     if (observationBooking[Strings.obMhaAssessmentNo] != null) {
-    //       if (mounted) {
-    //         setState(() {
-    //           obMhaAssessmentNo = GlobalFunctions.tinyIntToBool(observationBooking[Strings.obMhaAssessmentNo]);
-    //         });
-    //       }
-    //     }
-    //     if (observationBooking[Strings.obBedIdentifiedYes] != null) {
-    //       if (mounted) {
-    //         setState(() {
-    //           obBedIdentifiedYes = GlobalFunctions.tinyIntToBool(observationBooking[Strings.obBedIdentifiedYes]);
-    //         });
-    //       }
-    //     }
-    //     if (observationBooking[Strings.obBedIdentifiedNo] != null) {
-    //       if (mounted) {
-    //         setState(() {
-    //           obBedIdentifiedNo = GlobalFunctions.tinyIntToBool(observationBooking[Strings.obBedIdentifiedNo]);
-    //         });
-    //       }
-    //     }
-    //     if (observationBooking[Strings.obWrapDocumentationYes] != null) {
-    //       if (mounted) {
-    //         setState(() {
-    //           obWrapDocumentationYes = GlobalFunctions.tinyIntToBool(observationBooking[Strings.obWrapDocumentationYes]);
-    //         });
-    //       }
-    //     }
-    //     if (observationBooking[Strings.obWrapDocumentationNo] != null) {
-    //       if (mounted) {
-    //         setState(() {
-    //           obWrapDocumentationNo = GlobalFunctions.tinyIntToBool(observationBooking[Strings.obWrapDocumentationNo]);
-    //         });
-    //       }
-    //     }
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obShiftRequired, Strings.obShiftRequired);
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obPatientName, Strings.obPatientName);
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obLegalStatus, Strings.obLegalStatus);
-    //     GlobalFunctions.getTemporaryValueDate(observationBooking, obDateOfBirth, Strings.obDateOfBirth, true);
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obNhsNumber, Strings.obNhsNumber);
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obGender, Strings.obGender);
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obEthnicity, Strings.obEthnicity);
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obCovidStatus, Strings.obCovidStatus);
-    //     if (observationBooking[Strings.obRmn] != null) {
-    //       obRmn = GlobalFunctions.decryptString(observationBooking[Strings.obRmn]);
-    //     }
-    //     if (observationBooking[Strings.obHca] != null) {
-    //       obHca = GlobalFunctions.decryptString(observationBooking[Strings.obHca]);
-    //     }
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obHca1, Strings.obHca1);
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obHca2, Strings.obHca2);
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obHca3, Strings.obHca3);
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obHca4, Strings.obHca4);
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obHca5, Strings.obHca5);
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obCurrentPresentation, Strings.obCurrentPresentation);
-    //     if (observationBooking[Strings.obSpecificCarePlanYes] != null) {
-    //       if (mounted) {
-    //         setState(() {
-    //           obSpecificCarePlanYes = GlobalFunctions.tinyIntToBool(observationBooking[Strings.obSpecificCarePlanYes]);
-    //         });
-    //       }
-    //     }
-    //     if (observationBooking[Strings.obSpecificCarePlanNo] != null) {
-    //       if (mounted) {
-    //         setState(() {
-    //           obSpecificCarePlanNo = GlobalFunctions.tinyIntToBool(observationBooking[Strings.obSpecificCarePlanNo]);
-    //         });
-    //       }
-    //     }
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obSpecificCarePlan, Strings.obSpecificCarePlan);
-    //     if (observationBooking[Strings.obPatientWarningsYes] != null) {
-    //       if (mounted) {
-    //         setState(() {
-    //           obPatientWarningsYes = GlobalFunctions.tinyIntToBool(observationBooking[Strings.obPatientWarningsYes]);
-    //         });
-    //       }
-    //     }
-    //     if (observationBooking[Strings.obPatientWarningsNo] != null) {
-    //       if (mounted) {
-    //         setState(() {
-    //           obPatientWarningsNo = GlobalFunctions.tinyIntToBool(observationBooking[Strings.obPatientWarningsNo]);
-    //         });
-    //       }
-    //     }
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obPatientWarnings, Strings.obPatientWarnings);
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obPresentingRisks, Strings.obPresentingRisks);
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obPreviousRisks, Strings.obPreviousRisks);
-    //     if (observationBooking[Strings.obGenderConcernsYes] != null) {
-    //       if (mounted) {
-    //         setState(() {
-    //           obGenderConcernsYes = GlobalFunctions.tinyIntToBool(observationBooking[Strings.obGenderConcernsYes]);
-    //         });
-    //       }
-    //     }
-    //     if (observationBooking[Strings.obGenderConcernsNo] != null) {
-    //       if (mounted) {
-    //         setState(() {
-    //           obGenderConcernsNo = GlobalFunctions.tinyIntToBool(observationBooking[Strings.obGenderConcernsNo]);
-    //         });
-    //       }
-    //     }
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obGenderConcerns, Strings.obGenderConcerns);
-    //     if (observationBooking[Strings.obSafeguardingConcernsYes] != null) {
-    //       if (mounted) {
-    //         setState(() {
-    //           obSafeguardingConcernsYes = GlobalFunctions.tinyIntToBool(observationBooking[Strings.obSafeguardingConcernsYes]);
-    //         });
-    //       }
-    //     }
-    //     if (observationBooking[Strings.obSafeguardingConcernsNo] != null) {
-    //       if (mounted) {
-    //         setState(() {
-    //           obSafeguardingConcernsNo = GlobalFunctions.tinyIntToBool(observationBooking[Strings.obSafeguardingConcernsNo]);
-    //         });
-    //       }
-    //     }
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obSafeguardingConcerns, Strings.obSafeguardingConcerns);
-    //     GlobalFunctions.getTemporaryValueTime(observationBooking, obTimeDue, Strings.obTimeDue);
-    //
-    //
-    //     if (observationBooking[Strings.obStaffDate2] != null ||
-    //         observationBooking[Strings.obStaffStartTime2] != null ||
-    //         observationBooking[Strings.obStaffEndTime2] != null ||
-    //         (observationBooking[Strings.obStaffName2] != null && observationBooking[Strings.obStaffName2] != '') ||
-    //         observationBooking[Strings.obStaffRmn2] != null) {
-    //       setState(() {
-    //
-    //         print(observationBooking[Strings.obStaffDate2]);
-    //         print(observationBooking[Strings.obStaffStartTime2]);
-    //         print(observationBooking[Strings.obStaffEndTime2]);
-    //         print(observationBooking[Strings.obStaffName2]);
-    //         print(observationBooking[Strings.obStaffRmn2]);
-    //
-    //         print('inside here should not be');
-    //         roleCount += 1;
-    //       });
-    //     }
-    //     if (observationBooking[Strings.obStaffDate3] != null ||
-    //         observationBooking[Strings.obStaffStartTime3] != null ||
-    //         observationBooking[Strings.obStaffEndTime3] != null ||
-    //         (observationBooking[Strings.obStaffName3] != null && observationBooking[Strings.obStaffName3] != '') ||
-    //         observationBooking[Strings.obStaffRmn3] != null) {
-    //       setState(() {
-    //         roleCount += 1;
-    //       });
-    //     }
-    //     if (observationBooking[Strings.obStaffDate4] != null ||
-    //         observationBooking[Strings.obStaffStartTime4] != null ||
-    //         observationBooking[Strings.obStaffEndTime4] != null ||
-    //         (observationBooking[Strings.obStaffName4] != null && observationBooking[Strings.obStaffName4] != '') ||
-    //         observationBooking[Strings.obStaffRmn4] != null) {
-    //       setState(() {
-    //         roleCount += 1;
-    //       });
-    //     }
-    //     if (observationBooking[Strings.obStaffDate5] != null ||
-    //         observationBooking[Strings.obStaffStartTime5] != null ||
-    //         observationBooking[Strings.obStaffEndTime5] != null ||
-    //         (observationBooking[Strings.obStaffName5] != null && observationBooking[Strings.obStaffName5] != '') ||
-    //         observationBooking[Strings.obStaffRmn5] != null) {
-    //       setState(() {
-    //         roleCount += 1;
-    //       });
-    //     }
-    //     if (observationBooking[Strings.obStaffDate6] != null ||
-    //         observationBooking[Strings.obStaffStartTime6] != null ||
-    //         observationBooking[Strings.obStaffEndTime6] != null ||
-    //         (observationBooking[Strings.obStaffName6] != null && observationBooking[Strings.obStaffName6] != '') ||
-    //         observationBooking[Strings.obStaffRmn6] != null) {
-    //       setState(() {
-    //         roleCount += 1;
-    //       });
-    //     }
-    //     if (observationBooking[Strings.obStaffDate7] != null ||
-    //         observationBooking[Strings.obStaffStartTime7] != null ||
-    //         observationBooking[Strings.obStaffEndTime7] != null ||
-    //         (observationBooking[Strings.obStaffName7] != null && observationBooking[Strings.obStaffName7] != '') ||
-    //         observationBooking[Strings.obStaffRmn7] != null) {
-    //       setState(() {
-    //         roleCount += 1;
-    //       });
-    //     }
-    //     if (observationBooking[Strings.obStaffDate8] != null ||
-    //         observationBooking[Strings.obStaffStartTime8] != null ||
-    //         observationBooking[Strings.obStaffEndTime8] != null ||
-    //         (observationBooking[Strings.obStaffName8] != null && observationBooking[Strings.obStaffName8] != '') ||
-    //         observationBooking[Strings.obStaffRmn8] != null) {
-    //       setState(() {
-    //         roleCount += 1;
-    //       });
-    //     }
-    //     if (observationBooking[Strings.obStaffDate9] != null ||
-    //         observationBooking[Strings.obStaffStartTime9] != null ||
-    //         observationBooking[Strings.obStaffEndTime9] != null ||
-    //         (observationBooking[Strings.obStaffName9] != null && observationBooking[Strings.obStaffName9] != '') ||
-    //         observationBooking[Strings.obStaffRmn9] != null) {
-    //       setState(() {
-    //         roleCount += 1;
-    //       });
-    //     }
-    //     if (observationBooking[Strings.obStaffDate10] != null ||
-    //         observationBooking[Strings.obStaffStartTime10] != null ||
-    //         observationBooking[Strings.obStaffEndTime10] != null ||
-    //         (observationBooking[Strings.obStaffName10] != null && observationBooking[Strings.obStaffName10] != '') ||
-    //         observationBooking[Strings.obStaffRmn10] != null) {
-    //       setState(() {
-    //         roleCount += 1;
-    //       });
-    //     }
-    //     if (observationBooking[Strings.obStaffDate11] != null ||
-    //         observationBooking[Strings.obStaffStartTime11] != null ||
-    //         observationBooking[Strings.obStaffEndTime11] != null ||
-    //         (observationBooking[Strings.obStaffName11] != null && observationBooking[Strings.obStaffName11] != '') ||
-    //         observationBooking[Strings.obStaffRmn11] != null) {
-    //       setState(() {
-    //         roleCount += 1;
-    //       });
-    //     }
-    //     if (observationBooking[Strings.obStaffDate12] != null ||
-    //         observationBooking[Strings.obStaffStartTime12] != null ||
-    //         observationBooking[Strings.obStaffEndTime12] != null ||
-    //         (observationBooking[Strings.obStaffName12] != null && observationBooking[Strings.obStaffName12] != '') ||
-    //         observationBooking[Strings.obStaffRmn12] != null) {
-    //       setState(() {
-    //         roleCount += 1;
-    //       });
-    //     }
-    //     if (observationBooking[Strings.obStaffDate13] != null ||
-    //         observationBooking[Strings.obStaffStartTime13] != null ||
-    //         observationBooking[Strings.obStaffEndTime13] != null ||
-    //         (observationBooking[Strings.obStaffName13] != null && observationBooking[Strings.obStaffName13] != '') ||
-    //         observationBooking[Strings.obStaffRmn13] != null) {
-    //       setState(() {
-    //         roleCount += 1;
-    //       });
-    //     }
-    //     if (observationBooking[Strings.obStaffDate14] != null ||
-    //         observationBooking[Strings.obStaffStartTime14] != null ||
-    //         observationBooking[Strings.obStaffEndTime14] != null ||
-    //         (observationBooking[Strings.obStaffName14] != null && observationBooking[Strings.obStaffName14] != '') ||
-    //         observationBooking[Strings.obStaffRmn14] != null) {
-    //       setState(() {
-    //         roleCount += 1;
-    //       });
-    //     }
-    //     if (observationBooking[Strings.obStaffDate15] != null ||
-    //         observationBooking[Strings.obStaffStartTime15] != null ||
-    //         observationBooking[Strings.obStaffEndTime15] != null ||
-    //         (observationBooking[Strings.obStaffName15] != null && observationBooking[Strings.obStaffName15] != '') ||
-    //         observationBooking[Strings.obStaffRmn15] != null) {
-    //       setState(() {
-    //         roleCount += 1;
-    //       });
-    //     }
-    //     if (observationBooking[Strings.obStaffDate16] != null ||
-    //         observationBooking[Strings.obStaffStartTime16] != null ||
-    //         observationBooking[Strings.obStaffEndTime16] != null ||
-    //         (observationBooking[Strings.obStaffName16] != null && observationBooking[Strings.obStaffName16] != '') ||
-    //         observationBooking[Strings.obStaffRmn16] != null) {
-    //       setState(() {
-    //         roleCount += 1;
-    //       });
-    //     }
-    //     if (observationBooking[Strings.obStaffDate17] != null ||
-    //         observationBooking[Strings.obStaffStartTime17] != null ||
-    //         observationBooking[Strings.obStaffEndTime17] != null ||
-    //         (observationBooking[Strings.obStaffName17] != null && observationBooking[Strings.obStaffName17] != '') ||
-    //         observationBooking[Strings.obStaffRmn17] != null) {
-    //       setState(() {
-    //         roleCount += 1;
-    //       });
-    //     }
-    //     if (observationBooking[Strings.obStaffDate18] != null ||
-    //         observationBooking[Strings.obStaffStartTime18] != null ||
-    //         observationBooking[Strings.obStaffEndTime18] != null ||
-    //         (observationBooking[Strings.obStaffName18] != null && observationBooking[Strings.obStaffName18] != '') ||
-    //         observationBooking[Strings.obStaffRmn18] != null) {
-    //       setState(() {
-    //         roleCount += 1;
-    //       });
-    //     }
-    //     if (observationBooking[Strings.obStaffDate19] != null ||
-    //         observationBooking[Strings.obStaffStartTime19] != null ||
-    //         observationBooking[Strings.obStaffEndTime19] != null ||
-    //         (observationBooking[Strings.obStaffName19] != null && observationBooking[Strings.obStaffName19] != '') ||
-    //         observationBooking[Strings.obStaffRmn19] != null) {
-    //       setState(() {
-    //         roleCount += 1;
-    //       });
-    //     }
-    //     if (observationBooking[Strings.obStaffDate20] != null ||
-    //         observationBooking[Strings.obStaffStartTime20] != null ||
-    //         observationBooking[Strings.obStaffEndTime20] != null ||
-    //         (observationBooking[Strings.obStaffName20] != null && observationBooking[Strings.obStaffName20] != '') ||
-    //         observationBooking[Strings.obStaffRmn20] != null) {
-    //       setState(() {
-    //         roleCount += 1;
-    //       });
-    //     }
-    //     setState(() {
-    //       rowCount = roleCount;
-    //     });
-    //     GlobalFunctions.getTemporaryValueDate(observationBooking, obStaffDate1, Strings.obStaffDate1);
-    //     GlobalFunctions.getTemporaryValueDate(observationBooking, obStaffDate2, Strings.obStaffDate2);
-    //     GlobalFunctions.getTemporaryValueDate(observationBooking, obStaffDate3, Strings.obStaffDate3);
-    //     GlobalFunctions.getTemporaryValueDate(observationBooking, obStaffDate4, Strings.obStaffDate4);
-    //     GlobalFunctions.getTemporaryValueDate(observationBooking, obStaffDate5, Strings.obStaffDate5);
-    //     GlobalFunctions.getTemporaryValueDate(observationBooking, obStaffDate6, Strings.obStaffDate6);
-    //     GlobalFunctions.getTemporaryValueDate(observationBooking, obStaffDate7, Strings.obStaffDate7);
-    //     GlobalFunctions.getTemporaryValueDate(observationBooking, obStaffDate8, Strings.obStaffDate8);
-    //     GlobalFunctions.getTemporaryValueDate(observationBooking, obStaffDate9, Strings.obStaffDate9);
-    //     GlobalFunctions.getTemporaryValueDate(observationBooking, obStaffDate10, Strings.obStaffDate10);
-    //     GlobalFunctions.getTemporaryValueDate(observationBooking, obStaffDate11, Strings.obStaffDate11);
-    //     GlobalFunctions.getTemporaryValueDate(observationBooking, obStaffDate12, Strings.obStaffDate12);
-    //     GlobalFunctions.getTemporaryValueDate(observationBooking, obStaffDate13, Strings.obStaffDate13);
-    //     GlobalFunctions.getTemporaryValueDate(observationBooking, obStaffDate14, Strings.obStaffDate14);
-    //     GlobalFunctions.getTemporaryValueDate(observationBooking, obStaffDate15, Strings.obStaffDate15);
-    //     GlobalFunctions.getTemporaryValueDate(observationBooking, obStaffDate16, Strings.obStaffDate16);
-    //     GlobalFunctions.getTemporaryValueDate(observationBooking, obStaffDate17, Strings.obStaffDate17);
-    //     GlobalFunctions.getTemporaryValueDate(observationBooking, obStaffDate18, Strings.obStaffDate18);
-    //     GlobalFunctions.getTemporaryValueDate(observationBooking, obStaffDate19, Strings.obStaffDate19);
-    //     GlobalFunctions.getTemporaryValueDate(observationBooking, obStaffDate20, Strings.obStaffDate20);
-    //     GlobalFunctions.getTemporaryValueTime(observationBooking, obStaffStartTime1, Strings.obStaffStartTime1);
-    //     GlobalFunctions.getTemporaryValueTime(observationBooking, obStaffStartTime2, Strings.obStaffStartTime2);
-    //     GlobalFunctions.getTemporaryValueTime(observationBooking, obStaffStartTime3, Strings.obStaffStartTime3);
-    //     GlobalFunctions.getTemporaryValueTime(observationBooking, obStaffStartTime4, Strings.obStaffStartTime4);
-    //     GlobalFunctions.getTemporaryValueTime(observationBooking, obStaffStartTime5, Strings.obStaffStartTime5);
-    //     GlobalFunctions.getTemporaryValueTime(observationBooking, obStaffStartTime6, Strings.obStaffStartTime6);
-    //     GlobalFunctions.getTemporaryValueTime(observationBooking, obStaffStartTime7, Strings.obStaffStartTime7);
-    //     GlobalFunctions.getTemporaryValueTime(observationBooking, obStaffStartTime8, Strings.obStaffStartTime8);
-    //     GlobalFunctions.getTemporaryValueTime(observationBooking, obStaffStartTime9, Strings.obStaffStartTime9);
-    //     GlobalFunctions.getTemporaryValueTime(observationBooking, obStaffStartTime10, Strings.obStaffStartTime10);
-    //     GlobalFunctions.getTemporaryValueTime(observationBooking, obStaffStartTime11, Strings.obStaffStartTime11);
-    //     GlobalFunctions.getTemporaryValueTime(observationBooking, obStaffStartTime12, Strings.obStaffStartTime12);
-    //     GlobalFunctions.getTemporaryValueTime(observationBooking, obStaffStartTime13, Strings.obStaffStartTime13);
-    //     GlobalFunctions.getTemporaryValueTime(observationBooking, obStaffStartTime14, Strings.obStaffStartTime14);
-    //     GlobalFunctions.getTemporaryValueTime(observationBooking, obStaffStartTime15, Strings.obStaffStartTime15);
-    //     GlobalFunctions.getTemporaryValueTime(observationBooking, obStaffStartTime16, Strings.obStaffStartTime16);
-    //     GlobalFunctions.getTemporaryValueTime(observationBooking, obStaffStartTime17, Strings.obStaffStartTime17);
-    //     GlobalFunctions.getTemporaryValueTime(observationBooking, obStaffStartTime18, Strings.obStaffStartTime18);
-    //     GlobalFunctions.getTemporaryValueTime(observationBooking, obStaffStartTime19, Strings.obStaffStartTime19);
-    //     GlobalFunctions.getTemporaryValueTime(observationBooking, obStaffStartTime20, Strings.obStaffStartTime20);
-    //     GlobalFunctions.getTemporaryValueTime(observationBooking, obStaffEndTime1, Strings.obStaffEndTime1);
-    //     GlobalFunctions.getTemporaryValueTime(observationBooking, obStaffEndTime2, Strings.obStaffEndTime2);
-    //     GlobalFunctions.getTemporaryValueTime(observationBooking, obStaffEndTime3, Strings.obStaffEndTime3);
-    //     GlobalFunctions.getTemporaryValueTime(observationBooking, obStaffEndTime4, Strings.obStaffEndTime4);
-    //     GlobalFunctions.getTemporaryValueTime(observationBooking, obStaffEndTime5, Strings.obStaffEndTime5);
-    //     GlobalFunctions.getTemporaryValueTime(observationBooking, obStaffEndTime6, Strings.obStaffEndTime6);
-    //     GlobalFunctions.getTemporaryValueTime(observationBooking, obStaffEndTime7, Strings.obStaffEndTime7);
-    //     GlobalFunctions.getTemporaryValueTime(observationBooking, obStaffEndTime8, Strings.obStaffEndTime8);
-    //     GlobalFunctions.getTemporaryValueTime(observationBooking, obStaffEndTime9, Strings.obStaffEndTime9);
-    //     GlobalFunctions.getTemporaryValueTime(observationBooking, obStaffEndTime10, Strings.obStaffEndTime10);
-    //     GlobalFunctions.getTemporaryValueTime(observationBooking, obStaffEndTime11, Strings.obStaffEndTime11);
-    //     GlobalFunctions.getTemporaryValueTime(observationBooking, obStaffEndTime12, Strings.obStaffEndTime12);
-    //     GlobalFunctions.getTemporaryValueTime(observationBooking, obStaffEndTime13, Strings.obStaffEndTime13);
-    //     GlobalFunctions.getTemporaryValueTime(observationBooking, obStaffEndTime14, Strings.obStaffEndTime14);
-    //     GlobalFunctions.getTemporaryValueTime(observationBooking, obStaffEndTime15, Strings.obStaffEndTime15);
-    //     GlobalFunctions.getTemporaryValueTime(observationBooking, obStaffEndTime16, Strings.obStaffEndTime16);
-    //     GlobalFunctions.getTemporaryValueTime(observationBooking, obStaffEndTime17, Strings.obStaffEndTime17);
-    //     GlobalFunctions.getTemporaryValueTime(observationBooking, obStaffEndTime18, Strings.obStaffEndTime18);
-    //     GlobalFunctions.getTemporaryValueTime(observationBooking, obStaffEndTime19, Strings.obStaffEndTime19);
-    //     GlobalFunctions.getTemporaryValueTime(observationBooking, obStaffEndTime20, Strings.obStaffEndTime20);
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obStaffName1, Strings.obStaffName1);
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obStaffName2, Strings.obStaffName2);
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obStaffName3, Strings.obStaffName3);
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obStaffName4, Strings.obStaffName4);
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obStaffName5, Strings.obStaffName5);
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obStaffName6, Strings.obStaffName6);
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obStaffName7, Strings.obStaffName7);
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obStaffName8, Strings.obStaffName8);
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obStaffName9, Strings.obStaffName9);
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obStaffName10, Strings.obStaffName10);
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obStaffName11, Strings.obStaffName11);
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obStaffName12, Strings.obStaffName12);
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obStaffName13, Strings.obStaffName13);
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obStaffName14, Strings.obStaffName14);
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obStaffName15, Strings.obStaffName15);
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obStaffName16, Strings.obStaffName16);
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obStaffName17, Strings.obStaffName17);
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obStaffName18, Strings.obStaffName18);
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obStaffName19, Strings.obStaffName19);
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obStaffName20, Strings.obStaffName20);
-    //     if (observationBooking[Strings.obStaffRmn1] != null) {
-    //       obStaffRmn1 = GlobalFunctions.decryptString(observationBooking[Strings.obStaffRmn1]);
-    //     }
-    //     if (observationBooking[Strings.obStaffRmn2] != null) {
-    //       obStaffRmn2 = GlobalFunctions.decryptString(observationBooking[Strings.obStaffRmn2]);
-    //     }
-    //     if (observationBooking[Strings.obStaffRmn3] != null) {
-    //       obStaffRmn3 = GlobalFunctions.decryptString(observationBooking[Strings.obStaffRmn3]);
-    //     }
-    //     if (observationBooking[Strings.obStaffRmn4] != null) {
-    //       obStaffRmn4 = GlobalFunctions.decryptString(observationBooking[Strings.obStaffRmn4]);
-    //     }
-    //     if (observationBooking[Strings.obStaffRmn5] != null) {
-    //       obStaffRmn5 = GlobalFunctions.decryptString(observationBooking[Strings.obStaffRmn5]);
-    //     }
-    //     if (observationBooking[Strings.obStaffRmn6] != null) {
-    //       obStaffRmn6 = GlobalFunctions.decryptString(observationBooking[Strings.obStaffRmn6]);
-    //     }
-    //     if (observationBooking[Strings.obStaffRmn7] != null) {
-    //       obStaffRmn7 = GlobalFunctions.decryptString(observationBooking[Strings.obStaffRmn7]);
-    //     }
-    //     if (observationBooking[Strings.obStaffRmn8] != null) {
-    //       obStaffRmn8 = GlobalFunctions.decryptString(observationBooking[Strings.obStaffRmn8]);
-    //     }
-    //     if (observationBooking[Strings.obStaffRmn9] != null) {
-    //       obStaffRmn9 = GlobalFunctions.decryptString(observationBooking[Strings.obStaffRmn9]);
-    //     }
-    //     if (observationBooking[Strings.obStaffRmn10] != null) {
-    //       obStaffRmn10 = GlobalFunctions.decryptString(observationBooking[Strings.obStaffRmn10]);
-    //     }
-    //     if (observationBooking[Strings.obStaffRmn11] != null) {
-    //       obStaffRmn11 = GlobalFunctions.decryptString(observationBooking[Strings.obStaffRmn11]);
-    //     }
-    //     if (observationBooking[Strings.obStaffRmn12] != null) {
-    //       obStaffRmn12 = GlobalFunctions.decryptString(observationBooking[Strings.obStaffRmn12]);
-    //     }
-    //     if (observationBooking[Strings.obStaffRmn13] != null) {
-    //       obStaffRmn13 = GlobalFunctions.decryptString(observationBooking[Strings.obStaffRmn13]);
-    //     }
-    //     if (observationBooking[Strings.obStaffRmn14] != null) {
-    //       obStaffRmn14 = GlobalFunctions.decryptString(observationBooking[Strings.obStaffRmn14]);
-    //     }
-    //     if (observationBooking[Strings.obStaffRmn15] != null) {
-    //       obStaffRmn15 = GlobalFunctions.decryptString(observationBooking[Strings.obStaffRmn15]);
-    //     }
-    //     if (observationBooking[Strings.obStaffRmn16] != null) {
-    //       obStaffRmn16 = GlobalFunctions.decryptString(observationBooking[Strings.obStaffRmn16]);
-    //     }
-    //     if (observationBooking[Strings.obStaffRmn17] != null) {
-    //       obStaffRmn17 = GlobalFunctions.decryptString(observationBooking[Strings.obStaffRmn17]);
-    //     }
-    //     if (observationBooking[Strings.obStaffRmn18] != null) {
-    //       obStaffRmn18 = GlobalFunctions.decryptString(observationBooking[Strings.obStaffRmn18]);
-    //     }
-    //     if (observationBooking[Strings.obStaffRmn19] != null) {
-    //       obStaffRmn19 = GlobalFunctions.decryptString(observationBooking[Strings.obStaffRmn19]);
-    //     }
-    //     if (observationBooking[Strings.obStaffRmn20] != null) {
-    //       obStaffRmn20 = GlobalFunctions.decryptString(observationBooking[Strings.obStaffRmn20]);
-    //     }
-    //     GlobalFunctions.getTemporaryValue(observationBooking, obUsefulDetails, Strings.obUsefulDetails);
-    //
-    //     if (mounted) {
-    //       setState(() {
-    //         _loadingTemporary = false;
-    //       });
-    //     }
-    //   } else {
-    //     if (mounted) {
-    //       setState(() {
-    //         _loadingTemporary = false;
-    //       });
-    //     }
-    //   }
-    // }
   }
 
   _increaseRowCount(){
@@ -1506,6 +1032,9 @@ class _ObservationBookingState extends State<ObservationBooking> {
         ),
         TextFormField(
           keyboardType: textInputType,
+          inputFormatters: textInputType == TextInputType.number ? <TextInputFormatter>[
+            FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
+          ] : null,
           validator: (String value) {
             String message;
             if(required){
@@ -1517,6 +1046,7 @@ class _ObservationBookingState extends State<ObservationBooking> {
           },
           maxLines: lines,
           decoration: InputDecoration(
+              filled: required && controller.text.isEmpty ? true : false, fillColor: Color(0xFF0000).withOpacity(0.3),
               suffixIcon: controller.text == ''
                   ? null
                   : IconButton(
@@ -1560,6 +1090,8 @@ class _ObservationBookingState extends State<ObservationBooking> {
             Flexible(
               child: IgnorePointer(
                 child: TextFormField(
+                  decoration: InputDecoration(              filled: required && controller.text.isEmpty ? true : false, fillColor: Color(0xFF0000).withOpacity(0.3),
+                  ),
                   enabled: true,
                   initialValue: null,
                   controller: controller,
@@ -1663,6 +1195,8 @@ class _ObservationBookingState extends State<ObservationBooking> {
             Flexible(
               child: IgnorePointer(
                 child: TextFormField(
+                  decoration: InputDecoration(              filled: required && controller.text.isEmpty ? true : false, fillColor: Color(0xFF0000).withOpacity(0.3),
+                  ),
                   enabled: true,
                   initialValue: null,
                   controller: controller,
@@ -1760,7 +1294,9 @@ class _ObservationBookingState extends State<ObservationBooking> {
             Flexible(
               child: IgnorePointer(
                 child: TextFormField(
-                  enabled: true,
+    decoration: InputDecoration(              filled: obStartDateTime.text.isEmpty ? true : false, fillColor: Color(0xFF0000).withOpacity(0.3)),
+
+    enabled: true,
                   initialValue: null,
                   controller: obStartDateTime,
                   onSaved: (String value) {
@@ -1852,46 +1388,50 @@ class _ObservationBookingState extends State<ObservationBooking> {
                 ),                                           ]
           ),
         ),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: obMhaAssessmentYes,
-                onChanged: (bool value) => setState(() {
-                  obMhaAssessmentYes = value;
-                  observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obMhaAssessmentYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+        Container(
+          color: obMhaAssessmentYes == false && obMhaAssessmentNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
 
-                  //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obMhaAssessmentYes : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId, widget.saved, widget.savedId);
-                  if (obMhaAssessmentNo == true){
-                    obMhaAssessmentNo = false;
-                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obMhaAssessmentNo, null, widget.jobId, widget.saved, widget.savedId);
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: obMhaAssessmentYes,
+                  onChanged: (bool value) => setState(() {
+                    obMhaAssessmentYes = value;
+                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obMhaAssessmentYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
 
-                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obMhaAssessmentNo : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: obMhaAssessmentNo,
-                onChanged: (bool value) => setState(() {
-                  obMhaAssessmentNo = value;
-                  observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obMhaAssessmentNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obMhaAssessmentYes : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId, widget.saved, widget.savedId);
+                    if (obMhaAssessmentNo == true){
+                      obMhaAssessmentNo = false;
+                      observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obMhaAssessmentNo, null, widget.jobId, widget.saved, widget.savedId);
 
-                  //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obMhaAssessmentNo : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId, widget.saved, widget.savedId);
-                  if (obMhaAssessmentYes == true){
-                    obMhaAssessmentYes = false;
-                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obMhaAssessmentYes, null, widget.jobId, widget.saved, widget.savedId);
+                      //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obMhaAssessmentNo : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: obMhaAssessmentNo,
+                  onChanged: (bool value) => setState(() {
+                    obMhaAssessmentNo = value;
+                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obMhaAssessmentNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+
+                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obMhaAssessmentNo : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId, widget.saved, widget.savedId);
+                    if (obMhaAssessmentYes == true){
+                      obMhaAssessmentYes = false;
+                      observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obMhaAssessmentYes, null, widget.jobId, widget.saved, widget.savedId);
 
 
-                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obMhaAssessmentYes : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
-                  }
-                }))
-          ],
+                      //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obMhaAssessmentYes : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -1917,48 +1457,52 @@ class _ObservationBookingState extends State<ObservationBooking> {
                 ),                                           ]
           ),
         ),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: obBedIdentifiedYes,
-                onChanged: (bool value) => setState(() {
-                  obBedIdentifiedYes = value;
+        Container(
+          color: obBedIdentifiedYes == false && obBedIdentifiedNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
 
-                  observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obBedIdentifiedYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: obBedIdentifiedYes,
+                  onChanged: (bool value) => setState(() {
+                    obBedIdentifiedYes = value;
 
-                  //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obBedIdentifiedYes : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId, widget.saved, widget.savedId);
-                  if (obBedIdentifiedNo == true){
-                    obBedIdentifiedNo = false;
+                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obBedIdentifiedYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
 
-                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obBedIdentifiedNo, null, widget.jobId, widget.saved, widget.savedId);
+                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obBedIdentifiedYes : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId, widget.saved, widget.savedId);
+                    if (obBedIdentifiedNo == true){
+                      obBedIdentifiedNo = false;
 
-                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obBedIdentifiedNo : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: obBedIdentifiedNo,
-                onChanged: (bool value) => setState(() {
-                  obBedIdentifiedNo = value;
-                  observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obBedIdentifiedNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                      observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obBedIdentifiedNo, null, widget.jobId, widget.saved, widget.savedId);
 
-                  //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obBedIdentifiedNo : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId, widget.saved, widget.savedId);
-                  if (obBedIdentifiedYes == true){
-                    obBedIdentifiedYes = false;
+                      //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obBedIdentifiedNo : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: obBedIdentifiedNo,
+                  onChanged: (bool value) => setState(() {
+                    obBedIdentifiedNo = value;
+                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obBedIdentifiedNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
 
-                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obBedIdentifiedYes, null, widget.jobId, widget.saved, widget.savedId);
+                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obBedIdentifiedNo : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId, widget.saved, widget.savedId);
+                    if (obBedIdentifiedYes == true){
+                      obBedIdentifiedYes = false;
 
-                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obBedIdentifiedYes : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
-                  }
-                }))
-          ],
+                      observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obBedIdentifiedYes, null, widget.jobId, widget.saved, widget.savedId);
+
+                      //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obBedIdentifiedYes : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -1984,45 +1528,49 @@ class _ObservationBookingState extends State<ObservationBooking> {
                 ),                                           ]
           ),
         ),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: obWrapDocumentationYes,
-                onChanged: (bool value) => setState(() {
-                  obWrapDocumentationYes = value;
-                  observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obWrapDocumentationYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+        Container(
+          color: obWrapDocumentationYes == false && obWrapDocumentationNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
 
-                  //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obWrapDocumentationYes : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId, widget.saved, widget.savedId);
-                  if (obWrapDocumentationNo == true){
-                    obWrapDocumentationNo = false;
-                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obWrapDocumentationNo, null, widget.jobId, widget.saved, widget.savedId);
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: obWrapDocumentationYes,
+                  onChanged: (bool value) => setState(() {
+                    obWrapDocumentationYes = value;
+                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obWrapDocumentationYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
 
-                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obWrapDocumentationNo : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: obWrapDocumentationNo,
-                onChanged: (bool value) => setState(() {
-                  obWrapDocumentationNo = value;
-                  observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obWrapDocumentationNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obWrapDocumentationYes : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId, widget.saved, widget.savedId);
+                    if (obWrapDocumentationNo == true){
+                      obWrapDocumentationNo = false;
+                      observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obWrapDocumentationNo, null, widget.jobId, widget.saved, widget.savedId);
 
-                  //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obWrapDocumentationNo : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId, widget.saved, widget.savedId);
-                  if (obWrapDocumentationYes == true){
-                    obWrapDocumentationYes = false;
-                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obWrapDocumentationYes, null, widget.jobId, widget.saved, widget.savedId);
+                      //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obWrapDocumentationNo : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: obWrapDocumentationNo,
+                  onChanged: (bool value) => setState(() {
+                    obWrapDocumentationNo = value;
+                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obWrapDocumentationNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
 
-                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obWrapDocumentationYes : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
-                  }
-                }))
-          ],
+                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obWrapDocumentationNo : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId, widget.saved, widget.savedId);
+                    if (obWrapDocumentationYes == true){
+                      obWrapDocumentationYes = false;
+                      observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obWrapDocumentationYes, null, widget.jobId, widget.saved, widget.savedId);
+
+                      //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obWrapDocumentationYes : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -2048,45 +1596,49 @@ class _ObservationBookingState extends State<ObservationBooking> {
                 ),                                           ]
           ),
         ),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: obSpecificCarePlanYes,
-                onChanged: (bool value) => setState(() {
-                  obSpecificCarePlanYes = value;
-                  observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obSpecificCarePlanYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+        Container(
+          color: obSpecificCarePlanYes == false && obSpecificCarePlanNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
 
-                  //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obSpecificCarePlanYes : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId, widget.saved, widget.savedId);
-                  if (obSpecificCarePlanNo == true){
-                    obSpecificCarePlanNo = false;
-                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obSpecificCarePlanNo, null, widget.jobId, widget.saved, widget.savedId);
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: obSpecificCarePlanYes,
+                  onChanged: (bool value) => setState(() {
+                    obSpecificCarePlanYes = value;
+                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obSpecificCarePlanYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
 
-                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obSpecificCarePlanNo : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: obSpecificCarePlanNo,
-                onChanged: (bool value) => setState(() {
-                  obSpecificCarePlanNo = value;
-                  observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obSpecificCarePlanNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obSpecificCarePlanYes : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId, widget.saved, widget.savedId);
+                    if (obSpecificCarePlanNo == true){
+                      obSpecificCarePlanNo = false;
+                      observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obSpecificCarePlanNo, null, widget.jobId, widget.saved, widget.savedId);
 
-                  //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obSpecificCarePlanNo : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId, widget.saved, widget.savedId);
-                  if (obSpecificCarePlanYes == true){
-                    obSpecificCarePlanYes = false;
-                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obSpecificCarePlanYes, null, widget.jobId, widget.saved, widget.savedId);
+                      //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obSpecificCarePlanNo : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: obSpecificCarePlanNo,
+                  onChanged: (bool value) => setState(() {
+                    obSpecificCarePlanNo = value;
+                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obSpecificCarePlanNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
 
-                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obSpecificCarePlanYes : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
-                  }
-                }))
-          ],
+                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obSpecificCarePlanNo : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId, widget.saved, widget.savedId);
+                    if (obSpecificCarePlanYes == true){
+                      obSpecificCarePlanYes = false;
+                      observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obSpecificCarePlanYes, null, widget.jobId, widget.saved, widget.savedId);
+
+                      //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obSpecificCarePlanYes : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -2112,45 +1664,48 @@ class _ObservationBookingState extends State<ObservationBooking> {
                 ),                                           ]
           ),
         ),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: obPatientWarningsYes,
-                onChanged: (bool value) => setState(() {
-                  obPatientWarningsYes = value;
-                  observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obPatientWarningsYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+        Container(
+          color: obPatientWarningsYes == false && obPatientWarningsNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: obPatientWarningsYes,
+                  onChanged: (bool value) => setState(() {
+                    obPatientWarningsYes = value;
+                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obPatientWarningsYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
 
-                  //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obPatientWarningsYes : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId, widget.saved, widget.savedId);
-                  if (obPatientWarningsNo == true){
-                    obPatientWarningsNo = false;
-                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obPatientWarningsNo, null, widget.jobId, widget.saved, widget.savedId);
+                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obPatientWarningsYes : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId, widget.saved, widget.savedId);
+                    if (obPatientWarningsNo == true){
+                      obPatientWarningsNo = false;
+                      observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obPatientWarningsNo, null, widget.jobId, widget.saved, widget.savedId);
 
-                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obPatientWarningsNo : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: obPatientWarningsNo,
-                onChanged: (bool value) => setState(() {
-                  obPatientWarningsNo = value;
-                  observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obPatientWarningsNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                      //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obPatientWarningsNo : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: obPatientWarningsNo,
+                  onChanged: (bool value) => setState(() {
+                    obPatientWarningsNo = value;
+                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obPatientWarningsNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
 
-                  //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obPatientWarningsNo : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId, widget.saved, widget.savedId);
-                  if (obPatientWarningsYes == true){
-                    obPatientWarningsYes = false;
-                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obPatientWarningsYes, null, widget.jobId, widget.saved, widget.savedId);
+                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obPatientWarningsNo : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId, widget.saved, widget.savedId);
+                    if (obPatientWarningsYes == true){
+                      obPatientWarningsYes = false;
+                      observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obPatientWarningsYes, null, widget.jobId, widget.saved, widget.savedId);
 
-                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obPatientWarningsYes : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
-                  }
-                }))
-          ],
+                      //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obPatientWarningsYes : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -2176,45 +1731,48 @@ class _ObservationBookingState extends State<ObservationBooking> {
                 ),                                           ]
           ),
         ),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: obGenderConcernsYes,
-                onChanged: (bool value) => setState(() {
-                  obGenderConcernsYes = value;
-                  observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obGenderConcernsYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+        Container(
+          color: obGenderConcernsYes == false && obGenderConcernsNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: obGenderConcernsYes,
+                  onChanged: (bool value) => setState(() {
+                    obGenderConcernsYes = value;
+                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obGenderConcernsYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
 
-                  //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obGenderConcernsYes : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId, widget.saved, widget.savedId);
-                  if (obGenderConcernsNo == true){
-                    obGenderConcernsNo = false;
-                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obGenderConcernsNo, null, widget.jobId, widget.saved, widget.savedId);
+                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obGenderConcernsYes : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId, widget.saved, widget.savedId);
+                    if (obGenderConcernsNo == true){
+                      obGenderConcernsNo = false;
+                      observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obGenderConcernsNo, null, widget.jobId, widget.saved, widget.savedId);
 
-                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obGenderConcernsNo : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: obGenderConcernsNo,
-                onChanged: (bool value) => setState(() {
-                  obGenderConcernsNo = value;
-                  observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obGenderConcernsNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                      //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obGenderConcernsNo : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: obGenderConcernsNo,
+                  onChanged: (bool value) => setState(() {
+                    obGenderConcernsNo = value;
+                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obGenderConcernsNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
 
-                  //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obGenderConcernsNo : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId, widget.saved, widget.savedId);
-                  if (obGenderConcernsYes == true){
-                    obGenderConcernsYes = false;
-                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obGenderConcernsYes, null, widget.jobId, widget.saved, widget.savedId);
+                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obGenderConcernsNo : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId, widget.saved, widget.savedId);
+                    if (obGenderConcernsYes == true){
+                      obGenderConcernsYes = false;
+                      observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obGenderConcernsYes, null, widget.jobId, widget.saved, widget.savedId);
 
-                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obGenderConcernsYes : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
-                  }
-                }))
-          ],
+                      //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obGenderConcernsYes : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -2240,45 +1798,48 @@ class _ObservationBookingState extends State<ObservationBooking> {
                 ),                                           ]
           ),
         ),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: obSafeguardingConcernsYes,
-                onChanged: (bool value) => setState(() {
-                  obSafeguardingConcernsYes = value;
-                  observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obSafeguardingConcernsYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+        Container(
+          color: obSafeguardingConcernsYes == false && obSafeguardingConcernsNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: obSafeguardingConcernsYes,
+                  onChanged: (bool value) => setState(() {
+                    obSafeguardingConcernsYes = value;
+                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obSafeguardingConcernsYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
 
-                  //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obSafeguardingConcernsYes : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId, widget.saved, widget.savedId);
-                  if (obSafeguardingConcernsNo == true){
-                    obSafeguardingConcernsNo = false;
-                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obSafeguardingConcernsNo, null, widget.jobId, widget.saved, widget.savedId);
+                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obSafeguardingConcernsYes : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId, widget.saved, widget.savedId);
+                    if (obSafeguardingConcernsNo == true){
+                      obSafeguardingConcernsNo = false;
+                      observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obSafeguardingConcernsNo, null, widget.jobId, widget.saved, widget.savedId);
 
-                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obSafeguardingConcernsNo : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: obSafeguardingConcernsNo,
-                onChanged: (bool value) => setState(() {
-                  obSafeguardingConcernsNo = value;
-                  observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obSafeguardingConcernsNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                      //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obSafeguardingConcernsNo : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: obSafeguardingConcernsNo,
+                  onChanged: (bool value) => setState(() {
+                    obSafeguardingConcernsNo = value;
+                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obSafeguardingConcernsNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
 
-                  //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obSafeguardingConcernsNo : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId, widget.saved, widget.savedId);
-                  if (obSafeguardingConcernsYes == true){
-                    obSafeguardingConcernsYes = false;
-                    observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obSafeguardingConcernsYes, null, widget.jobId, widget.saved, widget.savedId);
+                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obSafeguardingConcernsNo : GlobalFunctions.boolToTinyInt(value)}, user.uid, widget.jobId, widget.saved, widget.savedId);
+                    if (obSafeguardingConcernsYes == true){
+                      obSafeguardingConcernsYes = false;
+                      observationBookingModel.updateTemporaryRecord(widget.edit, Strings.obSafeguardingConcernsYes, null, widget.jobId, widget.saved, widget.savedId);
 
-                    //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obSafeguardingConcernsYes : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
-                  }
-                }))
-          ],
+                      //_databaseHelper.updateTemporaryObservationBookingField(widget.edit, {Strings.obSafeguardingConcernsYes : null}, user.uid, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -2882,6 +2443,49 @@ class _ObservationBookingState extends State<ObservationBooking> {
     );
   }
 
+  Widget _buildJobRefDrop() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        RichText(
+          text: TextSpan(
+              text: 'Reference',
+              style: TextStyle(
+                  fontSize: 16.0, fontFamily: 'Open Sans', color: bluePurple),
+              children:
+              [
+                TextSpan(
+                  text: ' *',
+                  style: TextStyle(
+                      color: Colors.red,
+                      fontSize: 16.0),
+                ),                                           ]
+          ),
+        ),
+        Container(
+          color: jobRefRef == 'Select One' ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: DropdownFormField(
+            expanded: false,
+            value: jobRefRef,
+            items: jobRefDrop.toList(),
+            onChanged: (val) => setState(() {
+              jobRefRef = val;
+              if(val == 'Select One'){
+                observationBookingModel.updateTemporaryRecord(widget.edit, Strings.jobRefRef, null, widget.jobId, widget.saved, widget.savedId);
+              } else {
+                observationBookingModel.updateTemporaryRecord(widget.edit, Strings.jobRefRef, val, widget.jobId, widget.saved, widget.savedId);
+              }
+
+              FocusScope.of(context).unfocus();
+            }),
+            initialValue: jobRefRef,
+          ),
+        ),
+        SizedBox(height: 15,),
+      ],
+    );
+  }
+
 
   void _resetForm() {
     showDialog(
@@ -2922,6 +2526,7 @@ class _ObservationBookingState extends State<ObservationBooking> {
                   FocusScope.of(context).requestFocus(new FocusNode());
                   setState(() {
                     jobRef.clear();
+                    jobRefRef = 'Select One';
                     obRequestedBy.clear();
                     obJobTitle.clear();
                     obJobContact.clear();
@@ -3149,6 +2754,7 @@ class _ObservationBookingState extends State<ObservationBooking> {
       if (success) {
         setState(() {
           jobRef.clear();
+          jobRefRef = 'Select One';
           obRequestedBy.clear();
           obJobTitle.clear();
           obJobContact.clear();
@@ -3434,6 +3040,7 @@ class _ObservationBookingState extends State<ObservationBooking> {
         if(success){
           setState(() {
             jobRef.clear();
+            jobRefRef = 'Select One';
             obRequestedBy.clear();
             obJobTitle.clear();
             obJobContact.clear();
@@ -3616,7 +3223,13 @@ class _ObservationBookingState extends State<ObservationBooking> {
             child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  _textFormField('Reference', jobRef, 1, true),
+                  Row(
+                    children: [
+                      Flexible(child: _buildJobRefDrop()),
+                      Container(width: 10,),
+                      Flexible(child: _textFormField('', jobRef, 1, true, TextInputType.number),),
+                    ],
+                  ),
                   _textFormField('Requested by', obRequestedBy, 1, true),
                   _textFormField('Job Title', obJobTitle, 1, true),
                   _textFormField('Contact Telephone Number', obJobContact, 1, true),

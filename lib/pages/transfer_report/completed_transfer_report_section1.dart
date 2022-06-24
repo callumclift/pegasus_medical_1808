@@ -164,6 +164,138 @@ class _CompletedTransferReportSection1State extends State<CompletedTransferRepor
   }
 
 
+  Widget _buildCheckboxRowAmbulanceTidyYes1(String text) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(text, style: TextStyle(color: bluePurple),),
+        Row(
+          children: <Widget>[
+            Text(
+              'Yes',
+            ),
+            Checkbox(
+                activeColor: bluePurple,
+                value: transferReportModel.selectedTransferReport[Strings.ambulanceTidyYes1] == null || transferReportModel.selectedTransferReport[Strings.ambulanceTidyYes1] == 0 ? false : true,
+                onChanged: (bool value){}),
+            Text(
+              'No',
+            ),
+            Checkbox(
+                activeColor: bluePurple,
+                value: transferReportModel.selectedTransferReport[Strings.ambulanceTidyNo1] == null || transferReportModel.selectedTransferReport[Strings.ambulanceTidyNo1] == 0 ? false : true,
+                onChanged: (bool value){}),
+          ],
+        )
+      ],
+    );
+  }
+  Widget _buildCheckboxRowLightsWorkingYes(String text) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(text, style: TextStyle(color: bluePurple),),
+        Row(
+          children: <Widget>[
+            Text(
+              'Yes',
+            ),
+            Checkbox(
+                activeColor: bluePurple,
+                value: transferReportModel.selectedTransferReport[Strings.lightsWorkingYes] == null || transferReportModel.selectedTransferReport[Strings.lightsWorkingYes] == 0 ? false : true,
+                onChanged: (bool value){}),
+            Text(
+              'No',
+            ),
+            Checkbox(
+                activeColor: bluePurple,
+                value: transferReportModel.selectedTransferReport[Strings.lightsWorkingNo] == null || transferReportModel.selectedTransferReport[Strings.lightsWorkingNo] == 0 ? false : true,
+                onChanged: (bool value){}),
+          ],
+        )
+      ],
+    );
+  }
+  Widget _buildCheckboxRowTyresInflatedYes(String text) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(text, style: TextStyle(color: bluePurple),),
+        Row(
+          children: <Widget>[
+            Text(
+              'Yes',
+            ),
+            Checkbox(
+                activeColor: bluePurple,
+                value: transferReportModel.selectedTransferReport[Strings.tyresInflatedYes] == null || transferReportModel.selectedTransferReport[Strings.tyresInflatedYes] == 0 ? false : true,
+                onChanged: (bool value){}),
+            Text(
+              'No',
+            ),
+            Checkbox(
+                activeColor: bluePurple,
+                value: transferReportModel.selectedTransferReport[Strings.tyresInflatedNo] == null || transferReportModel.selectedTransferReport[Strings.tyresInflatedNo] == 0 ? false : true,
+                onChanged: (bool value){}),
+          ],
+        )
+      ],
+    );
+  }
+  Widget _buildCheckboxRowWarningSignsYes(String text) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(text, style: TextStyle(color: bluePurple),),
+        Row(
+          children: <Widget>[
+            Text(
+              'Yes',
+            ),
+            Checkbox(
+                activeColor: bluePurple,
+                value: transferReportModel.selectedTransferReport[Strings.warningSignsYes] == null || transferReportModel.selectedTransferReport[Strings.warningSignsYes] == 0 ? false : true,
+                onChanged: (bool value){}),
+            Text(
+              'No',
+            ),
+            Checkbox(
+                activeColor: bluePurple,
+                value: transferReportModel.selectedTransferReport[Strings.warningSignsNo] == null || transferReportModel.selectedTransferReport[Strings.warningSignsNo] == 0 ? false : true,
+                onChanged: (bool value){}),
+          ],
+        )
+      ],
+    );
+  }
+
+  Widget _buildCheckboxRowVehicleDamageYes(String text) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(text, style: TextStyle(color: bluePurple),),
+        Row(
+          children: <Widget>[
+            Text(
+              'Yes',
+            ),
+            Checkbox(
+                activeColor: bluePurple,
+                value: transferReportModel.selectedTransferReport[Strings.vehicleDamageYes] == null || transferReportModel.selectedTransferReport[Strings.vehicleDamageYes] == 0 ? false : true,
+                onChanged: (bool value){}),
+            Text(
+              'No',
+            ),
+            Checkbox(
+                activeColor: bluePurple,
+                value: transferReportModel.selectedTransferReport[Strings.vehicleDamageNo] == null || transferReportModel.selectedTransferReport[Strings.vehicleDamageNo] == 0 ? false : true,
+                onChanged: (bool value){}),
+          ],
+        )
+      ],
+    );
+  }
+
 
 
   Widget _buildPageContent(BuildContext context) {
@@ -182,11 +314,33 @@ class _CompletedTransferReportSection1State extends State<CompletedTransferRepor
           child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
+                SizedBox(height: 10,),
+                Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  Text('TRANSFER REPORT', style: TextStyle(color: bluePurple, fontWeight: FontWeight.bold, fontSize: 16),),
+                ],),
+                SizedBox(height: 10,),
                 _textFormField('Job Ref', GlobalFunctions.databaseValueString(transferReportModel.selectedTransferReport[Strings.jobRef])),
                 _buildDateField('Date', GlobalFunctions.databaseValueDate(transferReportModel.selectedTransferReport[Strings.date], false)),
                 SizedBox(height: 20,),
                 Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Text('TRANSFER REPORT', style: TextStyle(color: bluePurple, fontWeight: FontWeight.bold, fontSize: 16),),
+                  Text('PRE-TRANSFER VEHICLE CHECKLIST', style: TextStyle(color: bluePurple, fontWeight: FontWeight.bold, fontSize: 16),),
+                ],),
+                SizedBox(height: 20,),
+                _textFormField('Completed by', GlobalFunctions.decryptString(transferReportModel.selectedTransferReport[Strings.vehicleCompletedBy1])),
+                _textFormField('Ambulance Reg', GlobalFunctions.decryptString(transferReportModel.selectedTransferReport[Strings.ambulanceReg])),
+                //_textFormField('Start Mileage', GlobalFunctions.decryptString(transferReportModel.selectedTransferReport[Strings.vehicleStartMileage])),
+                _textFormField('Fuel to the nearest 1/4 tank', GlobalFunctions.decryptString(transferReportModel.selectedTransferReport[Strings.nearestTank1])),
+                _buildDateField('Date', GlobalFunctions.databaseValueDate(transferReportModel.selectedTransferReport[Strings.vehicleDate])),
+                _buildTimeField('Time', GlobalFunctions.databaseValueTime(transferReportModel.selectedTransferReport[Strings.vehicleTime])),
+                SizedBox(height: 10,),
+                _buildCheckboxRowAmbulanceTidyYes1('• Was the ambulance left clean and tidy?'),
+                _buildCheckboxRowLightsWorkingYes('• Ambulance lights working?'),
+                _buildCheckboxRowTyresInflatedYes('• Tyres appear inflated fully?'),
+                _buildCheckboxRowWarningSignsYes('• Vehicle warning signs showing?'),
+                _buildCheckboxRowVehicleDamageYes('• Any damage to vehicle / bodywork?'),
+                SizedBox(height: 20,),
+                Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  Text('JOB DETAILS', style: TextStyle(color: bluePurple, fontWeight: FontWeight.bold, fontSize: 16),),
                 ],),
                 SizedBox(height: 20,),
                 _buildTimeField('Start Time', GlobalFunctions.databaseValueTime(transferReportModel.selectedTransferReport[Strings.startTime])),
@@ -247,6 +401,15 @@ class _CompletedTransferReportSection1State extends State<CompletedTransferRepor
                     _buildTimeField('Driving Times', GlobalFunctions.databaseValueTime(transferReportModel.selectedTransferReport[Strings.drivingTimes5_2])),
                   ],
                 ),
+                transferReportModel.selectedTransferReport[Strings.name6] == null || transferReportModel.selectedTransferReport[Strings.name6] == '' ?
+                Container() : Column(
+                  children: [
+                    _textFormField('Name', GlobalFunctions.decryptString(transferReportModel.selectedTransferReport[Strings.name6])),
+                    _textFormField('Role', GlobalFunctions.decryptString(transferReportModel.selectedTransferReport[Strings.role6])),
+                    _buildTimeField('Driving Times', GlobalFunctions.databaseValueTime(transferReportModel.selectedTransferReport[Strings.drivingTimes6_1])),
+                    _buildTimeField('Driving Times', GlobalFunctions.databaseValueTime(transferReportModel.selectedTransferReport[Strings.drivingTimes6_2])),
+                  ],
+                ),
 
 
 
@@ -283,7 +446,7 @@ class _CompletedTransferReportSection1State extends State<CompletedTransferRepor
                 SizedBox(height: 20,),
                 Text('Collection Details', style: TextStyle(color: bluePurple, fontWeight: FontWeight.bold),),
                 SizedBox(height: 10,),
-                Text('This is a legal and binding document and will be retained by the company for reference of any incidents that may occur in the event that we have been given any incorrect information. By signing this form, you are satisfied that all property, section papers and documents listed within this report have been handed over to Pegasus Medical (1808) Ltd.', style: TextStyle(color: bluePurple),),
+                Text('This is a legal and binding document and will be retained by the company for reference of any incidents that may occur in the event that we have been given any incorrect information. By signing this form, you are satisfied that all property, section papers and documents listed within this report have been handed over from Pegasus Medical (1808) Ltd.', style: TextStyle(color: bluePurple),),
                 SizedBox(height: 10,),
                 Text('Section Papers handed over if required', style: TextStyle(color: bluePurple, fontWeight: FontWeight.bold),),
                 _textFormField('Unit', GlobalFunctions.decryptString(transferReportModel.selectedTransferReport[Strings.collectionUnit])),
@@ -294,7 +457,7 @@ class _CompletedTransferReportSection1State extends State<CompletedTransferRepor
                 SizedBox(height: 10,),
                 Text('Destination Details', style: TextStyle(color: bluePurple, fontWeight: FontWeight.bold),),
                 SizedBox(height: 10,),
-                Text('This is a legal and binding document and will be retained by the company for reference of any incidents that may occur in the event that we have been given any incorrect information. By signing this form, you are satisfied that all property, section papers and documents listed within this report have been handed over to Pegasus Medical (1808) Ltd.', style: TextStyle(color: bluePurple),),
+                Text('This is a legal and binding document and will be retained by the company for reference of any incidents that may occur in the event that we have been given any incorrect information. By signing this form, you are satisfied that all property, section papers and documents listed within this report have been handed over from Pegasus Medical (1808) Ltd.', style: TextStyle(color: bluePurple),),
                 SizedBox(height: 10,),
                 Text('Section Papers handed over if required', style: TextStyle(color: bluePurple, fontWeight: FontWeight.bold),),
                 _textFormField('Unit', GlobalFunctions.decryptString(transferReportModel.selectedTransferReport[Strings.destinationUnit])),

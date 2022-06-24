@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:pegasus_medical_1808/models/share_option.dart';
 import 'package:pegasus_medical_1808/services/navigation_service.dart';
 import 'package:pegasus_medical_1808/shared/global_config.dart';
@@ -242,7 +244,7 @@ class BookingFormModel extends ChangeNotifier {
 
     if(edit){
       final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
-          [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, selectedJobId)]
+          [Db.Filter.equals(Strings.documentId, selectedBookingForm[Strings.documentId]), Db.Filter.equals(Strings.jobId, selectedJobId)]
       ));
       await _editedBookingFormsStore.update(await _db, {field: value},
           finder: finder);
@@ -295,6 +297,8 @@ class BookingFormModel extends ChangeNotifier {
     await _temporaryBookingFormsStore.update(await _db, {
       Strings.formVersion: 1,
       Strings.jobRef: null,
+      Strings.jobRefRef: null,
+      Strings.jobRefNo: null,
       Strings.bfRequestedBy: null,
       Strings.bfJobTitle: null,
       Strings.bfJobContact: null,
@@ -344,8 +348,9 @@ class BookingFormModel extends ChangeNotifier {
       Strings.bfSafeguardingConcerns: null,
       Strings.bfAmbulanceRegistration: null,
       Strings.bfTimeDue: null,
-      Strings.assignedUserId: null,
-      Strings.assignedUserName: null,
+      Strings.assignedUsers: null,
+      // Strings.assignedUserId: null,
+      // Strings.assignedUserName: null,
     },
         finder: finder);
     notifyListeners();
@@ -359,7 +364,11 @@ class BookingFormModel extends ChangeNotifier {
     Map<String, dynamic> bookingForm = await getTemporaryRecord(edit, jobId, saved, savedId);
 
 
-    if(bookingForm[Strings.jobRef]== null || bookingForm[Strings.jobRef].toString().trim() == ''){
+    if(bookingForm[Strings.jobRefNo]== null || bookingForm[Strings.jobRefNo].toString().trim() == ''){
+      success = false;
+    }
+
+    if(bookingForm[Strings.jobRefRef]== null || bookingForm[Strings.jobRefRef]== 'Select One'){
       success = false;
     }
 
@@ -551,6 +560,8 @@ class BookingFormModel extends ChangeNotifier {
       Strings.jobId: '1',
       Strings.formVersion: '1',
       Strings.jobRef: bookingForm[Strings.jobRef],
+      Strings.jobRefRef: bookingForm[Strings.jobRefRef],
+      Strings.jobRefNo: bookingForm[Strings.jobRefNo],
       Strings.bfRequestedBy: bookingForm[Strings.bfRequestedBy],
       Strings.bfJobTitle: bookingForm[Strings.bfJobTitle],
       Strings.bfJobContact: bookingForm[Strings.bfJobContact],
@@ -600,8 +611,9 @@ class BookingFormModel extends ChangeNotifier {
       Strings.bfSafeguardingConcerns: bookingForm[Strings.bfSafeguardingConcerns],
       Strings.bfAmbulanceRegistration: bookingForm[Strings.bfAmbulanceRegistration],
       Strings.bfTimeDue: bookingForm[Strings.bfTimeDue],
-      Strings.assignedUserId: bookingForm[Strings.assignedUserId],
-      Strings.assignedUserName: bookingForm[Strings.assignedUserName],
+      Strings.assignedUsers: bookingForm[Strings.assignedUsers],
+      // Strings.assignedUserId: bookingForm[Strings.assignedUserId],
+      // Strings.assignedUserName: bookingForm[Strings.assignedUserName],
     };
 
     await _savedBookingFormsStore.record(id).put(await _db,
@@ -626,6 +638,7 @@ class BookingFormModel extends ChangeNotifier {
   Future<void> getSavedRecordsList() async{
 
     _isLoading = true;
+    _bookingForms = [];
     notifyListeners();
     String message = '';
 
@@ -642,7 +655,7 @@ class BookingFormModel extends ChangeNotifier {
 
         _bookingForms = List.from(_fetchedRecordList.reversed);
       } else {
-        message = 'No saved records available';
+        //message = 'No saved records available';
       }
 
     } catch(e){
@@ -674,7 +687,9 @@ class BookingFormModel extends ChangeNotifier {
       Strings.uid: user.uid,
       Strings.jobId: '1',
       Strings.formVersion: '1',
-      Strings.jobRef: bookingForm[Strings.jobRef],
+      Strings.jobRef: bookingForm[Strings.jobRefRef] + bookingForm[Strings.jobRefNo],
+      Strings.jobRefRef: bookingForm[Strings.jobRefRef],
+      Strings.jobRefNo: bookingForm[Strings.jobRefNo],
       Strings.bfRequestedBy: bookingForm[Strings.bfRequestedBy],
       Strings.bfJobTitle: bookingForm[Strings.bfJobTitle],
       Strings.bfJobContact: bookingForm[Strings.bfJobContact],
@@ -724,8 +739,9 @@ class BookingFormModel extends ChangeNotifier {
       Strings.bfSafeguardingConcerns: bookingForm[Strings.bfSafeguardingConcerns],
       Strings.bfAmbulanceRegistration: bookingForm[Strings.bfAmbulanceRegistration],
       Strings.bfTimeDue: bookingForm[Strings.bfTimeDue],
-      Strings.assignedUserId: bookingForm[Strings.assignedUserId],
-      Strings.assignedUserName: bookingForm[Strings.assignedUserName],
+      Strings.assignedUsers: bookingForm[Strings.assignedUsers],
+      // Strings.assignedUserId: bookingForm[Strings.assignedUserId],
+      // Strings.assignedUserName: bookingForm[Strings.assignedUserName],
       Strings.pendingTime: DateTime.now().toIso8601String(),
       Strings.serverUploaded: 0,
     };
@@ -751,8 +767,10 @@ class BookingFormModel extends ChangeNotifier {
             Strings.uid: user.uid,
             Strings.jobId: '1',
             Strings.formVersion: '1',
-            Strings.jobRef: GlobalFunctions.databaseValueString(bookingForm[Strings.jobRef]),
-            Strings.jobRefLowercase: GlobalFunctions.databaseValueString(bookingForm[Strings.jobRef]).toLowerCase(),
+            Strings.jobRef: GlobalFunctions.databaseValueString(bookingForm[Strings.jobRefRef]) + GlobalFunctions.databaseValueString(bookingForm[Strings.jobRefNo]),
+            Strings.jobRefLowercase: GlobalFunctions.databaseValueString(bookingForm[Strings.jobRefRef]).toLowerCase() + GlobalFunctions.databaseValueString(bookingForm[Strings.jobRefNo]).toLowerCase(),
+            Strings.jobRefRef: GlobalFunctions.databaseValueString(bookingForm[Strings.jobRefRef]),
+            Strings.jobRefNo:  int.parse(bookingForm[Strings.jobRefNo]),
             Strings.bfRequestedBy: bookingForm[Strings.bfRequestedBy],
             Strings.bfJobTitle: bookingForm[Strings.bfJobTitle],
             Strings.bfJobContact: bookingForm[Strings.bfJobContact],
@@ -802,11 +820,21 @@ class BookingFormModel extends ChangeNotifier {
             Strings.bfSafeguardingConcerns: bookingForm[Strings.bfSafeguardingConcerns],
             Strings.bfAmbulanceRegistration: bookingForm[Strings.bfAmbulanceRegistration],
             Strings.bfTimeDue: bookingForm[Strings.bfTimeDue],
-            Strings.assignedUserId: bookingForm[Strings.assignedUserId],
-            Strings.assignedUserName: bookingForm[Strings.assignedUserName],
+            Strings.assignedUsers: jsonDecode(bookingForm[Strings.assignedUsers]),
+            Strings.transferReportCreated: false,
+            // Strings.assignedUserId: bookingForm[Strings.assignedUserId],
+            // Strings.assignedUserName: bookingForm[Strings.assignedUserName],
             Strings.timestamp: FieldValue.serverTimestamp(),
             Strings.serverUploaded: 1,
           });
+
+          List<dynamic> assignedUsers = jsonDecode(bookingForm[Strings.assignedUsers]);
+
+
+          for(dynamic assignedUser in assignedUsers){
+            await FirebaseFirestore.instance.collection('users').doc(assignedUser.toString()).update(
+                {'transport_bookings': FieldValue.increment(1)});
+          }
 
           //Sembast
           await _bookingFormsStore.record(id).delete(await _db);
@@ -876,11 +904,23 @@ class BookingFormModel extends ChangeNotifier {
 
         try {
 
+          DocumentSnapshot editedFormSnapShot = await FirebaseFirestore.instance.collection('booking_forms').doc(bookingForm[Strings.documentId]).get();
+
+          Map<String, dynamic> editedForm = editedFormSnapShot.data() as Map<String, dynamic>;
+          if(editedForm.containsKey('assigned_users')){
+            List<dynamic> assignedUsers = editedForm['assigned_users'];
+            for(dynamic assignedUser in assignedUsers){
+              FirebaseFirestore.instance.collection('users').doc(assignedUser.toString()).update({'transport_bookings' : FieldValue.increment(-1)});
+            }
+          }
+
           await FirebaseFirestore.instance.collection('booking_forms').doc(bookingForm[Strings.documentId]).update({
             Strings.jobId: '1',
             Strings.formVersion: '1',
-            Strings.jobRef: GlobalFunctions.databaseValueString(bookingForm[Strings.jobRef]),
-            Strings.jobRefLowercase: GlobalFunctions.databaseValueString(bookingForm[Strings.jobRef]).toLowerCase(),
+            Strings.jobRef: GlobalFunctions.databaseValueString(bookingForm[Strings.jobRefRef]) + GlobalFunctions.databaseValueString(bookingForm[Strings.jobRefNo]),
+            Strings.jobRefLowercase: GlobalFunctions.databaseValueString(bookingForm[Strings.jobRefRef]).toLowerCase() + GlobalFunctions.databaseValueString(bookingForm[Strings.jobRefNo]).toLowerCase(),
+            Strings.jobRefRef: GlobalFunctions.databaseValueString(bookingForm[Strings.jobRefRef]),
+            Strings.jobRefNo:  int.parse(bookingForm[Strings.jobRefNo]),
             Strings.bfRequestedBy: bookingForm[Strings.bfRequestedBy],
             Strings.bfJobTitle: bookingForm[Strings.bfJobTitle],
             Strings.bfJobContact: bookingForm[Strings.bfJobContact],
@@ -930,10 +970,20 @@ class BookingFormModel extends ChangeNotifier {
             Strings.bfSafeguardingConcerns: bookingForm[Strings.bfSafeguardingConcerns],
             Strings.bfAmbulanceRegistration: bookingForm[Strings.bfAmbulanceRegistration],
             Strings.bfTimeDue: bookingForm[Strings.bfTimeDue],
-            Strings.assignedUserId: bookingForm[Strings.assignedUserId],
-            Strings.assignedUserName: bookingForm[Strings.assignedUserName],
+            Strings.assignedUsers: jsonDecode(bookingForm[Strings.assignedUsers]),
+            // Strings.assignedUserId: bookingForm[Strings.assignedUserId],
+            // Strings.assignedUserName: bookingForm[Strings.assignedUserName],
             Strings.serverUploaded: 1,
           });
+
+          List<dynamic> assignedUsers = jsonDecode(bookingForm[Strings.assignedUsers]);
+
+
+          for(dynamic assignedUser in assignedUsers) {
+            await FirebaseFirestore.instance.collection('users').doc(
+                assignedUser.toString()).update(
+                {'transport_bookings': FieldValue.increment(1)});
+          }
 
           //Sembast
 
@@ -975,6 +1025,649 @@ class BookingFormModel extends ChangeNotifier {
 
   }
 
+  Future<void> amendingJobRefs() async{
+
+    try {
+
+
+          QuerySnapshot snapshot;
+            try{
+              snapshot = await FirebaseFirestore.instance.collection('booking_forms').where(
+                  'job_ref',
+                  isGreaterThanOrEqualTo: 'SHW',
+                  isLessThan: 'SHW' + 'z'
+              ).get().timeout(Duration(seconds: 90));
+            } catch(e){
+              print(e);
+            }
+
+
+          Map<String, dynamic> snapshotData = {};
+
+          if(snapshot.docs.length < 1){
+            print('none');
+          } else {
+            for (DocumentSnapshot snap in snapshot.docs) {
+              snapshotData = snap.data();
+              String jobRef = snapshotData['job_ref'];
+
+              List<String> parts = jobRef.split('SHW');
+
+              try {
+                int jobRefNo = int.parse(parts[1]);
+                await FirebaseFirestore.instance.collection('booking_forms').doc(snap.id).update(
+                    {'job_ref_ref': 'SHW', 'job_ref_no': jobRefNo});
+                print('successful');
+              } catch (e) {
+              }
+            }
+
+          }
+
+
+
+
+          try{
+            snapshot = await FirebaseFirestore.instance.collection('booking_forms').where(
+                'job_ref',
+                isGreaterThanOrEqualTo: 'CWP',
+                isLessThan: 'CWP' + 'z'
+            ).get().timeout(Duration(seconds: 90));
+          } catch(e){
+            print(e);
+          }
+
+
+          if(snapshot.docs.length < 1){
+            print('none');
+          } else {
+            for (DocumentSnapshot snap in snapshot.docs) {
+              snapshotData = snap.data();
+              String jobRef = snapshotData['job_ref'];
+
+              List<String> parts = jobRef.split('CWP');
+
+              try {
+                int jobRefNo = int.parse(parts[1]);
+                await FirebaseFirestore.instance.collection('booking_forms').doc(snap.id).update(
+                    {'job_ref_ref': 'CWP', 'job_ref_no': jobRefNo});
+                print('successful');
+              } catch (e) {
+              }
+            }
+
+          }
+
+
+
+
+
+
+          try{
+            snapshot = await FirebaseFirestore.instance.collection('booking_forms').where(
+                'job_ref',
+                isGreaterThanOrEqualTo: 'SWB',
+                isLessThan: 'SWB' + 'z'
+            ).get().timeout(Duration(seconds: 90));
+          } catch(e){
+            print(e);
+          }
+
+
+          if(snapshot.docs.length < 1){
+            print('none');
+          } else {
+            for (DocumentSnapshot snap in snapshot.docs) {
+              snapshotData = snap.data();
+              String jobRef = snapshotData['job_ref'];
+
+              List<String> parts = jobRef.split('SWB');
+
+              try {
+                int jobRefNo = int.parse(parts[1]);
+                await FirebaseFirestore.instance.collection('booking_forms').doc(snap.id).update(
+                    {'job_ref_ref': 'SWB', 'job_ref_no': jobRefNo});
+                print('successful');
+              } catch (e) {
+              }
+            }
+
+          }
+
+
+
+          try{
+            snapshot = await FirebaseFirestore.instance.collection('booking_forms').where(
+                'job_ref',
+                isGreaterThanOrEqualTo: 'PG',
+                isLessThan: 'PG' + 'z'
+            ).get().timeout(Duration(seconds: 90));
+          } catch(e){
+            print(e);
+          }
+
+
+          if(snapshot.docs.length < 1){
+            print('none');
+          } else {
+            for (DocumentSnapshot snap in snapshot.docs) {
+              snapshotData = snap.data();
+              String jobRef = snapshotData['job_ref'];
+
+              List<String> parts = jobRef.split('PG');
+
+              try {
+                int jobRefNo = int.parse(parts[1]);
+                await FirebaseFirestore.instance.collection('booking_forms').doc(snap.id).update(
+                    {'job_ref_ref': 'PG', 'job_ref_no': jobRefNo});
+                print('successful');
+              } catch (e) {
+              }
+            }
+
+          }
+
+          try{
+            snapshot = await FirebaseFirestore.instance.collection('booking_forms').where(
+                'job_ref',
+                isGreaterThanOrEqualTo: 'PTB',
+                isLessThan: 'PTB' + 'z'
+            ).get().timeout(Duration(seconds: 90));
+          } catch(e){
+            print(e);
+          }
+
+
+          if(snapshot.docs.length < 1){
+            print('none');
+          } else {
+            for (DocumentSnapshot snap in snapshot.docs) {
+              snapshotData = snap.data();
+              String jobRef = snapshotData['job_ref'];
+
+              List<String> parts = jobRef.split('PTB');
+
+              try {
+                int jobRefNo = int.parse(parts[1]);
+                await FirebaseFirestore.instance.collection('booking_forms').doc(snap.id).update(
+                    {'job_ref_ref': 'PTB', 'job_ref_no': jobRefNo});
+                print('successful');
+              } catch (e) {
+              }
+            }
+
+          }
+
+          try{
+            snapshot = await FirebaseFirestore.instance.collection('booking_forms').where(
+                'job_ref',
+                isGreaterThanOrEqualTo: 'BSFT',
+                isLessThan: 'BSFT' + 'z'
+            ).get().timeout(Duration(seconds: 90));
+          } catch(e){
+            print(e);
+          }
+
+
+          if(snapshot.docs.length < 1){
+            print('none');
+          } else {
+            for (DocumentSnapshot snap in snapshot.docs) {
+              snapshotData = snap.data();
+              String jobRef = snapshotData['job_ref'];
+
+              List<String> parts = jobRef.split('BSFT');
+
+              try {
+                int jobRefNo = int.parse(parts[1]);
+                await FirebaseFirestore.instance.collection('booking_forms').doc(snap.id).update(
+                    {'job_ref_ref': 'BSFT', 'job_ref_no': jobRefNo});
+                print('successful');
+              } catch (e) {
+              }
+            }
+
+          }
+
+
+          try{
+            snapshot = await FirebaseFirestore.instance.collection('booking_forms').where(
+                'job_ref',
+                isGreaterThanOrEqualTo: 'LP',
+                isLessThan: 'LP' + 'z'
+            ).get().timeout(Duration(seconds: 90));
+          } catch(e){
+            print(e);
+          }
+
+
+          if(snapshot.docs.length < 1){
+            print('none');
+          } else {
+            for (DocumentSnapshot snap in snapshot.docs) {
+              snapshotData = snap.data();
+              String jobRef = snapshotData['job_ref'];
+
+              List<String> parts = jobRef.split('LP');
+
+              try {
+                int jobRefNo = int.parse(parts[1]);
+                await FirebaseFirestore.instance.collection('booking_forms').doc(snap.id).update(
+                    {'job_ref_ref': 'LP', 'job_ref_no': jobRefNo});
+                print('successful');
+              } catch (e) {
+              }
+            }
+
+          }
+
+          try{
+            snapshot = await FirebaseFirestore.instance.collection('booking_forms').where(
+                'job_ref',
+                isGreaterThanOrEqualTo: 'PTHB',
+                isLessThan: 'PTHB' + 'z'
+            ).get().timeout(Duration(seconds: 90));
+          } catch(e){
+            print(e);
+          }
+
+
+          if(snapshot.docs.length < 1){
+            print('none');
+          } else {
+            for (DocumentSnapshot snap in snapshot.docs) {
+              snapshotData = snap.data();
+              String jobRef = snapshotData['job_ref'];
+
+              List<String> parts = jobRef.split('PTHB');
+
+              try {
+                int jobRefNo = int.parse(parts[1]);
+                await FirebaseFirestore.instance.collection('booking_forms').doc(snap.id).update(
+                    {'job_ref_ref': 'PTHB', 'job_ref_no': jobRefNo});
+                print('successful');
+              } catch (e) {
+              }
+            }
+
+          }
+
+
+
+
+          try{
+            snapshot = await FirebaseFirestore.instance.collection('booking_forms').where(
+                'job_ref',
+                isGreaterThanOrEqualTo: 'HWC',
+                isLessThan: 'HWC' + 'z'
+            ).get().timeout(Duration(seconds: 90));
+          } catch(e){
+            print(e);
+          }
+
+
+          if(snapshot.docs.length < 1){
+            print('none');
+          } else {
+            for (DocumentSnapshot snap in snapshot.docs) {
+              snapshotData = snap.data();
+              String jobRef = snapshotData['job_ref'];
+
+              List<String> parts = jobRef.split('HWC');
+
+              try {
+                int jobRefNo = int.parse(parts[1]);
+                await FirebaseFirestore.instance.collection('booking_forms').doc(snap.id).update(
+                    {'job_ref_ref': 'HWC', 'job_ref_no': jobRefNo});
+                print('successful');
+              } catch (e) {
+              }
+            }
+
+          }
+
+
+
+          try{
+            snapshot = await FirebaseFirestore.instance.collection('booking_forms').where(
+                'job_ref',
+                isGreaterThanOrEqualTo: 'UHB',
+                isLessThan: 'UHB' + 'z'
+            ).get().timeout(Duration(seconds: 90));
+          } catch(e){
+            print(e);
+          }
+
+
+          if(snapshot.docs.length < 1){
+            print('none');
+          } else {
+            for (DocumentSnapshot snap in snapshot.docs) {
+              snapshotData = snap.data();
+              String jobRef = snapshotData['job_ref'];
+
+              List<String> parts = jobRef.split('UHB');
+
+              try {
+                int jobRefNo = int.parse(parts[1]);
+                await FirebaseFirestore.instance.collection('booking_forms').doc(snap.id).update(
+                    {'job_ref_ref': 'UHB', 'job_ref_no': jobRefNo});
+                print('successful');
+              } catch (e) {
+              }
+            }
+
+          }
+
+
+
+
+          try{
+            snapshot = await FirebaseFirestore.instance.collection('booking_forms').where(
+                'job_ref',
+                isGreaterThanOrEqualTo: 'UHCW',
+                isLessThan: 'UHCW' + 'z'
+            ).get().timeout(Duration(seconds: 90));
+          } catch(e){
+            print(e);
+          }
+
+
+          if(snapshot.docs.length < 1){
+            print('none');
+          } else {
+            for (DocumentSnapshot snap in snapshot.docs) {
+              snapshotData = snap.data();
+              String jobRef = snapshotData['job_ref'];
+
+              List<String> parts = jobRef.split('UHCW');
+
+              try {
+                int jobRefNo = int.parse(parts[1]);
+                await FirebaseFirestore.instance.collection('booking_forms').doc(snap.id).update(
+                    {'job_ref_ref': 'UHCW', 'job_ref_no': jobRefNo});
+                print('successful');
+              } catch (e) {
+              }
+            }
+
+          }
+
+
+          try{
+            snapshot = await FirebaseFirestore.instance.collection('booking_forms').where(
+                'job_ref',
+                isGreaterThanOrEqualTo: 'SHCW',
+                isLessThan: 'SHCW' + 'z'
+            ).get().timeout(Duration(seconds: 90));
+          } catch(e){
+            print(e);
+          }
+
+
+          if(snapshot.docs.length < 1){
+            print('none');
+          } else {
+            for (DocumentSnapshot snap in snapshot.docs) {
+              snapshotData = snap.data();
+              String jobRef = snapshotData['job_ref'];
+
+              List<String> parts = jobRef.split('SHCW');
+
+              try {
+                int jobRefNo = int.parse(parts[1]);
+                await FirebaseFirestore.instance.collection('booking_forms').doc(snap.id).update(
+                    {'job_ref_ref': 'SHCW', 'job_ref_no': jobRefNo});
+                print('successful');
+              } catch (e) {
+              }
+            }
+
+          }
+
+
+          try{
+            snapshot = await FirebaseFirestore.instance.collection('booking_forms').where(
+                'job_ref',
+                isGreaterThanOrEqualTo: 'WM',
+                isLessThan: 'WM' + 'z'
+            ).get().timeout(Duration(seconds: 90));
+          } catch(e){
+            print(e);
+          }
+
+
+          if(snapshot.docs.length < 1){
+            print('none');
+          } else {
+            for (DocumentSnapshot snap in snapshot.docs) {
+              snapshotData = snap.data();
+              String jobRef = snapshotData['job_ref'];
+
+              List<String> parts = jobRef.split('WM');
+
+              try {
+                int jobRefNo = int.parse(parts[1]);
+                await FirebaseFirestore.instance.collection('booking_forms').doc(snap.id).update(
+                    {'job_ref_ref': 'WM', 'job_ref_no': jobRefNo});
+                print('successful');
+              } catch (e) {
+              }
+            }
+
+          }
+
+
+
+
+          try{
+            snapshot = await FirebaseFirestore.instance.collection('booking_forms').where(
+                'job_ref',
+                isGreaterThanOrEqualTo: 'BST',
+                isLessThan: 'BST' + 'z'
+            ).get().timeout(Duration(seconds: 90));
+          } catch(e){
+            print(e);
+          }
+
+
+          if(snapshot.docs.length < 1){
+            print('none');
+          } else {
+            for (DocumentSnapshot snap in snapshot.docs) {
+              snapshotData = snap.data();
+              String jobRef = snapshotData['job_ref'];
+
+              List<String> parts = jobRef.split('BST');
+
+              try {
+                int jobRefNo = int.parse(parts[1]);
+                await FirebaseFirestore.instance.collection('booking_forms').doc(snap.id).update(
+                    {'job_ref_ref': 'BST', 'job_ref_no': jobRefNo});
+                print('successful');
+              } catch (e) {
+              }
+            }
+
+          }
+
+
+          try{
+            snapshot = await FirebaseFirestore.instance.collection('booking_forms').where(
+                'job_ref',
+                isGreaterThanOrEqualTo: 'RWT',
+                isLessThan: 'RWT' + 'z'
+            ).get().timeout(Duration(seconds: 90));
+          } catch(e){
+            print(e);
+          }
+
+
+          if(snapshot.docs.length < 1){
+            print('none');
+          } else {
+            for (DocumentSnapshot snap in snapshot.docs) {
+              snapshotData = snap.data();
+              String jobRef = snapshotData['job_ref'];
+
+              List<String> parts = jobRef.split('RWT');
+
+              try {
+                int jobRefNo = int.parse(parts[1]);
+                await FirebaseFirestore.instance.collection('booking_forms').doc(snap.id).update(
+                    {'job_ref_ref': 'RWT', 'job_ref_no': jobRefNo});
+                print('successful');
+              } catch (e) {
+              }
+            }
+
+          }
+
+
+          try{
+            snapshot = await FirebaseFirestore.instance.collection('booking_forms').where(
+                'job_ref',
+                isGreaterThanOrEqualTo: 'WMH',
+                isLessThan: 'WMH' + 'z'
+            ).get().timeout(Duration(seconds: 90));
+          } catch(e){
+            print(e);
+          }
+
+
+          if(snapshot.docs.length < 1){
+            print('none');
+          } else {
+            for (DocumentSnapshot snap in snapshot.docs) {
+              snapshotData = snap.data();
+              String jobRef = snapshotData['job_ref'];
+
+              List<String> parts = jobRef.split('WMH');
+
+              try {
+                int jobRefNo = int.parse(parts[1]);
+                await FirebaseFirestore.instance.collection('booking_forms').doc(snap.id).update(
+                    {'job_ref_ref': 'WMH', 'job_ref_no': jobRefNo});
+                print('successful');
+              } catch (e) {
+              }
+            }
+
+          }
+
+
+          try{
+            snapshot = await FirebaseFirestore.instance.collection('booking_forms').where(
+                'job_ref',
+                isGreaterThanOrEqualTo: 'PTBH',
+                isLessThan: 'PTBH' + 'z'
+            ).get().timeout(Duration(seconds: 90));
+          } catch(e){
+            print(e);
+          }
+
+
+          if(snapshot.docs.length < 1){
+            print('none');
+          } else {
+            for (DocumentSnapshot snap in snapshot.docs) {
+              snapshotData = snap.data();
+              String jobRef = snapshotData['job_ref'];
+
+              List<String> parts = jobRef.split('PTBH');
+
+              try {
+                int jobRefNo = int.parse(parts[1]);
+                await FirebaseFirestore.instance.collection('booking_forms').doc(snap.id).update(
+                    {'job_ref_ref': 'PTBH', 'job_ref_no': jobRefNo});
+                print('successful');
+              } catch (e) {
+              }
+            }
+
+          }
+
+
+          try{
+            snapshot = await FirebaseFirestore.instance.collection('booking_forms').where(
+                'job_ref',
+                isGreaterThanOrEqualTo: 'NEL',
+                isLessThan: 'NEL' + 'z'
+            ).get().timeout(Duration(seconds: 90));
+          } catch(e){
+            print(e);
+          }
+
+
+          if(snapshot.docs.length < 1){
+            print('none');
+          } else {
+            for (DocumentSnapshot snap in snapshot.docs) {
+              snapshotData = snap.data();
+              String jobRef = snapshotData['job_ref'];
+
+              List<String> parts = jobRef.split('NEL');
+
+              try {
+                int jobRefNo = int.parse(parts[1]);
+                await FirebaseFirestore.instance.collection('booking_forms').doc(snap.id).update(
+                    {'job_ref_ref': 'NEL', 'job_ref_no': jobRefNo});
+                print('successful');
+              } catch (e) {
+              }
+            }
+
+          }
+
+
+          try{
+            snapshot = await FirebaseFirestore.instance.collection('booking_forms').where(
+                'job_ref',
+                isGreaterThanOrEqualTo: 'SMH',
+                isLessThan: 'SMH' + 'z'
+            ).get().timeout(Duration(seconds: 90));
+          } catch(e){
+            print(e);
+          }
+
+
+          if(snapshot.docs.length < 1){
+            print('none');
+          } else {
+            for (DocumentSnapshot snap in snapshot.docs) {
+              snapshotData = snap.data();
+              String jobRef = snapshotData['job_ref'];
+
+              List<String> parts = jobRef.split('SMH');
+
+              try {
+                int jobRefNo = int.parse(parts[1]);
+                await FirebaseFirestore.instance.collection('booking_forms').doc(snap.id).update(
+                    {'job_ref_ref': 'SMH', 'job_ref_no': jobRefNo});
+                print('successful');
+              } catch (e) {
+              }
+            }
+
+          }
+
+
+
+
+
+
+
+
+    } on TimeoutException catch (_) {
+      // A timeout occurred.
+    } catch(e){
+      print(e);
+
+    }
+
+  }
+
+
   Future<void> getBookingForms() async{
 
     _isLoading = true;
@@ -1005,14 +1698,14 @@ class BookingFormModel extends ChangeNotifier {
 
           if(user.role == 'Super User'){
             try{
-              snapshot = await FirebaseFirestore.instance.collection('booking_forms').orderBy('timestamp', descending: true).limit(10).get().timeout(Duration(seconds: 90));
+              snapshot = await FirebaseFirestore.instance.collection('booking_forms').orderBy('job_ref_no', descending: true).limit(10).get().timeout(Duration(seconds: 90));
             } catch(e){
               print(e);
             }
           } else {
             try{
               snapshot = await FirebaseFirestore.instance.collection('booking_forms').where(
-                  'uid', isEqualTo: user.uid).orderBy('timestamp', descending: true).limit(10).get().timeout(Duration(seconds: 90));
+                  'uid', isEqualTo: user.uid).orderBy('job_ref_no', descending: true).limit(10).get().timeout(Duration(seconds: 90));
             } catch(e){
               print(e);
             }
@@ -1086,13 +1779,13 @@ class BookingFormModel extends ChangeNotifier {
 
           QuerySnapshot snapshot;
           int currentLength = _bookingForms.length;
-          DateTime latestDate = DateTime.parse(_bookingForms[currentLength - 1][Strings.timestamp]);
+          int latestNo = int.parse(_bookingForms[currentLength - 1][Strings.jobRefNo]);
+
 
           if(user.role == 'Super User'){
             try {
-              snapshot = await FirebaseFirestore.instance.collection('booking_forms').orderBy(
-                  'timestamp', descending: true).startAfter(
-                  [Timestamp.fromDate(latestDate)]).limit(10)
+              snapshot = await FirebaseFirestore.instance.collection('booking_forms').where(Strings.jobRefNo, isLessThan: latestNo).orderBy(
+                  'job_ref_no', descending: true).limit(10)
                   .get()
                   .timeout(Duration(seconds: 90));
             } catch(e) {
@@ -1102,9 +1795,8 @@ class BookingFormModel extends ChangeNotifier {
           } else {
             try {
               snapshot = await FirebaseFirestore.instance.collection('booking_forms').where(
-                  'uid', isEqualTo: user.uid).orderBy(
-                  'timestamp', descending: true).startAfter(
-                  [Timestamp.fromDate(latestDate)]).limit(10)
+                  'uid', isEqualTo: user.uid).where(Strings.jobRefNo, isLessThan: latestNo).orderBy(
+                  'job_ref_no', descending: true).limit(10)
                   .get()
                   .timeout(Duration(seconds: 90));
             } catch(e) {
@@ -1153,7 +1845,7 @@ class BookingFormModel extends ChangeNotifier {
 
   }
 
-  Future<bool> searchBookingForms(DateTime dateFrom, DateTime dateTo, String jobRef, String selectedUser) async{
+  Future<bool> searchBookingForms(DateTime dateFrom, DateTime dateTo, String jobRefRef, int jobRefNo, String selectedUser) async{
 
     _isLoading = true;
     notifyListeners();
@@ -1190,15 +1882,14 @@ class BookingFormModel extends ChangeNotifier {
             if(dateFrom != null && dateTo != null){
 
 
-              if(jobRef == null || jobRef.trim() == ''){
+              if(jobRefRef == 'Select One' && (jobRefNo == null)){
 
 
                 if(selectedUser != null){
                   try{
                     snapshot =
-                    await FirebaseFirestore.instance.collection('booking_forms')
-                        .where(Strings.uid, isEqualTo: selectedUser).orderBy('timestamp', descending: true)
-                        .startAt([dateTo]).endAt([dateFrom]).get()
+                    await FirebaseFirestore.instance.collection('booking_forms').where(Strings.uid, isEqualTo: selectedUser).where(Strings.bfJobDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.bfJobDate, isLessThanOrEqualTo: dateTo)
+                        .get()
                         .timeout(Duration(seconds: 90));
                   } catch(e){
                     print(e);
@@ -1206,8 +1897,8 @@ class BookingFormModel extends ChangeNotifier {
                 } else {
                   try{
                     snapshot =
-                    await FirebaseFirestore.instance.collection('booking_forms').orderBy('timestamp', descending: true)
-                        .startAt([dateTo]).endAt([dateFrom]).get()
+                    await FirebaseFirestore.instance.collection('booking_forms').where(Strings.bfJobDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.bfJobDate, isLessThanOrEqualTo: dateTo)
+                        .get()
                         .timeout(Duration(seconds: 90));
                   } catch(e){
                     print(e);
@@ -1215,14 +1906,13 @@ class BookingFormModel extends ChangeNotifier {
                 }
 
 
-              } else {
+              } else if(jobRefRef != 'Select One' && jobRefNo != null) {
 
                 if(selectedUser != null){
                   try{
                     snapshot =
-                    await FirebaseFirestore.instance.collection('booking_forms').where(Strings.uid, isEqualTo: selectedUser).
-                    where(Strings.jobRefLowercase, isEqualTo: jobRef.toLowerCase()).orderBy('timestamp', descending: true)
-                        .startAt([dateTo]).endAt([dateFrom]).get()
+                    await FirebaseFirestore.instance.collection('booking_forms').where(Strings.uid, isEqualTo: selectedUser).where(Strings.bfJobDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.bfJobDate, isLessThanOrEqualTo: dateTo)
+                        .where(Strings.jobRefRef, isEqualTo: jobRefRef).where(Strings.jobRefNo, isEqualTo: jobRefNo).get()
                         .timeout(Duration(seconds: 90));
                   } catch(e){
                     print(e);
@@ -1230,57 +1920,72 @@ class BookingFormModel extends ChangeNotifier {
                 } else {
                   try{
                     snapshot =
-                    await FirebaseFirestore.instance.collection('booking_forms')
-                        .where(Strings.jobRefLowercase, isEqualTo: jobRef.toLowerCase()).orderBy('timestamp', descending: true)
-                        .startAt([dateTo]).endAt([dateFrom]).get()
+                    await FirebaseFirestore.instance.collection('booking_forms').where(Strings.bfJobDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.bfJobDate, isLessThanOrEqualTo: dateTo)
+                        .where(Strings.jobRefRef, isEqualTo: jobRefRef).where(Strings.jobRefNo, isEqualTo: jobRefNo)
+                        .get()
                         .timeout(Duration(seconds: 90));
                   } catch(e){
                     print(e);
                   }
                 }
 
+              } else if(jobRefRef != 'Select One' && (jobRefNo == null)) {
 
+                if(selectedUser != null){
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('booking_forms').where(Strings.uid, isEqualTo: selectedUser).where(Strings.bfJobDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.bfJobDate, isLessThanOrEqualTo: dateTo)
+                        .where(Strings.jobRefRef, isEqualTo: jobRefRef).get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                } else {
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('booking_forms').where(Strings.bfJobDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.bfJobDate, isLessThanOrEqualTo: dateTo)
+                        .where(Strings.jobRefRef, isEqualTo: jobRefRef)
+                        .get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                }
 
+              } else if(jobRefRef == 'Select One' && jobRefNo != null) {
 
+                if(selectedUser != null){
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('booking_forms').where(Strings.uid, isEqualTo: selectedUser).where(Strings.bfJobDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.bfJobDate, isLessThanOrEqualTo: dateTo)
+                        .where(Strings.jobRefNo, isEqualTo: jobRefNo).get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                } else {
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('booking_forms').where(Strings.bfJobDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.bfJobDate, isLessThanOrEqualTo: dateTo)
+                        .where(Strings.jobRefNo, isEqualTo: jobRefNo)
+                        .get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                }
               }
 
             } else {
 
 
-              if(jobRef == null || jobRef.trim() == ''){
+              if(jobRefRef == 'Select One' && (jobRefNo == null)){
+
 
                 if(selectedUser != null){
                   try{
                     snapshot =
-                    await FirebaseFirestore.instance.collection('booking_forms')
-                        .where(Strings.uid, isEqualTo: selectedUser).orderBy('timestamp', descending: true)
-                        .get()
-                        .timeout(Duration(seconds: 90));
-                  } catch(e){
-                    print(e);
-                  }
-                } else {
-                  try{
-                    snapshot =
-                    await FirebaseFirestore.instance.collection('booking_forms').orderBy('timestamp', descending: true)
-                        .get()
-                        .timeout(Duration(seconds: 90));
-                  } catch(e){
-                    print(e);
-                  }
-                }
-
-
-
-
-              } else {
-
-                if(selectedUser != null){
-                  try{
-                    snapshot =
-                    await FirebaseFirestore.instance.collection('booking_forms')
-                        .where(Strings.jobRefLowercase, isEqualTo: jobRef.toLowerCase())
-                        .where(Strings.uid, isEqualTo: selectedUser).orderBy('timestamp', descending: true)
+                    await FirebaseFirestore.instance.collection('booking_forms').where(Strings.uid, isEqualTo: selectedUser)
                         .get()
                         .timeout(Duration(seconds: 90));
                   } catch(e){
@@ -1290,8 +1995,28 @@ class BookingFormModel extends ChangeNotifier {
                   try{
                     snapshot =
                     await FirebaseFirestore.instance.collection('booking_forms')
-                        .where(Strings.jobRefLowercase, isEqualTo: jobRef.toLowerCase())
-                        .orderBy('timestamp', descending: true)
+                        .get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                }
+              } else if(jobRefRef != 'Select One' && jobRefNo != null) {
+
+                if(selectedUser != null){
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('booking_forms').where(Strings.uid, isEqualTo: selectedUser)
+                        .where(Strings.jobRefRef, isEqualTo: jobRefRef).where(Strings.jobRefNo, isEqualTo: jobRefNo).get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                } else {
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('booking_forms')
+                        .where(Strings.jobRefRef, isEqualTo: jobRefRef).where(Strings.jobRefNo, isEqualTo: jobRefNo)
                         .get()
                         .timeout(Duration(seconds: 90));
                   } catch(e){
@@ -1299,7 +2024,51 @@ class BookingFormModel extends ChangeNotifier {
                   }
                 }
 
+              } else if(jobRefRef != 'Select One' && (jobRefNo == null)) {
 
+                if(selectedUser != null){
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('booking_forms').where(Strings.uid, isEqualTo: selectedUser)
+                        .where(Strings.jobRefRef, isEqualTo: jobRefRef).get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                } else {
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('booking_forms')
+                        .where(Strings.jobRefRef, isEqualTo: jobRefRef)
+                        .get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                }
+
+              } else if(jobRefRef == 'Select One' && jobRefNo != null) {
+
+                if(selectedUser != null){
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('booking_forms').where(Strings.uid, isEqualTo: selectedUser)
+                        .where(Strings.jobRefNo, isEqualTo: jobRefNo).get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                } else {
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('booking_forms')
+                        .where(Strings.jobRefNo, isEqualTo: jobRefNo)
+                        .get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                }
 
               }
 
@@ -1307,74 +2076,110 @@ class BookingFormModel extends ChangeNotifier {
 
           } else {
 
-
             if(dateFrom != null && dateTo != null){
 
 
-              if(jobRef == null || jobRef.trim() == ''){
+              if(jobRefRef == 'Select One' && (jobRefNo == null)){
+
 
                 try{
                   snapshot =
-                  await FirebaseFirestore.instance.collection('booking_forms')
-                      .where(Strings.uid, isEqualTo: user.uid).orderBy('timestamp', descending: true)
-                      .startAt([dateTo]).endAt([dateFrom]).get()
+                  await FirebaseFirestore.instance.collection('booking_forms').where(Strings.uid, isEqualTo: user.uid).where(Strings.bfJobDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.bfJobDate, isLessThanOrEqualTo: dateTo)
+                      .get()
+                      .timeout(Duration(seconds: 90));
+                } catch(e){
+                  print(e);
+                }
+              } else if(jobRefRef != 'Select One' && jobRefNo != null) {
+
+                try{
+                  snapshot =
+                  await FirebaseFirestore.instance.collection('booking_forms').where(Strings.uid, isEqualTo: user.uid).where(Strings.bfJobDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.bfJobDate, isLessThanOrEqualTo: dateTo)
+                      .where(Strings.jobRefRef, isEqualTo: jobRefRef).where(Strings.jobRefNo, isEqualTo: jobRefNo)
+                      .get()
+                      .timeout(Duration(seconds: 90));
+                } catch(e){
+                  print(e);
+                }
+              } else if(jobRefRef != 'Select One' && (jobRefNo == null)) {
+
+
+                try{
+                  snapshot =
+                  await FirebaseFirestore.instance.collection('booking_forms').where(Strings.uid, isEqualTo: user.uid).where(Strings.bfJobDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.bfJobDate, isLessThanOrEqualTo: dateTo)
+                      .where(Strings.jobRefRef, isEqualTo: jobRefRef)
+                      .get()
                       .timeout(Duration(seconds: 90));
                 } catch(e){
                   print(e);
                 }
 
-
-              } else {
-
+              } else if(jobRefRef == 'Select One' && jobRefNo != null) {
 
                 try{
                   snapshot =
-                  await FirebaseFirestore.instance.collection('booking_forms')
-                      .where(Strings.jobRefLowercase, isEqualTo: jobRef.toLowerCase())
-                      .where(Strings.uid, isEqualTo: user.uid).orderBy('timestamp', descending: true)
-                      .startAt([dateTo]).endAt([dateFrom]).get()
+                  await FirebaseFirestore.instance.collection('booking_forms').where(Strings.uid, isEqualTo: user.uid).where(Strings.bfJobDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.bfJobDate, isLessThanOrEqualTo: dateTo)
+                      .where(Strings.jobRefNo, isEqualTo: jobRefNo)
+                      .get()
                       .timeout(Duration(seconds: 90));
                 } catch(e){
                   print(e);
                 }
+
               }
-
 
             } else {
 
 
-              if(jobRef == null || jobRef.trim() == ''){
+              if(jobRefRef == 'Select One' && (jobRefNo == null)){
 
                 try{
                   snapshot =
-                  await FirebaseFirestore.instance.collection('booking_forms')
-                      .where(Strings.uid, isEqualTo: user.uid).orderBy('timestamp', descending: true)
+                  await FirebaseFirestore.instance.collection('booking_forms').where(Strings.uid, isEqualTo: user.uid)
+                      .get()
+                      .timeout(Duration(seconds: 90));
+                } catch(e){
+                  print(e);
+                }
+              } else if(jobRefRef != 'Select One' && jobRefNo != null) {
+
+
+                try{
+                  snapshot =
+                  await FirebaseFirestore.instance.collection('booking_forms').where(Strings.uid, isEqualTo: user.uid)
+                      .where(Strings.jobRefRef, isEqualTo: jobRefRef).where(Strings.jobRefNo, isEqualTo: jobRefNo)
                       .get()
                       .timeout(Duration(seconds: 90));
                 } catch(e){
                   print(e);
                 }
 
-
-              } else {
+              } else if(jobRefRef != 'Select One' && (jobRefNo == null)) {
 
                 try{
                   snapshot =
-                  await FirebaseFirestore.instance.collection('booking_forms')
-                      .where(Strings.jobRefLowercase, isEqualTo: jobRef.toLowerCase())
-                      .where(Strings.uid, isEqualTo: user.uid).orderBy('timestamp', descending: true)
+                  await FirebaseFirestore.instance.collection('booking_forms').where(Strings.uid, isEqualTo: user.uid)
+                      .where(Strings.jobRefRef, isEqualTo: jobRefRef)
                       .get()
                       .timeout(Duration(seconds: 90));
                 } catch(e){
                   print(e);
                 }
+
+              } else if(jobRefRef == 'Select One' && jobRefNo != null) {
+                try{
+                  snapshot =
+                  await FirebaseFirestore.instance.collection('booking_forms').where(Strings.uid, isEqualTo: user.uid)
+                      .where(Strings.jobRefNo, isEqualTo: jobRefNo)
+                      .get()
+                      .timeout(Duration(seconds: 90));
+                } catch(e){
+                  print(e);
+                }
+
               }
 
             }
-
-
-
-
           }
 
           Map<String, dynamic> snapshotData = {};
@@ -1382,7 +2187,10 @@ class BookingFormModel extends ChangeNotifier {
           if(snapshot.docs.length < 1){
             message = 'No Transport Bookings found';
           } else {
-            for (DocumentSnapshot snap in snapshot.docs) {
+            List<QueryDocumentSnapshot> snapDocs = snapshot.docs;
+            snapDocs.sort((a, b) => (b.get('job_ref_no')).compareTo(a.get('job_ref_no')));
+
+            for (DocumentSnapshot snap in snapDocs) {
 
               snapshotData = snap.data();
 
@@ -1420,103 +2228,6 @@ class BookingFormModel extends ChangeNotifier {
 
   }
 
-  Future<bool> searchMoreBookingForms(DateTime dateFrom, DateTime dateTo) async{
-
-    _isLoading = true;
-    notifyListeners();
-    bool success = false;
-    String message = '';
-    GlobalFunctions.showLoadingDialog('Searching Forms');
-    List<Map<String, dynamic>> _fetchedBookingFormList = [];
-
-    try {
-
-      bool hasDataConnection = await GlobalFunctions.hasDataConnection();
-
-      if(!hasDataConnection){
-
-        message = 'No Data Connection, unable to search Transport Bookings';
-
-      } else {
-
-
-        bool isTokenExpired = GlobalFunctions.isTokenExpired();
-        bool authenticated = true;
-
-        if(isTokenExpired) authenticated = await authenticationModel.reAuthenticate();
-
-        if(authenticated){
-
-
-          QuerySnapshot snapshot;
-          int currentLength = _bookingForms.length;
-          DateTime latestDate = DateTime.parse(_bookingForms[currentLength - 1]['timestamp']);
-
-          if(user.role == 'Super User'){
-            try{
-              snapshot =
-              await FirebaseFirestore.instance.collection('booking_forms').orderBy('timestamp', descending: true)
-                  .startAfter([Timestamp.fromDate(latestDate)]).endAt([dateFrom]).limit(10).get()
-                  .timeout(Duration(seconds: 90));
-            } catch(e){
-              print(e);
-            }
-
-          } else {
-
-            try{
-              snapshot =
-              await FirebaseFirestore.instance.collection('booking_forms').where('uid', isEqualTo: user.uid).orderBy('timestamp', descending: true)
-                  .startAfter([Timestamp.fromDate(latestDate)]).endAt([dateFrom]).limit(10).get()
-                  .timeout(Duration(seconds: 90));
-            } catch(e){
-              print(e);
-            }
-
-          }
-
-          Map<String, dynamic> snapshotData = {};
-
-          if(snapshot.docs.length < 1){
-            message = 'No Transport Bookings found';
-          } else {
-            for (DocumentSnapshot snap in snapshot.docs) {
-
-              snapshotData = snap.data();
-
-              final Map<String, dynamic> bookingForm = onlineBookingForm(snapshotData, snap.id);
-
-              _fetchedBookingFormList.add(bookingForm);
-
-            }
-
-            _bookingForms.addAll(_fetchedBookingFormList);
-            success = true;
-          }
-
-
-        }
-
-      }
-
-
-    } on TimeoutException catch (_) {
-      // A timeout occurred.
-      message = 'Network Timeout communicating with the server, unable to search Transport Bookings';
-    } catch(e){
-      print(e);
-      message = 'Something went wrong. Please try again';
-
-    }
-
-    _isLoading = false;
-    notifyListeners();
-    _selBookingFormId = null;
-    GlobalFunctions.dismissLoadingDialog();
-    if(message != '') GlobalFunctions.showToast(message);
-    return success;
-
-  }
 
   Map<String, dynamic> localBookingForm(Map<String, dynamic> localRecord){
     return {
@@ -1525,6 +2236,8 @@ class BookingFormModel extends ChangeNotifier {
       Strings.jobId: localRecord[Strings.jobId],
       Strings.formVersion: localRecord[Strings.formVersion],
       Strings.jobRef: localRecord[Strings.jobRef],
+      Strings.jobRefRef: localRecord[Strings.jobRefRef],
+      Strings.jobRefNo: localRecord[Strings.jobRefNo],
       Strings.bfRequestedBy: localRecord[Strings.bfRequestedBy],
       Strings.bfJobTitle: localRecord[Strings.bfJobTitle],
       Strings.bfJobContact: localRecord[Strings.bfJobContact],
@@ -1574,8 +2287,9 @@ class BookingFormModel extends ChangeNotifier {
       Strings.bfSafeguardingConcerns: localRecord[Strings.bfSafeguardingConcerns],
       Strings.bfAmbulanceRegistration: localRecord[Strings.bfAmbulanceRegistration],
       Strings.bfTimeDue: localRecord[Strings.bfTimeDue],
-      Strings.assignedUserId: localRecord[Strings.assignedUserId],
-      Strings.assignedUserName: localRecord[Strings.assignedUserName],
+      Strings.assignedUsers: jsonDecode(localRecord[Strings.assignedUsers]),
+      // Strings.assignedUserId: localRecord[Strings.assignedUserId],
+      // Strings.assignedUserName: localRecord[Strings.assignedUserName],
       Strings.serverUploaded: localRecord[Strings.serverUploaded],
       Strings.timestamp: localRecord[Strings.timestamp] == null ? null : localRecord[Strings.timestamp]
     };
@@ -1588,6 +2302,8 @@ class BookingFormModel extends ChangeNotifier {
       Strings.jobId: localRecord[Strings.jobId],
       Strings.formVersion: localRecord[Strings.formVersion],
       Strings.jobRef: localRecord[Strings.jobRef],
+      Strings.jobRefRef: localRecord[Strings.jobRefRef],
+      Strings.jobRefNo: localRecord[Strings.jobRefNo].toString(),
       Strings.bfRequestedBy: localRecord[Strings.bfRequestedBy],
       Strings.bfJobTitle: localRecord[Strings.bfJobTitle],
       Strings.bfJobContact: localRecord[Strings.bfJobContact],
@@ -1640,8 +2356,9 @@ class BookingFormModel extends ChangeNotifier {
       Strings.bfSafeguardingConcerns: localRecord[Strings.bfSafeguardingConcerns],
       Strings.bfAmbulanceRegistration: localRecord[Strings.bfAmbulanceRegistration],
       Strings.bfTimeDue: localRecord[Strings.bfTimeDue],
-      Strings.assignedUserId: localRecord[Strings.assignedUserId],
-      Strings.assignedUserName: localRecord[Strings.assignedUserName],
+      Strings.assignedUsers: localRecord[Strings.assignedUsers],
+      // Strings.assignedUserId: localRecord[Strings.assignedUserId],
+      // Strings.assignedUserName: localRecord[Strings.assignedUserName],
       Strings.serverUploaded: localRecord[Strings.serverUploaded],
       Strings.timestamp: localRecord[Strings.timestamp] == null ? null : DateTime
           .fromMillisecondsSinceEpoch(
@@ -1657,6 +2374,8 @@ class BookingFormModel extends ChangeNotifier {
       Strings.jobId: localRecord[Strings.jobId],
       Strings.formVersion: localRecord[Strings.formVersion],
       Strings.jobRef: localRecord[Strings.jobRef],
+      Strings.jobRefRef: localRecord[Strings.jobRefRef],
+      Strings.jobRefNo: localRecord[Strings.jobRefNo],
       Strings.bfRequestedBy: localRecord[Strings.bfRequestedBy],
       Strings.bfJobTitle: localRecord[Strings.bfJobTitle],
       Strings.bfJobContact: localRecord[Strings.bfJobContact],
@@ -1706,8 +2425,9 @@ class BookingFormModel extends ChangeNotifier {
       Strings.bfSafeguardingConcerns: localRecord[Strings.bfSafeguardingConcerns],
       Strings.bfAmbulanceRegistration: localRecord[Strings.bfAmbulanceRegistration],
       Strings.bfTimeDue: localRecord[Strings.bfTimeDue],
-      Strings.assignedUserId: localRecord[Strings.assignedUserId],
-      Strings.assignedUserName: localRecord[Strings.assignedUserName],
+      Strings.assignedUsers: localRecord[Strings.assignedUsers],
+      // Strings.assignedUserId: localRecord[Strings.assignedUserId],
+      // Strings.assignedUserName: localRecord[Strings.assignedUserName],
       Strings.serverUploaded: localRecord[Strings.serverUploaded],
       Strings.timestamp: localRecord[Strings.timestamp]
     };
@@ -1728,14 +2448,6 @@ class BookingFormModel extends ChangeNotifier {
         bookingForms.add(bookingFormRecord.value);
       }
 
-      // List<Map<String, dynamic>> bookingForms =
-      // await _databaseHelper.getAllWhereAndWhere(
-      //     Strings.bookingFormTable,
-      //     Strings.serverUploaded,
-      //     0,
-      //     Strings.uid,
-      //     user.uid);
-
 
       bool isTokenExpired = GlobalFunctions.isTokenExpired();
       bool authenticated = true;
@@ -1752,8 +2464,10 @@ class BookingFormModel extends ChangeNotifier {
             Strings.uid: user.uid,
             Strings.jobId: '1',
             Strings.formVersion: '1',
-            Strings.jobRef: GlobalFunctions.databaseValueString(bookingForm[Strings.jobRef]),
-            Strings.jobRefLowercase: GlobalFunctions.databaseValueString(bookingForm[Strings.jobRef]).toLowerCase(),
+            Strings.jobRef: GlobalFunctions.databaseValueString(bookingForm[Strings.jobRefRef]) + GlobalFunctions.databaseValueString(bookingForm[Strings.jobRefNo]),
+            Strings.jobRefLowercase: GlobalFunctions.databaseValueString(bookingForm[Strings.jobRefRef]).toLowerCase() + GlobalFunctions.databaseValueString(bookingForm[Strings.jobRefNo]).toLowerCase(),
+            Strings.jobRefRef: GlobalFunctions.databaseValueString(bookingForm[Strings.jobRefRef]),
+            Strings.jobRefNo: int.parse(bookingForm[Strings.jobRefNo]),
             Strings.bfRequestedBy: bookingForm[Strings.bfRequestedBy],
             Strings.bfJobTitle: bookingForm[Strings.bfJobTitle],
             Strings.bfJobContact: bookingForm[Strings.bfJobContact],
@@ -1803,11 +2517,22 @@ class BookingFormModel extends ChangeNotifier {
             Strings.bfSafeguardingConcerns: bookingForm[Strings.bfSafeguardingConcerns],
             Strings.bfAmbulanceRegistration: bookingForm[Strings.bfAmbulanceRegistration],
             Strings.bfTimeDue: bookingForm[Strings.bfTimeDue],
-            Strings.assignedUserId: bookingForm[Strings.assignedUserId],
-            Strings.assignedUserName: bookingForm[Strings.assignedUserName],
+            Strings.assignedUsers: jsonDecode(bookingForm[Strings.assignedUsers]),
+            Strings.transferReportCreated: false,
+            // Strings.assignedUserId: bookingForm[Strings.assignedUserId],
+            // Strings.assignedUserName: bookingForm[Strings.assignedUserName],
             Strings.timestamp: FieldValue.serverTimestamp(),
             Strings.serverUploaded: 1,
           });
+
+          List<dynamic> assignedUsers = jsonDecode(bookingForm[Strings.assignedUsers]);
+
+
+          for(dynamic assignedUser in assignedUsers) {
+            await FirebaseFirestore.instance.collection('users').doc(
+                assignedUser.toString()).update(
+                {'transport_bookings': FieldValue.increment(1)});
+          }
 
           await deletePendingRecord(bookingForm[Strings.localId]);
           success = true;
@@ -1926,15 +2651,8 @@ class BookingFormModel extends ChangeNotifier {
             width: width,
             padding: const EdgeInsets.all(5),
             decoration: BoxDecoration(
-              borderRadius: 5,
-              border: BoxBorder(
-                top: true,
-                left: true,
-                right: true,
-                bottom: true,
-                width: 1,
-                color: PdfColors.grey,
-              ),
+              borderRadius: BorderRadius.all(Radius.circular(5)),
+              border: Border.all(width: 1, color: PdfColors.grey),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -2000,15 +2718,8 @@ class BookingFormModel extends ChangeNotifier {
                         width: 158,
                         padding: const EdgeInsets.all(5),
                         decoration: BoxDecoration(
-                          borderRadius: 5,
-                          border: BoxBorder(
-                            top: true,
-                            left: true,
-                            right: true,
-                            bottom: true,
-                            width: 1,
-                            color: PdfColors.grey,
-                          ),
+                          borderRadius: BorderRadius.all(Radius.circular(5)),
+                          border: Border.all(width: 1, color: PdfColors.grey),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -2021,15 +2732,8 @@ class BookingFormModel extends ChangeNotifier {
                       child: Container(
                         padding: const EdgeInsets.all(5),
                         decoration: BoxDecoration(
-                          borderRadius: 5,
-                          border: BoxBorder(
-                            top: true,
-                            left: true,
-                            right: true,
-                            bottom: true,
-                            width: 1,
-                            color: PdfColors.grey,
-                          ),
+                          borderRadius: BorderRadius.all(Radius.circular(5)),
+                          border: Border.all(width: 1, color: PdfColors.grey),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -2136,25 +2840,18 @@ class BookingFormModel extends ChangeNotifier {
                       child: Container(
                         padding: const EdgeInsets.all(3),
                         decoration: BoxDecoration(
-                          borderRadius: 5,
-                          border: BoxBorder(
-                            top: true,
-                            left: true,
-                            right: true,
-                            bottom: true,
-                            width: 1,
-                            color: PdfColors.grey,
-                          ),
+                          borderRadius: BorderRadius.all(Radius.circular(5)),
+                          border: Border.all(width: 1, color: PdfColors.grey),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            value1 == 'signature' && signature != null ? Container(height: 20, child: FittedBox(alignment: Alignment.centerLeft, child: Image(PdfImage(doc,
+                            value1 == 'signature' && signature != null ? Container(height: 20, child: FittedBox(alignment: Alignment.centerLeft, child: Image(ImageProxy(PdfImage(doc,
                                 image: signature.data.buffer
                                     .asUint8List(),
                                 width: signature.width,
-                                height: signature.height)))) : Text(value1 == null || value1 == 'signature' ? '' : value1, style: TextStyle(fontSize: 8))
+                                height: signature.height))))) : Text(value1 == null || value1 == 'signature' ? '' : value1, style: TextStyle(fontSize: 8))
                           ],
                         ),
                       ))),
@@ -2165,25 +2862,18 @@ class BookingFormModel extends ChangeNotifier {
                       child: Container(
                         padding: const EdgeInsets.all(3),
                         decoration: BoxDecoration(
-                          borderRadius: 5,
-                          border: BoxBorder(
-                            top: true,
-                            left: true,
-                            right: true,
-                            bottom: true,
-                            width: 1,
-                            color: PdfColors.grey,
-                          ),
+                          borderRadius: BorderRadius.all(Radius.circular(5)),
+                          border: Border.all(width: 1, color: PdfColors.grey),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            value2 == 'signature' && signature != null ? Container(height: 20, child: FittedBox(alignment: Alignment.centerLeft, child: Image(PdfImage(doc,
+                            value2 == 'signature' && signature != null ? Container(height: 20, child: FittedBox(alignment: Alignment.centerLeft, child: Image(ImageProxy(PdfImage(doc,
                                 image: signature.data.buffer
                                     .asUint8List(),
                                 width: signature.width,
-                                height: signature.height)))) : Text(value2 == null || value2 == 'signature' ? '' : value2, style: TextStyle(fontSize: 8)),
+                                height: signature.height))))) : Text(value2 == null || value2 == 'signature' ? '' : value2, style: TextStyle(fontSize: 8)),
                           ],
                         ),
                       ))),
@@ -2216,27 +2906,13 @@ class BookingFormModel extends ChangeNotifier {
                   Text('Yes', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
                   Container(width: 5),
                   Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                        top: true,
-                        left: true,
-                        right: true,
-                        bottom: true,
-                        width: 1,
-                        color: PdfColors.grey,
-                      )),
+                      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                       child: Center(child: Text(selectedBookingForm[yesString] == null || selectedBookingForm[yesString] == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
                   Container(width: 10),
                   Text('No', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
                   Container(width: 5),
                   Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                        top: true,
-                        left: true,
-                        right: true,
-                        bottom: true,
-                        width: 1,
-                        color: PdfColors.grey,
-                      )),
+                      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                       child: Center(child: Text(selectedBookingForm[noString] == null || selectedBookingForm[noString] == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
                 ]
             ),
@@ -2250,11 +2926,11 @@ class BookingFormModel extends ChangeNotifier {
       Document pdf;
       pdf = Document();
       PdfDocument pdfDoc = pdf.document;
-      PdfImage pegasusLogo = await pdfImageFromImageProvider(pdf: pdfDoc, image: Material.AssetImage('assets/images/pegasusLogo.png'),);
+      final pegasusLogo = MemoryImage((await rootBundle.load('assets/images/pegasusLogo.png')).buffer.asUint8List(),);
 
 
       pdf.addPage(MultiPage(
-          theme: Theme.withFont(base: ttf, bold: ttfBold),
+          theme: ThemeData.withFont(base: ttf, bold: ttfBold),
           pageFormat: PdfPageFormat.a4,
           crossAxisAlignment: CrossAxisAlignment.start,
           margin: EdgeInsets.all(40),
@@ -2284,7 +2960,8 @@ class BookingFormModel extends ChangeNotifier {
                       ]
                   ),
 
-                  Container(height: 50, child: Image(pegasusLogo)),
+                  Container(height: 50, child: Image(pegasusLogo)
+),
 
                 ]
             ),
@@ -2357,7 +3034,7 @@ class BookingFormModel extends ChangeNotifier {
       if(kIsWeb){
 
         if(option == ShareOption.Download){
-          List<int> pdfList = pdf.save();
+          List<int> pdfList = await pdf.save();
           Uint8List pdfInBytes = Uint8List.fromList(pdfList);
 
 //Create blob and link from bytes
@@ -2387,14 +3064,13 @@ class BookingFormModel extends ChangeNotifier {
         final File file = File('$pdfPath/transport_booking_${formDate}_$id.pdf');
 
         if(option == ShareOption.Email){
-          file.writeAsBytesSync(pdf.save());
-        }
+await file.writeAsBytes(await pdf.save());}
 
         ConnectivityResult connectivityResult = await Connectivity().checkConnectivity();
 
         if(connectivityResult != ConnectivityResult.none) {
 
-          if(option == ShareOption.Share) Printing.sharePdf(bytes: pdf.save(),filename: 'transport_booking_${formDate}_$id.pdf');
+          if(option == ShareOption.Share) Printing.sharePdf(bytes: await pdf.save(),filename: 'transport_booking_${formDate}_$id.pdf');
           if(option == ShareOption.Print) await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save());
 
           if(option == ShareOption.Email) {

@@ -50,7 +50,7 @@ class _ProfilePictureState extends State<ProfilePicture> {
 
           if (userSnapshot.hasData) {
 
-            return userSnapshot.data[Strings.profilePicture] == null ? Container(color: Colors.black, child: Center(child: CircleAvatar(
+            return userSnapshot.data[Strings.profilePicture] == null || userSnapshot.data[Strings.profilePicture] == '' ? Container(color: Colors.black, child: Center(child: CircleAvatar(
               radius: MediaQuery.of(context).size.width *0.4,
               backgroundColor: bluePurple,
               child: FittedBox(

@@ -254,7 +254,6 @@ class _CompletedTransferReportOverallState extends State<CompletedTransferReport
               }
 
             } else if(value == edit){
-
               //Sembast
               await context.read<TransferReportModel>().setUpEditedRecord();
 
@@ -267,7 +266,7 @@ class _CompletedTransferReportOverallState extends State<CompletedTransferReport
                   })).then((_) {
 
                 //Sembast
-                context.read<TransferReportModel>().deleteEditedRecord();
+                //context.read<TransferReportModel>().deleteEditedRecord();
 
                 //Sqlflite
                 //context.read<TransferReportModel>().deleteEditedTransferReport();

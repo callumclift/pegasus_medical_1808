@@ -39,18 +39,6 @@ class _SpotChecksSearchResultsState extends State<SpotChecksSearchResults> {
   }
 
 
-  void loadMore() async {
-    setState(() {
-      _loadingMore = true;
-
-    });
-    await spotChecksModel.searchMoreSpotChecks(widget.dateFrom, widget.dateTo);
-    setState(() {
-      _loadingMore = false;
-    });
-  }
-
-
   void _viewSpotChecks(int index){
     spotChecksModel.selectSpotChecks(spotChecksModel.allSpotChecks[index]['document_id']);
     Navigator.of(context)
@@ -103,7 +91,7 @@ class _SpotChecksSearchResultsState extends State<SpotChecksSearchResults> {
       itemBuilder: (BuildContext context, int index) {
         return _buildListTile(index, spotChecks);
       },
-      itemCount: spotChecks.length >= 10 ? spotChecks.length + 1 : spotChecks.length,
+      itemCount: spotChecks.length,
     );
   }
 

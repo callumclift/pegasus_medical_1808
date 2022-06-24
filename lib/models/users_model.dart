@@ -828,9 +828,14 @@ class UsersModel extends ChangeNotifier {
           Map<String, dynamic> response = await changeUserEmail(deletedEmail);
           bool updatedEmail = response['success'];
 
+
+
           if(!updatedEmail) message = response['message'];
 
+
+
           if(updatedEmail){
+
 
             await FirebaseFirestore.instance.collection('users').doc(selectedUser.uid).update({'deleted': true, 'email': deletedEmail}).timeout(Duration(seconds: 60));
             // await databaseHelper.delete(Strings.usersTable, userData.uid);
@@ -872,18 +877,27 @@ class UsersModel extends ChangeNotifier {
     String message = 'Something went wrong';
     final request = http.MultipartRequest('POST', Uri.parse(changeEmailFunctionUrl));
 
+
+
     request.fields['email'] = Uri.encodeComponent(newEmail);
     request.fields['uid'] = Uri.encodeComponent(selectedUser.uid);
 
     request.headers['Authorization'] = 'Bearer ${user.token}';
+    print(request);
+
+
 
     try {
       final http.StreamedResponse streamedResponse = await request.send().timeout(Duration(seconds: 60));
       final http.Response response =
       await http.Response.fromStream(streamedResponse);
+
+      print(response.statusCode);
+
       if (response.statusCode != 200 && response.statusCode != 201) {
         if(response.body.contains('The email address is already in use by another account')) message = 'This email address is already in use by another account';
       } else if(response.statusCode == 200 || response.statusCode == 201){
+
         success = true;
         message = 'success';
       }

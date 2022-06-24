@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:pegasus_medical_1808/models/authentication_model.dart';
 import 'package:pegasus_medical_1808/models/transfer_report_model.dart';
+import 'package:pegasus_medical_1808/pages/patient_observation/patient_observation.dart';
 import 'package:pegasus_medical_1808/utils/database_helper.dart';
 import 'package:pegasus_medical_1808/widgets/app_bar_gradient.dart';
 import 'package:provider/provider.dart';
@@ -638,7 +639,7 @@ class _TransferReportOverallState extends State<TransferReportOverall> with Sing
           Map<String, dynamic> validationResult = await context.read<TransferReportModel>().validateTransferReport(widget.jobId, widget.edit, widget.saved, widget.savedId);
           if(validationResult['successJobDetails'] == false || validationResult['successVehicleChecklist'] == false || validationResult['successPatientDetails'] == false){
             //Navigator.of(context).pop();
-            showDialog(
+            await showDialog(
                 context: context,
                 builder: (BuildContext context) {
                   return AlertDialog(
@@ -684,16 +685,59 @@ class _TransferReportOverallState extends State<TransferReportOverall> with Sing
                     ),
                     actions: <Widget>[
                       TextButton(
-                        onPressed: () {
+                        onPressed: () async {
                           FocusScope.of(context).requestFocus(new FocusNode());
-                          Navigator.of(context).pop();
-                          Navigator.pushReplacement(
-                            context,
-                            PageRouteBuilder(
-                              pageBuilder: (context, animation1, animation2) => TransferReportOverall(tabIndex == null ? widget.initialIndex : tabIndex),
-                              transitionDuration: Duration(seconds: 0),
-                            ),
-                          );
+                          //Navigator.of(context).pop();
+                          if(!widget.edit && !widget.saved) {
+                            if(Navigator.canPop(context)){
+                              Navigator.of(context).pop();
+
+                            }
+                            Navigator.pushReplacement(
+                              context,
+                              PageRouteBuilder(
+                                pageBuilder: (context, animation1,
+                                    animation2) =>
+                                    TransferReportOverall(tabIndex == null
+                                        ? widget.initialIndex
+                                        : tabIndex),
+                                transitionDuration: Duration(seconds: 0),
+                              ),
+                            );
+                          } else if(widget.edit) {
+                            if(Navigator.canPop(context)){
+                            Navigator.of(context).pop();
+
+                            }
+                            //Sembast
+                            //await context.read<TransferReportModel>().setUpEditedRecord();
+
+                            //Sqlflite
+                            //await context.read<TransferReportModel>().setUpEditedTransferReport();
+
+                            Navigator.of(context).pushReplacement(
+                                MaterialPageRoute(builder: (BuildContext context) {
+                                  return TransferReportOverall(0, false, '1', false, true);
+                                })).then((_) {
+
+                              //Sembast
+                              //context.read<TransferReportModel>().deleteEditedRecord();
+
+                              //Sqlflite
+                              //context.read<TransferReportModel>().deleteEditedTransferReport();
+                            });
+                          } else if(widget.saved){
+                            Navigator.of(context).pop();
+
+
+                            Navigator.of(context).pushReplacement(
+                                MaterialPageRoute(builder: (BuildContext context) {
+                                  return TransferReportOverall(0, false, '1', false, false, true, widget.savedId);
+                                })).then((_) {
+                              //context.read<TransferReportModel>().getSavedRecordsList();
+                            });
+
+                          }
                         },
                         child: Text(
                           'OK',
@@ -713,7 +757,7 @@ class _TransferReportOverallState extends State<TransferReportOverall> with Sing
                 Navigator.pushReplacement(
                   context,
                   PageRouteBuilder(
-                    pageBuilder: (context, animation1, animation2) => TransferReportOverall(tabIndex == null ? widget.initialIndex : tabIndex),
+                    pageBuilder: (context, animation1, animation2) => TransferReportOverall(0),
                     transitionDuration: Duration(seconds: 0),
                   ),
                 );
@@ -726,13 +770,23 @@ class _TransferReportOverallState extends State<TransferReportOverall> with Sing
               bool success = await context.read<TransferReportModel>().submitTransferReport(widget.jobId, widget.edit, widget.saved, widget.savedId);
               FocusScope.of(context).requestFocus(new FocusNode());
               if(success){
-                Navigator.pushReplacement(
-                  context,
-                  PageRouteBuilder(
-                    pageBuilder: (context, animation1, animation2) => TransferReportOverall(tabIndex == null ? widget.initialIndex : tabIndex),
-                    transitionDuration: Duration(seconds: 0),
-                  ),
-                );
+                if(user.role != 'Normal User'){
+                  Navigator.pushReplacement(
+                    context,
+                    PageRouteBuilder(
+                      pageBuilder: (context, animation1, animation2) => TransferReportOverall(0),
+                      transitionDuration: Duration(seconds: 0),
+                    ),
+                  );
+                } else {
+                  Navigator.pushReplacement(
+                    context,
+                    PageRouteBuilder(
+                      pageBuilder: (context, animation1, animation2) => PatientObservation(),
+                    ),
+                  );
+
+                }
               } else {
                 Navigator.of(context).pop();
 
@@ -811,7 +865,7 @@ class _TransferReportOverallState extends State<TransferReportOverall> with Sing
           Navigator.pushReplacement(
             context,
             PageRouteBuilder(
-              pageBuilder: (context, animation1, animation2) => TransferReportOverall(tabIndex == null ? widget.initialIndex : tabIndex),
+              pageBuilder: (context, animation1, animation2) => TransferReportOverall(0),
               transitionDuration: Duration(seconds: 0),
             ),
           );

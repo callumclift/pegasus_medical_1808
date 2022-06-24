@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
+import 'package:pegasus_medical_1808/models/job_refs_model.dart';
 import 'package:pegasus_medical_1808/models/transfer_report_model.dart';
 import 'package:pegasus_medical_1808/shared/global_config.dart';
 import 'package:pegasus_medical_1808/shared/global_functions.dart';
@@ -51,6 +52,46 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
   bool _loadingTemporary = false;
   //DatabaseHelper _databaseHelper = DatabaseHelper();
   TransferReportModel transferReportModel;
+  JobRefsModel jobRefsModel;
+
+
+  //Vehicle Checklist
+  bool ambulanceTidyYes1 = false;
+  bool ambulanceTidyNo1 = false;
+  bool lightsWorkingYes = false;
+  bool lightsWorkingNo = false;
+  bool tyresInflatedYes = false;
+  bool tyresInflatedNo = false;
+  bool warningSignsYes = false;
+  bool warningSignsNo = false;
+  bool vehicleDamageYes = false;
+  bool vehicleDamageNo = false;
+  bool ambulanceTidyYes2 = false;
+  bool ambulanceTidyNo2 = false;
+  bool sanitiserCleanYes = false;
+  bool sanitiserCleanNo = false;
+  final TextEditingController vehicleCompletedBy1 = TextEditingController();
+  final TextEditingController ambulanceReg = TextEditingController();
+  final TextEditingController vehicleStartMileage = TextEditingController();
+  final TextEditingController vehicleCompletedBy2 = TextEditingController();
+  final TextEditingController finishMileage = TextEditingController();
+  final TextEditingController totalMileage = TextEditingController();
+  final TextEditingController issuesFaults = TextEditingController();
+  final TextEditingController vehicleDate = TextEditingController();
+  final TextEditingController vehicleTime = TextEditingController();
+  String nearestTank1 = 'Select One';
+  String nearestTank2 = 'Select One';
+  List<String> nearestTankDrop = [
+    'Select One',
+    '1/4',
+    '1/2',
+    '3/4 ',
+    'Full'];
+
+  bool showPopup = false;
+  bool mandatoryIssuesFaults;
+
+  //Start of Job Details
   final dateFormat = DateFormat("dd/MM/yyyy");
   final timeFormat = DateFormat("HH:mm");
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
@@ -72,8 +113,6 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
   final TextEditingController destinationDepartureTime = TextEditingController();
   final TextEditingController vehicleRegNo = TextEditingController();
   final TextEditingController startMileage = TextEditingController();
-  final TextEditingController finishMileage = TextEditingController();
-  final TextEditingController totalMileage = TextEditingController();
   final TextEditingController name1 = TextEditingController();
   final TextEditingController other1 = TextEditingController();
   final TextEditingController drivingTimes1_1 = TextEditingController();
@@ -159,14 +198,23 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
   int rowCount = 1;
   int roleCount = 1;
 
+  String jobRefRef = 'Select One';
+
+  List<String> jobRefDrop = [
+    'Select One',
+  ];
+
+
 
 
 
   @override
   void initState() {
     // TODO: implement initState
-    if(!isWeb) _loadingTemporary = true;
+    //if(!isWeb) _loadingTemporary = true;
+    _loadingTemporary = true;
     transferReportModel = Provider.of<TransferReportModel>(context, listen: false);
+    jobRefsModel = context.read<JobRefsModel>();
     _setUpTextControllerListeners();
     _getTemporaryTransferReport();
     super.initState();
@@ -174,6 +222,17 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
 
   @override
   void dispose() {
+
+    vehicleCompletedBy1.dispose();
+    ambulanceReg.dispose();
+    vehicleStartMileage.dispose();
+    vehicleCompletedBy2.dispose();
+    finishMileage.dispose();
+    totalMileage.dispose();
+    issuesFaults.dispose();
+    vehicleDate.dispose();
+    vehicleTime.dispose();
+
     jobRef.dispose();
     date.dispose();
     startTime.dispose();
@@ -191,8 +250,6 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
     destinationDepartureTime.dispose();
     vehicleRegNo.dispose();
     startMileage.dispose();
-    finishMileage.dispose();
-    totalMileage.dispose();
     name1.dispose();
     other1.dispose();
     drivingTimes1_1.dispose();
@@ -258,6 +315,54 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
     }
   }
 
+  void showIssuesDialog(){
+    showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.all(Radius.circular(32.0))),
+            contentPadding: EdgeInsets.fromLTRB(10, 10, 10, 0),
+            titlePadding: EdgeInsets.all(0),
+            title: Container(
+              padding: EdgeInsets.only(top: 10, bottom: 10),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [purpleDesign, purpleDesign]),
+                borderRadius: BorderRadius.only(topLeft: Radius.circular(32), topRight: Radius.circular(32)),
+              ),
+              child: Center(child: Text("Explain Issue / Fault", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),),),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                RichText(
+                  text: TextSpan(
+                    text: 'Please explain in issues / faults box at the bottom of the Vehicle Checklist page',
+                    style: TextStyle(color: Colors.black, fontSize: 16, fontFamily: 'Open Sans'),
+                  ),
+                ),
+              ],
+            ),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () {
+                  FocusScope.of(context).requestFocus(new FocusNode());
+                  Navigator.of(context).pop();
+                },
+                child: Text(
+                  'OK',
+                  style: TextStyle(color: blueDesign, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          );
+        });
+  }
+
   _addListener(TextEditingController controller, String value, [bool encrypt = true, bool capitalise = false, bool isName = false]){
 
     controller.addListener(() {
@@ -297,7 +402,12 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
 
   _setUpTextControllerListeners() {
 
-    _addListener(jobRef, Strings.jobRef, false, true);
+    _addListener(vehicleCompletedBy1, Strings.vehicleCompletedBy1, true, false, true);
+    _addListener(ambulanceReg, Strings.ambulanceReg, true, true);
+    _addListener(vehicleStartMileage, Strings.vehicleStartMileage);
+    _addListener(vehicleCompletedBy2, Strings.vehicleCompletedBy2, true, false, true);
+    _addListener(issuesFaults, Strings.issuesFaults);
+    _addListener(jobRef, Strings.jobRefNo, false, true);
     _addListener(totalHours, Strings.totalHours, false);
     _addListener(collectionDetails, Strings.collectionDetails);
     _addListener(collectionPostcode, Strings.collectionPostcode, true, true);
@@ -384,6 +494,15 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
   _getTemporaryTransferReport() async {
 
     if (mounted) {
+
+      await jobRefsModel.getJobRefs();
+
+      if(jobRefsModel.allJobRefs.isNotEmpty){
+        for(Map<String, dynamic> jobRefMap in jobRefsModel.allJobRefs){
+          jobRefDrop.add(jobRefMap['job_ref']);
+        }
+      }
+
       await transferReportModel.setupTemporaryRecord();
 
       bool hasRecord = await transferReportModel.checkRecordExists(widget.edit, widget.jobId, widget.saved, widget.savedId);
@@ -458,11 +577,176 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
 
         }
 
-        if (transferReport[Strings.jobRef] != null) {
+
+        //Vehicle Checklist
+
+
+
+        if(transferReport[Strings.vehicleCompletedBy1] == null){
+          vehicleCompletedBy1.text = user.name;
+          transferReportModel.updateTemporaryRecord(widget.edit, Strings.vehicleCompletedBy1, GlobalFunctions.encryptString(vehicleCompletedBy1.text), widget.jobId, widget.saved, widget.savedId);
+
+          // _databaseHelper.updateTemporaryTransferReportField(widget.edit, {
+          //   Strings.vehicleCompletedBy1: GlobalFunctions.encryptString(vehicleCompletedBy1.text)
+          // }, user.uid, widget.jobId, widget.saved, widget.savedId);
+        } else {
+          GlobalFunctions.getTemporaryValue(transferReport, vehicleCompletedBy1, Strings.vehicleCompletedBy1);
+        }
+        GlobalFunctions.getTemporaryValue(transferReport, ambulanceReg, Strings.ambulanceReg);
+        GlobalFunctions.getTemporaryValue(transferReport, vehicleStartMileage, Strings.vehicleStartMileage);
+        if (transferReport[Strings.nearestTank1] != null) {
+          nearestTank1 = GlobalFunctions.decryptString(transferReport[Strings.nearestTank1]);
+        }
+        if(transferReport[Strings.vehicleCompletedBy2] == null){
+          vehicleCompletedBy2.text = user.name;
+          transferReportModel.updateTemporaryRecord(widget.edit, Strings.vehicleCompletedBy2, GlobalFunctions.encryptString(vehicleCompletedBy2.text), widget.jobId, widget.saved, widget.savedId);
+
+          // _databaseHelper.updateTemporaryTransferReportField(widget.edit, {
+          //   Strings.vehicleCompletedBy2: GlobalFunctions.encryptString(vehicleCompletedBy2.text)
+          // }, user.uid, widget.jobId, widget.saved, widget.savedId);
+        } else {
+          GlobalFunctions.getTemporaryValue(transferReport, vehicleCompletedBy2, Strings.vehicleCompletedBy2);
+        }
+        if (transferReport[Strings.nearestTank2] != null) {
+          nearestTank2 = GlobalFunctions.decryptString(transferReport[Strings.nearestTank2]);
+        }
+        GlobalFunctions.getTemporaryValue(transferReport, finishMileage, Strings.finishMileage);
+        GlobalFunctions.getTemporaryValue(transferReport, totalMileage, Strings.totalMileage);
+        GlobalFunctions.getTemporaryValue(transferReport, issuesFaults, Strings.issuesFaults);
+        GlobalFunctions.getTemporaryValueDate(transferReport, vehicleDate, Strings.vehicleDate);
+        GlobalFunctions.getTemporaryValueTime(transferReport, vehicleTime, Strings.vehicleTime);
+
+        if (transferReport[Strings.ambulanceTidyYes1] != null) {
+          if (mounted) {
+            setState(() {
+              ambulanceTidyYes1 = GlobalFunctions.tinyIntToBool(transferReport[Strings.ambulanceTidyYes1]);
+            });
+          }
+        }
+        if (transferReport[Strings.ambulanceTidyNo1] != null) {
+          if (mounted) {
+            setState(() {
+              ambulanceTidyNo1 = GlobalFunctions.tinyIntToBool(transferReport[Strings.ambulanceTidyNo1]);
+              if(ambulanceTidyNo1) mandatoryIssuesFaults = true;
+            });
+          }
+        }
+        if (transferReport[Strings.lightsWorkingYes] != null) {
+          if (mounted) {
+            setState(() {
+              lightsWorkingYes = GlobalFunctions.tinyIntToBool(transferReport[Strings.lightsWorkingYes]);
+            });
+          }
+        }
+        if (transferReport[Strings.lightsWorkingNo] != null) {
+          if (mounted) {
+            setState(() {
+              lightsWorkingNo = GlobalFunctions.tinyIntToBool(transferReport[Strings.lightsWorkingNo]);
+              if(lightsWorkingNo) mandatoryIssuesFaults = true;
+
+            });
+          }
+        }
+        if (transferReport[Strings.tyresInflatedYes] != null) {
+          if (mounted) {
+            setState(() {
+              tyresInflatedYes = GlobalFunctions.tinyIntToBool(transferReport[Strings.tyresInflatedYes]);
+            });
+          }
+        }
+        if (transferReport[Strings.tyresInflatedNo] != null) {
+          if (mounted) {
+            setState(() {
+              tyresInflatedNo = GlobalFunctions.tinyIntToBool(transferReport[Strings.tyresInflatedNo]);
+              if(tyresInflatedNo) mandatoryIssuesFaults = true;
+            });
+          }
+        }
+        if (transferReport[Strings.warningSignsYes] != null) {
+          if (mounted) {
+            setState(() {
+              warningSignsYes = GlobalFunctions.tinyIntToBool(transferReport[Strings.warningSignsYes]);
+              if(warningSignsYes) mandatoryIssuesFaults = true;
+
+            });
+          }
+        }
+        if (transferReport[Strings.warningSignsNo] != null) {
+          if (mounted) {
+            setState(() {
+              warningSignsNo = GlobalFunctions.tinyIntToBool(transferReport[Strings.warningSignsNo]);
+            });
+          }
+        }
+        if (transferReport[Strings.vehicleDamageYes] != null) {
+          if (mounted) {
+            setState(() {
+              vehicleDamageYes = GlobalFunctions.tinyIntToBool(transferReport[Strings.vehicleDamageYes]);
+              if(vehicleDamageYes) mandatoryIssuesFaults = true;
+
+            });
+          }
+        }
+        if (transferReport[Strings.vehicleDamageNo] != null) {
+          if (mounted) {
+            setState(() {
+              vehicleDamageNo = GlobalFunctions.tinyIntToBool(transferReport[Strings.vehicleDamageNo]);
+            });
+          }
+        }
+        if (transferReport[Strings.ambulanceTidyYes2] != null) {
+          if (mounted) {
+            setState(() {
+              ambulanceTidyYes2 = GlobalFunctions.tinyIntToBool(transferReport[Strings.ambulanceTidyYes2]);
+            });
+          }
+        }
+        if (transferReport[Strings.ambulanceTidyNo2] != null) {
+          if (mounted) {
+            setState(() {
+              ambulanceTidyNo2 = GlobalFunctions.tinyIntToBool(transferReport[Strings.ambulanceTidyNo2]);
+              if(ambulanceTidyNo2) mandatoryIssuesFaults = true;
+
+            });
+          }
+        }
+        if (transferReport[Strings.sanitiserCleanYes] != null) {
+          if (mounted) {
+            setState(() {
+              sanitiserCleanYes = GlobalFunctions.tinyIntToBool(transferReport[Strings.sanitiserCleanYes]);
+            });
+          }
+        }
+        if (transferReport[Strings.sanitiserCleanNo] != null) {
+          if (mounted) {
+            setState(() {
+              sanitiserCleanNo = GlobalFunctions.tinyIntToBool(transferReport[Strings.sanitiserCleanNo]);
+              if(sanitiserCleanNo) mandatoryIssuesFaults = true;
+
+            });
+          }
+        }
+
+
+
+
+        //Normal Fields
+
+        if (transferReport[Strings.jobRefNo] != null) {
           jobRef.text = GlobalFunctions.databaseValueString(
-              transferReport[Strings.jobRef]);
+              transferReport[Strings.jobRefNo]);
         } else {
           jobRef.text = '';
+        }
+
+        if (transferReport[Strings.jobRefRef] != null) {
+
+          if(jobRefDrop.contains(GlobalFunctions.databaseValueString(transferReport[Strings.jobRefRef]))){
+            jobRefRef = GlobalFunctions.databaseValueString(transferReport[Strings.jobRefRef]);
+          } else {
+            jobRefRef = 'Select One';
+          }
+
         }
         if (transferReport[Strings.date] != null) {
           date.text =
@@ -481,7 +765,6 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
         GlobalFunctions.getTemporaryValue(transferReport, vehicleRegNo, Strings.vehicleRegNo);
         GlobalFunctions.getTemporaryValue(transferReport, startMileage, Strings.startMileage);
         GlobalFunctions.getTemporaryValue(transferReport, finishMileage, Strings.finishMileage);
-        GlobalFunctions.getTemporaryValue(transferReport, totalMileage, Strings.totalMileage);
         GlobalFunctions.getTemporaryValue(transferReport, name1, Strings.name1);
         if (transferReport[Strings.role1] != null) {
           setState(() {
@@ -718,14 +1001,6 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
         GlobalFunctions.getTemporaryValue(transferReport, collectionUnit, Strings.collectionUnit);
         GlobalFunctions.getTemporaryValue(transferReport, collectionPosition, Strings.collectionPosition);
         GlobalFunctions.getTemporaryValue(transferReport, collectionPrintName, Strings.collectionPrintName);
-        // if(transferReport[Strings.collectionPrintName] == null){
-        //   collectionPrintName.text = user.name;
-        //   _databaseHelper.updateTemporaryTransferReportField(widget.edit, {
-        //     Strings.collectionPrintName: GlobalFunctions.encryptString(collectionPrintName.text)
-        //   }, user.uid, widget.jobId, widget.saved, widget.savedId);
-        // } else {
-        //   GlobalFunctions.getTemporaryValue(transferReport, collectionPrintName, Strings.collectionPrintName);
-        // }
         GlobalFunctions.getTemporaryValue(transferReport, destinationUnit, Strings.destinationUnit);
         GlobalFunctions.getTemporaryValue(transferReport, destinationPosition, Strings.destinationPosition);
         GlobalFunctions.getTemporaryValue(transferReport, destinationPrintName, Strings.destinationPrintName);
@@ -781,424 +1056,10 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
         }
       }
     }
-
-
-
-
-    // if (mounted) {
-    //   int result = await _databaseHelper.checkTemporaryTransferReportExists(widget.edit,
-    //       user.uid, widget.jobId, widget.saved, widget.savedId);
-    //   if (result != 0) {
-    //     Map<String, dynamic> transferReport = await _databaseHelper
-    //         .getTemporaryTransferReport(widget.edit, user.uid, widget.jobId, widget.saved, widget.savedId);
-    //
-    //     if (transferReport[Strings.collectionSignature] != null) {
-    //       if (mounted) {
-    //         Uint8List decryptedSignature = await GlobalFunctions.decryptSignature(transferReport[Strings.collectionSignature]);
-    //         setState(() {
-    //           collectionImageBytes = decryptedSignature;
-    //         });
-    //       }
-    //     } else {
-    //       collectionSignature = null;
-    //       collectionImageBytes = null;
-    //     }
-    //     if (transferReport[Strings.collectionSignaturePoints] != null) {
-    //       if (mounted) {
-    //         String decryptedPoints = GlobalFunctions.decryptString(transferReport[Strings.collectionSignaturePoints]);
-    //         setState(() {
-    //           List<dynamic> fetchedSignaturePoints = jsonDecode(decryptedPoints);
-    //           fetchedSignaturePoints.forEach((dynamic pointMap) {
-    //             if (pointMap['pointType'] == 'tap') {
-    //               collectionSignaturePoints.add(Point(
-    //                   Offset(pointMap['dx'], pointMap['dy']),
-    //                   PointType.tap));
-    //             } else if (pointMap['pointType'] == 'move') {
-    //               collectionSignaturePoints.add(Point(
-    //                   Offset(pointMap['dx'], pointMap['dy']),
-    //                   PointType.move));
-    //             }
-    //           });
-    //         });
-    //       }
-    //     } else {
-    //       collectionSignaturePoints = [];
-    //
-    //     }
-    //     if (transferReport[Strings.destinationSignature] != null) {
-    //       if (mounted) {
-    //         Uint8List decryptedSignature = await GlobalFunctions.decryptSignature(transferReport[Strings.destinationSignature]);
-    //         setState(() {
-    //           destinationImageBytes = decryptedSignature;
-    //         });
-    //       }
-    //     } else {
-    //       destinationSignature = null;
-    //       destinationImageBytes = null;
-    //     }
-    //     if (transferReport[Strings.destinationSignaturePoints] != null) {
-    //       if (mounted) {
-    //         String decryptedPoints = GlobalFunctions.decryptString(transferReport[Strings.destinationSignaturePoints]);
-    //         setState(() {
-    //           List<dynamic> fetchedSignaturePoints = jsonDecode(decryptedPoints);
-    //           fetchedSignaturePoints.forEach((dynamic pointMap) {
-    //             if (pointMap['pointType'] == 'tap') {
-    //               destinationSignaturePoints.add(Point(
-    //                   Offset(pointMap['dx'], pointMap['dy']),
-    //                   PointType.tap));
-    //             } else if (pointMap['pointType'] == 'move') {
-    //               destinationSignaturePoints.add(Point(
-    //                   Offset(pointMap['dx'], pointMap['dy']),
-    //                   PointType.move));
-    //             }
-    //           });
-    //         });
-    //       }
-    //     } else {
-    //       destinationSignaturePoints = [];
-    //
-    //     }
-    //
-    //     if (transferReport[Strings.jobRef] != null) {
-    //       jobRef.text = GlobalFunctions.databaseValueString(
-    //           transferReport[Strings.jobRef]);
-    //     } else {
-    //       jobRef.text = '';
-    //     }
-    //     if (transferReport[Strings.date] != null) {
-    //       date.text =
-    //           dateFormat.format(DateTime.parse(transferReport[Strings.date]));
-    //     } else {
-    //       date.text = '';
-    //     }
-    //
-    //     print(transferReport[Strings.jobRef]);
-    //
-    //     GlobalFunctions.getTemporaryValue(transferReport, totalHours, Strings.totalHours, false);
-    //     GlobalFunctions.getTemporaryValue(transferReport, collectionDetails, Strings.collectionDetails);
-    //     GlobalFunctions.getTemporaryValue(transferReport, collectionPostcode, Strings.collectionPostcode);
-    //     GlobalFunctions.getTemporaryValue(transferReport, collectionContactNo, Strings.collectionContactNo);
-    //     GlobalFunctions.getTemporaryValue(transferReport, destinationDetails, Strings.destinationDetails);
-    //     GlobalFunctions.getTemporaryValue(transferReport, destinationPostcode, Strings.destinationPostcode);
-    //     GlobalFunctions.getTemporaryValue(transferReport, destinationContactNo, Strings.destinationContactNo);
-    //     GlobalFunctions.getTemporaryValue(transferReport, vehicleRegNo, Strings.vehicleRegNo);
-    //     GlobalFunctions.getTemporaryValue(transferReport, startMileage, Strings.startMileage);
-    //     GlobalFunctions.getTemporaryValue(transferReport, finishMileage, Strings.finishMileage);
-    //     GlobalFunctions.getTemporaryValue(transferReport, totalMileage, Strings.totalMileage);
-    //     GlobalFunctions.getTemporaryValue(transferReport, name1, Strings.name1);
-    //     if (transferReport[Strings.role1] != null) {
-    //       setState(() {
-    //         roleCount += 1;
-    //       });
-    //       String decryptedRole = GlobalFunctions.decryptString(transferReport[Strings.role1]);
-    //       print(decryptedRole);
-    //       bool inDrop = false;
-    //
-    //       for(String role in roleDrop){
-    //         if(decryptedRole == role){
-    //           inDrop = true;
-    //           role1 = decryptedRole;
-    //         }
-    //       }
-    //
-    //       if(!inDrop){
-    //         role1  = 'Other';
-    //         other1.text = decryptedRole;
-    //       }
-    //     }
-    //     if (transferReport[Strings.role2] != null) {
-    //       setState(() {
-    //         roleCount += 1;
-    //       });
-    //       String decryptedRole = GlobalFunctions.decryptString(transferReport[Strings.role2]);
-    //       print(decryptedRole);
-    //       bool inDrop = false;
-    //
-    //       for(String role in roleDrop){
-    //         if(decryptedRole == role){
-    //           inDrop = true;
-    //           role2 = decryptedRole;
-    //         }
-    //       }
-    //
-    //       if(!inDrop){
-    //         role2  = 'Other';
-    //         other2.text = decryptedRole;
-    //       }
-    //     }
-    //     if (transferReport[Strings.role3] != null) {
-    //       setState(() {
-    //         roleCount += 1;
-    //       });
-    //       String decryptedRole = GlobalFunctions.decryptString(transferReport[Strings.role3]);
-    //       print(decryptedRole);
-    //       bool inDrop = false;
-    //
-    //       for(String role in roleDrop){
-    //         if(decryptedRole == role){
-    //           inDrop = true;
-    //           role3 = decryptedRole;
-    //         }
-    //       }
-    //
-    //       if(!inDrop){
-    //         role3  = 'Other';
-    //         other3.text = decryptedRole;
-    //       }
-    //     }
-    //     if (transferReport[Strings.role4] != null) {
-    //       setState(() {
-    //         roleCount += 1;
-    //       });
-    //       String decryptedRole = GlobalFunctions.decryptString(transferReport[Strings.role4]);
-    //       print(decryptedRole);
-    //       bool inDrop = false;
-    //
-    //       for(String role in roleDrop){
-    //         if(decryptedRole == role){
-    //           inDrop = true;
-    //           role4 = decryptedRole;
-    //         }
-    //       }
-    //
-    //       if(!inDrop){
-    //         role4  = 'Other';
-    //         other4.text = decryptedRole;
-    //       }
-    //     }
-    //     if (transferReport[Strings.role5] != null) {
-    //       setState(() {
-    //         roleCount += 1;
-    //       });
-    //       String decryptedRole = GlobalFunctions.decryptString(transferReport[Strings.role5]);
-    //       print(decryptedRole);
-    //       bool inDrop = false;
-    //
-    //       for(String role in roleDrop){
-    //         if(decryptedRole == role){
-    //           inDrop = true;
-    //           role5 = decryptedRole;
-    //         }
-    //       }
-    //
-    //       if(!inDrop){
-    //         role5  = 'Other';
-    //         other5.text = decryptedRole;
-    //       }
-    //     }
-    //     if (transferReport[Strings.role6] != null) {
-    //       setState(() {
-    //         roleCount += 1;
-    //       });
-    //       String decryptedRole = GlobalFunctions.decryptString(transferReport[Strings.role6]);
-    //       print(decryptedRole);
-    //       bool inDrop = false;
-    //
-    //       for(String role in roleDrop){
-    //         if(decryptedRole == role){
-    //           inDrop = true;
-    //           role6 = decryptedRole;
-    //         }
-    //       }
-    //
-    //       if(!inDrop){
-    //         role6  = 'Other';
-    //         other6.text = decryptedRole;
-    //       }
-    //     }
-    //     if (transferReport[Strings.role7] != null) {
-    //       setState(() {
-    //         roleCount += 1;
-    //       });
-    //       String decryptedRole = GlobalFunctions.decryptString(transferReport[Strings.role7]);
-    //       print(decryptedRole);
-    //       bool inDrop = false;
-    //
-    //       for(String role in roleDrop){
-    //         if(decryptedRole == role){
-    //           inDrop = true;
-    //           role7 = decryptedRole;
-    //         }
-    //       }
-    //
-    //       if(!inDrop){
-    //         role7  = 'Other';
-    //         other7.text = decryptedRole;
-    //       }
-    //     }
-    //     if (transferReport[Strings.role8] != null) {
-    //       setState(() {
-    //         roleCount += 1;
-    //       });
-    //       String decryptedRole = GlobalFunctions.decryptString(transferReport[Strings.role8]);
-    //       print(decryptedRole);
-    //       bool inDrop = false;
-    //
-    //       for(String role in roleDrop){
-    //         if(decryptedRole == role){
-    //           inDrop = true;
-    //           role8 = decryptedRole;
-    //         }
-    //       }
-    //
-    //       if(!inDrop){
-    //         role8  = 'Other';
-    //         other8.text = decryptedRole;
-    //       }
-    //     }
-    //     if (transferReport[Strings.role9] != null) {
-    //       setState(() {
-    //         roleCount += 1;
-    //       });
-    //       String decryptedRole = GlobalFunctions.decryptString(transferReport[Strings.role9]);
-    //       print(decryptedRole);
-    //       bool inDrop = false;
-    //
-    //       for(String role in roleDrop){
-    //         if(decryptedRole == role){
-    //           inDrop = true;
-    //           role9 = decryptedRole;
-    //         }
-    //       }
-    //
-    //       if(!inDrop){
-    //         role9  = 'Other';
-    //         other9.text = decryptedRole;
-    //       }
-    //     }
-    //     if (transferReport[Strings.role10] != null) {
-    //       setState(() {
-    //         roleCount += 1;
-    //       });
-    //       String decryptedRole = GlobalFunctions.decryptString(transferReport[Strings.role10]);
-    //       print(decryptedRole);
-    //       bool inDrop = false;
-    //
-    //       for(String role in roleDrop){
-    //         if(decryptedRole == role){
-    //           inDrop = true;
-    //           role10 = decryptedRole;
-    //         }
-    //       }
-    //
-    //       if(!inDrop){
-    //         role10  = 'Other';
-    //         other10.text = decryptedRole;
-    //       }
-    //     }
-    //     if (transferReport[Strings.role11] != null) {
-    //       setState(() {
-    //         roleCount += 1;
-    //       });
-    //       String decryptedRole = GlobalFunctions.decryptString(transferReport[Strings.role11]);
-    //       print(decryptedRole);
-    //       bool inDrop = false;
-    //
-    //       for(String role in roleDrop){
-    //         if(decryptedRole == role){
-    //           inDrop = true;
-    //           role11 = decryptedRole;
-    //         }
-    //       }
-    //
-    //       if(!inDrop){
-    //         role11  = 'Other';
-    //         other11.text = decryptedRole;
-    //       }
-    //     }
-    //     setState(() {
-    //       rowCount = roleCount;
-    //     });
-    //     GlobalFunctions.getTemporaryValue(transferReport, name2, Strings.name2);
-    //     //GlobalFunctions.getTemporaryValue(transferReport, role2, Strings.role2);
-    //     GlobalFunctions.getTemporaryValue(transferReport, name3, Strings.name3);
-    //     //GlobalFunctions.getTemporaryValue(transferReport, role3, Strings.role3);
-    //     GlobalFunctions.getTemporaryValue(transferReport, name4, Strings.name4);
-    //     //GlobalFunctions.getTemporaryValue(transferReport, role4, Strings.role4);
-    //     GlobalFunctions.getTemporaryValue(transferReport, name5, Strings.name5);
-    //     //GlobalFunctions.getTemporaryValue(transferReport, role5, Strings.role5);
-    //     GlobalFunctions.getTemporaryValue(transferReport, name6, Strings.name6);
-    //     //GlobalFunctions.getTemporaryValue(transferReport, role6, Strings.role6);
-    //     GlobalFunctions.getTemporaryValue(transferReport, name7, Strings.name7);
-    //     //GlobalFunctions.getTemporaryValue(transferReport, role7, Strings.role7);
-    //     GlobalFunctions.getTemporaryValue(transferReport, name8, Strings.name8);
-    //     //GlobalFunctions.getTemporaryValue(transferReport, role8, Strings.role8);
-    //     GlobalFunctions.getTemporaryValue(transferReport, name9, Strings.name9);
-    //     //GlobalFunctions.getTemporaryValue(transferReport, role9, Strings.role9);
-    //     GlobalFunctions.getTemporaryValue(transferReport, name10, Strings.name10);
-    //     //GlobalFunctions.getTemporaryValue(transferReport, role10, Strings.role10);
-    //     GlobalFunctions.getTemporaryValue(transferReport, name11, Strings.name11);
-    //     //GlobalFunctions.getTemporaryValue(transferReport, role11, Strings.role11);
-    //     GlobalFunctions.getTemporaryValue(transferReport, collectionUnit, Strings.collectionUnit);
-    //     GlobalFunctions.getTemporaryValue(transferReport, collectionPosition, Strings.collectionPosition);
-    //     GlobalFunctions.getTemporaryValue(transferReport, collectionPrintName, Strings.collectionPrintName);
-    //     // if(transferReport[Strings.collectionPrintName] == null){
-    //     //   collectionPrintName.text = user.name;
-    //     //   _databaseHelper.updateTemporaryTransferReportField(widget.edit, {
-    //     //     Strings.collectionPrintName: GlobalFunctions.encryptString(collectionPrintName.text)
-    //     //   }, user.uid, widget.jobId, widget.saved, widget.savedId);
-    //     // } else {
-    //     //   GlobalFunctions.getTemporaryValue(transferReport, collectionPrintName, Strings.collectionPrintName);
-    //     // }
-    //     GlobalFunctions.getTemporaryValue(transferReport, destinationUnit, Strings.destinationUnit);
-    //     GlobalFunctions.getTemporaryValue(transferReport, destinationPosition, Strings.destinationPosition);
-    //     GlobalFunctions.getTemporaryValue(transferReport, destinationPrintName, Strings.destinationPrintName);
-    //     // if(transferReport[Strings.destinationPrintName] == null){
-    //     //   destinationPrintName.text = user.name;
-    //     //   _databaseHelper.updateTemporaryTransferReportField(widget.edit, {
-    //     //     Strings.destinationPrintName: GlobalFunctions.encryptString(destinationPrintName.text)
-    //     //   }, user.uid, widget.jobId, widget.saved, widget.savedId);
-    //     // } else {
-    //     //   GlobalFunctions.getTemporaryValue(transferReport, destinationPrintName, Strings.destinationPrintName);
-    //     // }
-    //     GlobalFunctions.getTemporaryValueTime(transferReport, startTime, Strings.startTime);
-    //     GlobalFunctions.getTemporaryValueTime(transferReport, finishTime, Strings.finishTime);
-    //     GlobalFunctions.getTemporaryValueTime(transferReport, collectionArrivalTime, Strings.collectionArrivalTime);
-    //     GlobalFunctions.getTemporaryValueTime(transferReport, collectionDepartureTime, Strings.collectionDepartureTime);
-    //     GlobalFunctions.getTemporaryValueTime(transferReport, destinationArrivalTime, Strings.destinationArrivalTime);
-    //     GlobalFunctions.getTemporaryValueTime(transferReport, destinationDepartureTime, Strings.destinationDepartureTime);
-    //     GlobalFunctions.getTemporaryValueTime(transferReport, drivingTimes1_1, Strings.drivingTimes1_1);
-    //     GlobalFunctions.getTemporaryValueTime(transferReport, drivingTimes1_2, Strings.drivingTimes1_2);
-    //     GlobalFunctions.getTemporaryValueTime(transferReport, drivingTimes2_1, Strings.drivingTimes2_1);
-    //     GlobalFunctions.getTemporaryValueTime(transferReport, drivingTimes2_2, Strings.drivingTimes2_2);
-    //     GlobalFunctions.getTemporaryValueTime(transferReport, drivingTimes3_1, Strings.drivingTimes3_1);
-    //     GlobalFunctions.getTemporaryValueTime(transferReport, drivingTimes3_2, Strings.drivingTimes3_2);
-    //     GlobalFunctions.getTemporaryValueTime(transferReport, drivingTimes4_1, Strings.drivingTimes4_1);
-    //     GlobalFunctions.getTemporaryValueTime(transferReport, drivingTimes4_2, Strings.drivingTimes4_2);
-    //     GlobalFunctions.getTemporaryValueTime(transferReport, drivingTimes5_1, Strings.drivingTimes5_1);
-    //     GlobalFunctions.getTemporaryValueTime(transferReport, drivingTimes5_2, Strings.drivingTimes5_2);
-    //     GlobalFunctions.getTemporaryValueTime(transferReport, drivingTimes6_1, Strings.drivingTimes6_1);
-    //     GlobalFunctions.getTemporaryValueTime(transferReport, drivingTimes6_2, Strings.drivingTimes6_2);
-    //     GlobalFunctions.getTemporaryValueTime(transferReport, drivingTimes7_1, Strings.drivingTimes7_1);
-    //     GlobalFunctions.getTemporaryValueTime(transferReport, drivingTimes7_2, Strings.drivingTimes7_2);
-    //     GlobalFunctions.getTemporaryValueTime(transferReport, drivingTimes8_1, Strings.drivingTimes8_1);
-    //     GlobalFunctions.getTemporaryValueTime(transferReport, drivingTimes8_2, Strings.drivingTimes8_2);
-    //     GlobalFunctions.getTemporaryValueTime(transferReport, drivingTimes9_1, Strings.drivingTimes9_1);
-    //     GlobalFunctions.getTemporaryValueTime(transferReport, drivingTimes9_2, Strings.drivingTimes9_2);
-    //     GlobalFunctions.getTemporaryValueTime(transferReport, drivingTimes10_1, Strings.drivingTimes10_1);
-    //     GlobalFunctions.getTemporaryValueTime(transferReport, drivingTimes10_2, Strings.drivingTimes10_2);
-    //     GlobalFunctions.getTemporaryValueTime(transferReport, drivingTimes11_1, Strings.drivingTimes11_1);
-    //     GlobalFunctions.getTemporaryValueTime(transferReport, drivingTimes11_2, Strings.drivingTimes11_2);
-    //     GlobalFunctions.getTemporaryValueTime(transferReport, collectionArrivalTimeEnd, Strings.collectionArrivalTimeEnd);
-    //     GlobalFunctions.getTemporaryValueTime(transferReport, destinationArrivalTimeEnd, Strings.destinationArrivalTimeEnd);
-    //
-    //     if (mounted) {
-    //       setState(() {
-    //         _loadingTemporary = false;
-    //       });
-    //     }
-    //   } else {
-    //     if (mounted) {
-    //       setState(() {
-    //         _loadingTemporary = false;
-    //       });
-    //     }
-    //   }
-    // }
   }
 
   _increaseRowCount(){
-    if(rowCount == 5){
+    if(rowCount == 6){
       GlobalFunctions.showToast('Maximum staff added');
     } else {
       setState(() {
@@ -1207,14 +1068,113 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
     }
   }
 
+  Widget _buildJobRefDrop() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        RichText(
+          text: TextSpan(
+              text: 'Reference',
+              style: TextStyle(
+                  fontSize: 16.0, fontFamily: 'Open Sans', color: bluePurple),
+              children:
+              [
+                TextSpan(
+                  text: ' *',
+                  style: TextStyle(
+                      color: Colors.red,
+                      fontSize: 16.0),
+                ),                                           ]
+          ),
+        ),
+        Container(
+          color: jobRefRef == 'Select One' ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: DropdownFormField(
+            expanded: false,
+            value: jobRefRef,
+            items: jobRefDrop.toList(),
+            onChanged: (val) => setState(() {
+              jobRefRef = val;
+              if(val == 'Select One'){
+                transferReportModel.updateTemporaryRecord(widget.edit, Strings.jobRefRef, null, widget.jobId, widget.saved, widget.savedId);
+              } else {
+                transferReportModel.updateTemporaryRecord(widget.edit, Strings.jobRefRef, val, widget.jobId, widget.saved, widget.savedId);
+              }
+
+              FocusScope.of(context).unfocus();
+            }),
+            initialValue: jobRefRef,
+          ),
+        ),
+        SizedBox(height: 15,),
+      ],
+    );
+  }
+
+  Widget _buildNearestTank1Drop() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        RichText(
+          text: TextSpan(
+              text: 'Fuel to the nearest 1/4 tank',
+              style: TextStyle(
+                  fontSize: 16.0, fontFamily: 'Open Sans', color: bluePurple),
+              children:
+              [
+                TextSpan(
+                  text: ' *',
+                  style: TextStyle(
+                      color: Colors.red,
+                      fontSize: 16.0),
+                ),                                           ]
+          ),
+        ),
+        Container(
+          color: nearestTank1 == 'Select One' ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: DropdownFormField(
+            expanded: true,
+            value: nearestTank1,
+            items: nearestTankDrop.toList(),
+            onChanged: (val) => setState(() {
+              nearestTank1 = val;
+              if(val == 'Select One'){
+                transferReportModel.updateTemporaryRecord(widget.edit, Strings.nearestTank1, null, widget.jobId, widget.saved, widget.savedId);
+              } else {
+                transferReportModel.updateTemporaryRecord(widget.edit, Strings.nearestTank1, GlobalFunctions.encryptString(val), widget.jobId, widget.saved, widget.savedId);
+              }
+
+              FocusScope.of(context).unfocus();
+            }),
+            initialValue: nearestTank1,
+          ),
+        ),
+        SizedBox(height: 15,),
+      ],
+    );
+  }
+
   _getBookingFormData() async{
 
-    QuerySnapshot snapshot = await FirebaseFirestore.instance.collection('booking_forms').where(Strings.jobRef, isEqualTo: jobRef.text.toUpperCase()).where(Strings.assignedUserId, isEqualTo: user.uid).orderBy('timestamp', descending: true).limit(10).get().timeout(Duration(seconds: 90));
+    String searchRef = (jobRefRef + jobRef.text).toLowerCase();
+
+    QuerySnapshot snapshotOld = await FirebaseFirestore.instance.collection('booking_forms').where(Strings.jobRefLowercase, isEqualTo: searchRef).where(Strings.assignedUserId, isEqualTo: user.uid).orderBy('timestamp', descending: true).limit(10).get().timeout(Duration(seconds: 90));
+
+    QuerySnapshot snapshotNew = await FirebaseFirestore.instance.collection('booking_forms').where(Strings.jobRefLowercase, isEqualTo: searchRef).where(Strings.assignedUsers, arrayContains: user.uid).orderBy('timestamp', descending: true).limit(10).get().timeout(Duration(seconds: 90));
 
 
-    if(snapshot.docs.length > 0){
 
-      Map<String, dynamic> localRecord = snapshot.docs[0].data();
+    if(snapshotOld.docs.length > 0 || snapshotNew.docs.length > 0){
+
+      Map<String, dynamic> localRecord = {};
+
+      if(snapshotNew.docs.length > 0) {
+        localRecord = snapshotNew.docs[0].data();
+      } else {
+        localRecord = snapshotOld.docs[0].data();
+      }
+
+
 
       Map<String, dynamic> bookingForm = {
 
@@ -1239,6 +1199,13 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
         Strings.bfSafeguardingConcernsYes: localRecord[Strings.bfSafeguardingConcernsYes],
         Strings.bfSafeguardingConcernsNo: localRecord[Strings.bfSafeguardingConcernsNo],
         Strings.bfSafeguardingConcerns: localRecord[Strings.bfSafeguardingConcerns],
+        Strings.bfRmn1: localRecord[Strings.bfRmn1],
+        Strings.bfHca1: localRecord[Strings.bfHca1],
+        Strings.bfHca2: localRecord[Strings.bfHca2],
+        Strings.bfHca3: localRecord[Strings.bfHca3],
+        Strings.bfHca4: localRecord[Strings.bfHca4],
+        Strings.bfHca5: localRecord[Strings.bfHca5],
+
 
 
       };
@@ -1253,6 +1220,65 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
         destinationPostcode.text = GlobalFunctions.decryptString(bookingForm[Strings.bfDestinationPostcode]);
         destinationContactNo.text = GlobalFunctions.decryptString(bookingForm[Strings.bfDestinationTel]);
         vehicleRegNo.text = GlobalFunctions.decryptString(bookingForm[Strings.bfAmbulanceRegistration]);
+        ambulanceReg.text = GlobalFunctions.decryptString(bookingForm[Strings.bfAmbulanceRegistration]);
+        int rows = 1;
+        if(bookingForm[Strings.bfRmn1] != ''){
+          role1 = 'RMN';
+          name1.text = GlobalFunctions.decryptString(bookingForm[Strings.bfRmn1]);
+
+          if(bookingForm[Strings.bfHca1] != ''){
+            rows ++;
+            role2 = 'HCA';
+            name2.text = GlobalFunctions.decryptString(bookingForm[Strings.bfHca1]);
+          }
+          if(bookingForm[Strings.bfHca2] != ''){
+            rows ++;
+            role3 = 'HCA';
+            name3.text = GlobalFunctions.decryptString(bookingForm[Strings.bfHca2]);
+          }
+          if(bookingForm[Strings.bfHca3] != ''){
+            rows ++;
+            role4 = 'HCA';
+            name4.text = GlobalFunctions.decryptString(bookingForm[Strings.bfHca3]);
+          }
+          if(bookingForm[Strings.bfHca4] != ''){
+            rows ++;
+            role5 = 'HCA';
+            name5.text = GlobalFunctions.decryptString(bookingForm[Strings.bfHca4]);
+          }
+          if(bookingForm[Strings.bfHca5] != ''){
+            rows ++;
+            role6 = 'HCA';
+            name6.text = GlobalFunctions.decryptString(bookingForm[Strings.bfHca5]);
+          }
+          } else {
+
+          if(bookingForm[Strings.bfHca1] != ''){
+            role1 = 'HCA';
+            name1.text = GlobalFunctions.decryptString(bookingForm[Strings.bfHca1]);
+          }
+          if(bookingForm[Strings.bfHca2] != ''){
+            rows ++;
+            role2 = 'HCA';
+            name2.text = GlobalFunctions.decryptString(bookingForm[Strings.bfHca2]);
+          }
+          if(bookingForm[Strings.bfHca3] != ''){
+            rows ++;
+            role3 = 'HCA';
+            name3.text = GlobalFunctions.decryptString(bookingForm[Strings.bfHca3]);
+          }
+          if(bookingForm[Strings.bfHca4] != ''){
+            rows ++;
+            role4 = 'HCA';
+            name4.text = GlobalFunctions.decryptString(bookingForm[Strings.bfHca4]);
+          }
+          if(bookingForm[Strings.bfHca5] != ''){
+            rows ++;
+            role5 = 'HCA';
+            name5.text = GlobalFunctions.decryptString(bookingForm[Strings.bfHca5]);
+          }
+        }
+        rowCount = rows;
 
       });
 
@@ -1296,6 +1322,66 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
       transferReportModel.updateTemporaryRecord(widget.edit, Strings.ambulanceReg, bookingForm[Strings.bfAmbulanceRegistration], widget.jobId, widget.saved, widget.savedId);
       // _databaseHelper.updateTemporaryTransferReportField(widget.edit,
       //     {Strings.ambulanceReg : bookingForm[Strings.bfAmbulanceRegistration]}, user.uid, widget.jobId, widget.saved, widget.savedId);
+
+
+
+      if(bookingForm[Strings.bfRmn1] != ''){
+
+        transferReportModel.updateTemporaryRecord(widget.edit, Strings.role1, GlobalFunctions.encryptString('RMN'), widget.jobId, widget.saved, widget.savedId);
+        transferReportModel.updateTemporaryRecord(widget.edit, Strings.name1, bookingForm[Strings.bfRmn1], widget.jobId, widget.saved, widget.savedId);
+
+        if(bookingForm[Strings.bfHca1] != ''){
+
+          transferReportModel.updateTemporaryRecord(widget.edit, Strings.role2, GlobalFunctions.encryptString('HCA'), widget.jobId, widget.saved, widget.savedId);
+          transferReportModel.updateTemporaryRecord(widget.edit, Strings.name2, bookingForm[Strings.bfHca1], widget.jobId, widget.saved, widget.savedId);
+        }
+        if(bookingForm[Strings.bfHca2] != ''){
+
+          transferReportModel.updateTemporaryRecord(widget.edit, Strings.role3, GlobalFunctions.encryptString('HCA'), widget.jobId, widget.saved, widget.savedId);
+          transferReportModel.updateTemporaryRecord(widget.edit, Strings.name3, bookingForm[Strings.bfHca2], widget.jobId, widget.saved, widget.savedId);
+        }
+        if(bookingForm[Strings.bfHca3] != ''){
+
+          transferReportModel.updateTemporaryRecord(widget.edit, Strings.role4, GlobalFunctions.encryptString('HCA'), widget.jobId, widget.saved, widget.savedId);
+          transferReportModel.updateTemporaryRecord(widget.edit, Strings.name4, bookingForm[Strings.bfHca3], widget.jobId, widget.saved, widget.savedId);
+        }
+        if(bookingForm[Strings.bfHca4] != ''){
+
+          transferReportModel.updateTemporaryRecord(widget.edit, Strings.role5, GlobalFunctions.encryptString('HCA'), widget.jobId, widget.saved, widget.savedId);
+          transferReportModel.updateTemporaryRecord(widget.edit, Strings.name5, bookingForm[Strings.bfHca4], widget.jobId, widget.saved, widget.savedId);
+        }
+        if(bookingForm[Strings.bfHca5] != ''){
+          transferReportModel.updateTemporaryRecord(widget.edit, Strings.role6, GlobalFunctions.encryptString('HCA'), widget.jobId, widget.saved, widget.savedId);
+          transferReportModel.updateTemporaryRecord(widget.edit, Strings.name6, bookingForm[Strings.bfHca5], widget.jobId, widget.saved, widget.savedId);
+        }
+      } else {
+
+        if(bookingForm[Strings.bfHca1] != ''){
+
+          transferReportModel.updateTemporaryRecord(widget.edit, Strings.role1, GlobalFunctions.encryptString('HCA'), widget.jobId, widget.saved, widget.savedId);
+          transferReportModel.updateTemporaryRecord(widget.edit, Strings.name1, bookingForm[Strings.bfHca1], widget.jobId, widget.saved, widget.savedId);
+        }
+        if(bookingForm[Strings.bfHca2] != ''){
+
+          transferReportModel.updateTemporaryRecord(widget.edit, Strings.role2, GlobalFunctions.encryptString('HCA'), widget.jobId, widget.saved, widget.savedId);
+          transferReportModel.updateTemporaryRecord(widget.edit, Strings.name2, bookingForm[Strings.bfHca2], widget.jobId, widget.saved, widget.savedId);
+        }
+        if(bookingForm[Strings.bfHca3] != ''){
+
+          transferReportModel.updateTemporaryRecord(widget.edit, Strings.role3, GlobalFunctions.encryptString('HCA'), widget.jobId, widget.saved, widget.savedId);
+          transferReportModel.updateTemporaryRecord(widget.edit, Strings.name3, bookingForm[Strings.bfHca3], widget.jobId, widget.saved, widget.savedId);
+        }
+        if(bookingForm[Strings.bfHca4] != ''){
+
+          transferReportModel.updateTemporaryRecord(widget.edit, Strings.role4, GlobalFunctions.encryptString('HCA'), widget.jobId, widget.saved, widget.savedId);
+          transferReportModel.updateTemporaryRecord(widget.edit, Strings.name4, bookingForm[Strings.bfHca4], widget.jobId, widget.saved, widget.savedId);
+        }
+        if(bookingForm[Strings.bfHca5] != ''){
+          transferReportModel.updateTemporaryRecord(widget.edit, Strings.role5, GlobalFunctions.encryptString('HCA'), widget.jobId, widget.saved, widget.savedId);
+          transferReportModel.updateTemporaryRecord(widget.edit, Strings.name5, bookingForm[Strings.bfHca5], widget.jobId, widget.saved, widget.savedId);
+        }
+      }
+
 
       transferReportModel.updateTemporaryRecord(widget.edit, Strings.patientName, bookingForm[Strings.bfPatientName], widget.jobId, widget.saved, widget.savedId);
       // _databaseHelper.updateTemporaryTransferReportField(widget.edit,
@@ -1351,6 +1437,605 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
       GlobalFunctions.showToast('No results found');
     }
 
+  }
+
+  Widget _buildCheckboxRowAmbulanceTidyYes1(String text) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        RichText(
+          text: TextSpan(
+              text: text,
+              style: TextStyle(
+                  fontSize: 16.0, fontFamily: 'Open Sans', color: bluePurple),
+              children:
+              [
+                TextSpan(
+                  text: ' *',
+                  style: TextStyle(
+                      color: Colors.red,
+                      fontSize: 16.0),
+                ),                                           ]
+          ),
+        ),        Container(
+          color: ambulanceTidyYes1 == false && ambulanceTidyNo1 == false ? Color(0xFF0000).withOpacity(0.3) : null,
+
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: ambulanceTidyYes1,
+                  onChanged: (bool value) => setState(() {
+                    ambulanceTidyYes1 = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.ambulanceTidyYes1, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (ambulanceTidyNo1 == true){
+                      ambulanceTidyNo1 = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.ambulanceTidyNo1, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+
+                    if(
+                    (ambulanceTidyNo1 == null || ambulanceTidyNo1 == false) &&
+                        (lightsWorkingNo == null || lightsWorkingNo == false) &&
+                        (tyresInflatedNo == null || tyresInflatedNo == false) &&
+                        (warningSignsYes == null || warningSignsYes == false) &&
+                        (vehicleDamageYes == null || vehicleDamageYes == false) &&
+                        (ambulanceTidyNo2 == null || ambulanceTidyNo2 == false) &&
+                        (sanitiserCleanNo == null || sanitiserCleanNo == false)
+                    ) {
+                      mandatoryIssuesFaults = false;
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: ambulanceTidyNo1,
+                  onChanged: (bool value) => setState(() {
+                    ambulanceTidyNo1 = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.ambulanceTidyNo1, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (ambulanceTidyYes1 == true){
+                      ambulanceTidyYes1 = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.ambulanceTidyYes1, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+
+                    if(ambulanceTidyNo1 == true){
+                      mandatoryIssuesFaults = true;
+                      if(issuesFaults.text.isEmpty) showIssuesDialog();
+                    } else if(
+                    (ambulanceTidyNo1 == null || ambulanceTidyNo1 == false) &&
+                        (lightsWorkingNo == null || lightsWorkingNo == false) &&
+                        (tyresInflatedNo == null || tyresInflatedNo == false) &&
+                        (warningSignsYes == null || warningSignsYes == false) &&
+                        (vehicleDamageYes == null || vehicleDamageYes == false) &&
+                        (ambulanceTidyNo2 == null || ambulanceTidyNo2 == false) &&
+                        (sanitiserCleanNo == null || sanitiserCleanNo == false)
+                    ) {
+                      mandatoryIssuesFaults = false;
+                    }
+
+
+                  }))
+            ],
+          ),
+        )
+      ],
+    );
+  }
+  Widget _buildCheckboxRowLightsWorkingYes(String text) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        RichText(
+          text: TextSpan(
+              text: text,
+              style: TextStyle(
+                  fontSize: 16.0, fontFamily: 'Open Sans', color: bluePurple),
+              children:
+              [
+                TextSpan(
+                  text: ' *',
+                  style: TextStyle(
+                      color: Colors.red,
+                      fontSize: 16.0),
+                ),                                           ]
+          ),
+        ),        Container(
+          color: lightsWorkingYes == false && lightsWorkingNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
+
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: lightsWorkingYes,
+                  onChanged: (bool value) => setState(() {
+                    lightsWorkingYes = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.lightsWorkingYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (lightsWorkingNo == true){
+                      lightsWorkingNo = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.lightsWorkingNo, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+
+                    if(
+                    (ambulanceTidyNo1 == null || ambulanceTidyNo1 == false) &&
+                        (lightsWorkingNo == null || lightsWorkingNo == false) &&
+                        (tyresInflatedNo == null || tyresInflatedNo == false) &&
+                        (warningSignsYes == null || warningSignsYes == false) &&
+                        (vehicleDamageYes == null || vehicleDamageYes == false) &&
+                        (ambulanceTidyNo2 == null || ambulanceTidyNo2 == false) &&
+                        (sanitiserCleanNo == null || sanitiserCleanNo == false)
+                    ) {
+                      mandatoryIssuesFaults = false;
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: lightsWorkingNo,
+                  onChanged: (bool value) => setState(() {
+                    lightsWorkingNo = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.lightsWorkingNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (lightsWorkingYes == true){
+                      lightsWorkingYes = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.lightsWorkingYes, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+
+                    if(lightsWorkingNo == true){
+                      mandatoryIssuesFaults = true;
+                      if(issuesFaults.text.isEmpty) showIssuesDialog();
+
+                    } else if(
+                    (ambulanceTidyNo1 == null || ambulanceTidyNo1 == false) &&
+                        (lightsWorkingNo == null || lightsWorkingNo == false) &&
+                        (tyresInflatedNo == null || tyresInflatedNo == false) &&
+                        (warningSignsYes == null || warningSignsYes == false) &&
+                        (vehicleDamageYes == null || vehicleDamageYes == false) &&
+                        (ambulanceTidyNo2 == null || ambulanceTidyNo2 == false) &&
+                        (sanitiserCleanNo == null || sanitiserCleanNo == false)
+                    ) {
+                      mandatoryIssuesFaults = false;
+                    }
+                  }))
+            ],
+          ),
+        )
+      ],
+    );
+  }
+  Widget _buildCheckboxRowTyresInflatedYes(String text) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        RichText(
+          text: TextSpan(
+              text: text,
+              style: TextStyle(
+                  fontSize: 16.0, fontFamily: 'Open Sans', color: bluePurple),
+              children:
+              [
+                TextSpan(
+                  text: ' *',
+                  style: TextStyle(
+                      color: Colors.red,
+                      fontSize: 16.0),
+                ),                                           ]
+          ),
+        ),        Container(
+          color: tyresInflatedYes == false && tyresInflatedNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
+
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: tyresInflatedYes,
+                  onChanged: (bool value) => setState(() {
+                    tyresInflatedYes = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.tyresInflatedYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (tyresInflatedNo == true){
+                      tyresInflatedNo = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.tyresInflatedNo, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+
+                    if(
+                    (ambulanceTidyNo1 == null || ambulanceTidyNo1 == false) &&
+                        (lightsWorkingNo == null || lightsWorkingNo == false) &&
+                        (tyresInflatedNo == null || tyresInflatedNo == false) &&
+                        (warningSignsYes == null || warningSignsYes == false) &&
+                        (vehicleDamageYes == null || vehicleDamageYes == false) &&
+                        (ambulanceTidyNo2 == null || ambulanceTidyNo2 == false) &&
+                        (sanitiserCleanNo == null || sanitiserCleanNo == false)
+                    ) {
+                      mandatoryIssuesFaults = false;
+                    }
+
+
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: tyresInflatedNo,
+                  onChanged: (bool value) => setState(() {
+                    tyresInflatedNo = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.tyresInflatedNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (tyresInflatedYes == true){
+                      tyresInflatedYes = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.tyresInflatedYes, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+
+                    if(tyresInflatedNo == true){
+                      mandatoryIssuesFaults = true;
+                      if(issuesFaults.text.isEmpty) showIssuesDialog();
+
+                    } else if(
+                    (ambulanceTidyNo1 == null || ambulanceTidyNo1 == false) &&
+                        (lightsWorkingNo == null || lightsWorkingNo == false) &&
+                        (tyresInflatedNo == null || tyresInflatedNo == false) &&
+                        (warningSignsYes == null || warningSignsYes == false) &&
+                        (vehicleDamageYes == null || vehicleDamageYes == false) &&
+                        (ambulanceTidyNo2 == null || ambulanceTidyNo2 == false) &&
+                        (sanitiserCleanNo == null || sanitiserCleanNo == false)
+                    ) {
+                      mandatoryIssuesFaults = false;
+                    }
+                  }))
+            ],
+          ),
+        )
+      ],
+    );
+  }
+  Widget _buildCheckboxRowWarningSignsYes(String text) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        RichText(
+          text: TextSpan(
+              text: text,
+              style: TextStyle(
+                  fontSize: 16.0, fontFamily: 'Open Sans', color: bluePurple),
+              children:
+              [
+                TextSpan(
+                  text: ' *',
+                  style: TextStyle(
+                      color: Colors.red,
+                      fontSize: 16.0),
+                ),                                           ]
+          ),
+        ),        Container(
+          color: warningSignsYes == false && warningSignsNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
+
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: warningSignsYes,
+                  onChanged: (bool value) => setState(() {
+                    warningSignsYes = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.warningSignsYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (warningSignsNo == true){
+                      warningSignsNo = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.warningSignsNo, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+
+                    if(warningSignsYes == true){
+                      mandatoryIssuesFaults = true;
+                      if(issuesFaults.text.isEmpty) showIssuesDialog();
+
+                    } else if(
+                    (ambulanceTidyNo1 == null || ambulanceTidyNo1 == false) &&
+                        (lightsWorkingNo == null || lightsWorkingNo == false) &&
+                        (tyresInflatedNo == null || tyresInflatedNo == false) &&
+                        (warningSignsYes == null || warningSignsYes == false) &&
+                        (vehicleDamageYes == null || vehicleDamageYes == false) &&
+                        (ambulanceTidyNo2 == null || ambulanceTidyNo2 == false) &&
+                        (sanitiserCleanNo == null || sanitiserCleanNo == false)
+                    ) {
+                      mandatoryIssuesFaults = false;
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: warningSignsNo,
+                  onChanged: (bool value) => setState(() {
+                    warningSignsNo = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.warningSignsNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (warningSignsYes == true){
+                      warningSignsYes = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.warningSignsYes, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+
+                    if(
+                    (ambulanceTidyNo1 == null || ambulanceTidyNo1 == false) &&
+                        (lightsWorkingNo == null || lightsWorkingNo == false) &&
+                        (tyresInflatedNo == null || tyresInflatedNo == false) &&
+                        (warningSignsYes == null || warningSignsYes == false) &&
+                        (vehicleDamageYes == null || vehicleDamageYes == false) &&
+                        (ambulanceTidyNo2 == null || ambulanceTidyNo2 == false) &&
+                        (sanitiserCleanNo == null || sanitiserCleanNo == false)
+                    ) {
+                      mandatoryIssuesFaults = false;
+                    }
+                  }))
+            ],
+          ),
+        )
+      ],
+    );
+  }
+  Widget _buildCheckboxRowVehicleDamageYes(String text) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        RichText(
+          text: TextSpan(
+              text: text,
+              style: TextStyle(
+                  fontSize: 16.0, fontFamily: 'Open Sans', color: bluePurple),
+              children:
+              [
+                TextSpan(
+                  text: ' *',
+                  style: TextStyle(
+                      color: Colors.red,
+                      fontSize: 16.0),
+                ),                                           ]
+          ),
+        ),        Container(
+          color: vehicleDamageYes == false && vehicleDamageNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
+
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: vehicleDamageYes,
+                  onChanged: (bool value) => setState(() {
+                    vehicleDamageYes = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.vehicleDamageYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (vehicleDamageNo == true){
+                      vehicleDamageNo = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.vehicleDamageNo, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+
+                    if(vehicleDamageYes == true){
+                      mandatoryIssuesFaults = true;
+                      if(issuesFaults.text.isEmpty) showIssuesDialog();
+
+                    } else if(
+                    (ambulanceTidyNo1 == null || ambulanceTidyNo1 == false) &&
+                        (lightsWorkingNo == null || lightsWorkingNo == false) &&
+                        (tyresInflatedNo == null || tyresInflatedNo == false) &&
+                        (warningSignsYes == null || warningSignsYes == false) &&
+                        (vehicleDamageYes == null || vehicleDamageYes == false) &&
+                        (ambulanceTidyNo2 == null || ambulanceTidyNo2 == false) &&
+                        (sanitiserCleanNo == null || sanitiserCleanNo == false)
+                    ) {
+                      mandatoryIssuesFaults = false;
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: vehicleDamageNo,
+                  onChanged: (bool value) => setState(() {
+                    vehicleDamageNo = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.vehicleDamageNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (vehicleDamageYes == true){
+                      vehicleDamageYes = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.vehicleDamageYes, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+
+                    if(
+                    (ambulanceTidyNo1 == null || ambulanceTidyNo1 == false) &&
+                        (lightsWorkingNo == null || lightsWorkingNo == false) &&
+                        (tyresInflatedNo == null || tyresInflatedNo == false) &&
+                        (warningSignsNo == null || warningSignsNo == false) &&
+                        (vehicleDamageYes == null || vehicleDamageYes == false) &&
+                        (ambulanceTidyNo2 == null || ambulanceTidyNo2 == false) &&
+                        (sanitiserCleanNo == null || sanitiserCleanNo == false)
+                    ) {
+                      mandatoryIssuesFaults = false;
+                    }
+                  }))
+            ],
+          ),
+        )
+      ],
+    );
+  }
+  Widget _buildCheckboxRowAmbulanceTidyYes2(String text) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        RichText(
+          text: TextSpan(
+              text: text,
+              style: TextStyle(
+                  fontSize: 16.0, fontFamily: 'Open Sans', color: bluePurple),
+              children:
+              [
+                TextSpan(
+                  text: ' *',
+                  style: TextStyle(
+                      color: Colors.red,
+                      fontSize: 16.0),
+                ),                                           ]
+          ),
+        ),
+        Container(
+          color: ambulanceTidyYes2 == false && ambulanceTidyNo2 == false ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: ambulanceTidyYes2,
+                  onChanged: (bool value) => setState(() {
+                    ambulanceTidyYes2 = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.ambulanceTidyYes2, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (ambulanceTidyNo2 == true){
+                      ambulanceTidyNo2 = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.ambulanceTidyNo2, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+
+                    if(
+                    (ambulanceTidyNo1 == null || ambulanceTidyNo1 == false) &&
+                        (lightsWorkingNo == null || lightsWorkingNo == false) &&
+                        (tyresInflatedNo == null || tyresInflatedNo == false) &&
+                        (warningSignsYes == null || warningSignsYes == false) &&
+                        (vehicleDamageYes == null || vehicleDamageYes == false) &&
+                        (ambulanceTidyNo2 == null || ambulanceTidyNo2 == false) &&
+                        (sanitiserCleanNo == null || sanitiserCleanNo == false)
+                    ) {
+                      mandatoryIssuesFaults = false;
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: ambulanceTidyNo2,
+                  onChanged: (bool value) => setState(() {
+                    ambulanceTidyNo2 = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.ambulanceTidyNo2, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (ambulanceTidyYes2 == true){
+                      ambulanceTidyYes2 = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.ambulanceTidyYes2, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+
+                    if(ambulanceTidyNo2 == true){
+                      mandatoryIssuesFaults = true;
+                      if(issuesFaults.text.isEmpty) showIssuesDialog();
+
+                    } else if(
+                    (ambulanceTidyNo1 == null || ambulanceTidyNo1 == false) &&
+                        (lightsWorkingNo == null || lightsWorkingNo == false) &&
+                        (tyresInflatedNo == null || tyresInflatedNo == false) &&
+                        (warningSignsYes == null || warningSignsYes == false) &&
+                        (vehicleDamageYes == null || vehicleDamageYes == false) &&
+                        (ambulanceTidyNo2 == null || ambulanceTidyNo2 == false) &&
+                        (sanitiserCleanNo == null || sanitiserCleanNo == false)
+                    ) {
+                      mandatoryIssuesFaults = false;
+                    }
+                  }))
+            ],
+          ),
+        )
+      ],
+    );
+  }
+  Widget _buildCheckboxRowSanitiserCleanYes(String text) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        RichText(
+          text: TextSpan(
+              text: text,
+              style: TextStyle(
+                  fontSize: 16.0, fontFamily: 'Open Sans', color: bluePurple),
+              children:
+              [
+                TextSpan(
+                  text: ' *',
+                  style: TextStyle(
+                      color: Colors.red,
+                      fontSize: 16.0),
+                ),                                           ]
+          ),
+        ),
+        Container(
+          color: sanitiserCleanYes == false && sanitiserCleanNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: sanitiserCleanYes,
+                  onChanged: (bool value) => setState(() {
+                    sanitiserCleanYes = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.sanitiserCleanYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (sanitiserCleanNo == true){
+                      sanitiserCleanNo = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.sanitiserCleanNo, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+
+                    if(
+                    (ambulanceTidyNo1 == null || ambulanceTidyNo1 == false) &&
+                        (lightsWorkingNo == null || lightsWorkingNo == false) &&
+                        (tyresInflatedNo == null || tyresInflatedNo == false) &&
+                        (warningSignsYes == null || warningSignsYes == false) &&
+                        (vehicleDamageYes == null || vehicleDamageYes == false) &&
+                        (ambulanceTidyNo2 == null || ambulanceTidyNo2 == false) &&
+                        (sanitiserCleanNo == null || sanitiserCleanNo == false)
+                    ) {
+                      mandatoryIssuesFaults = false;
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: sanitiserCleanNo,
+                  onChanged: (bool value) => setState(() {
+                    sanitiserCleanNo = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.sanitiserCleanNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (sanitiserCleanYes == true){
+                      sanitiserCleanYes = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.sanitiserCleanYes, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+
+                    if(sanitiserCleanNo == true){
+                      mandatoryIssuesFaults = true;
+                      if(issuesFaults.text.isEmpty) showIssuesDialog();
+
+                    } else if(
+                    (ambulanceTidyNo1 == null || ambulanceTidyNo1 == false) &&
+                        (lightsWorkingNo == null || lightsWorkingNo == false) &&
+                        (tyresInflatedNo == null || tyresInflatedNo == false) &&
+                        (warningSignsYes == null || warningSignsYes == false) &&
+                        (vehicleDamageYes == null || vehicleDamageYes == false) &&
+                        (ambulanceTidyNo2 == null || ambulanceTidyNo2 == false) &&
+                        (sanitiserCleanNo == null || sanitiserCleanNo == false)
+                    ) {
+                      mandatoryIssuesFaults = false;
+                    }
+                  }))
+            ],
+          ),
+        )
+      ],
+    );
   }
 
 
@@ -1482,6 +2167,33 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
             FocusScope.of(context).unfocus();
           }),
           initialValue: role5,
+        ),
+        SizedBox(height: 15,),
+      ],
+    );
+  }
+
+  Widget _buildRoleDrop6() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Role', style: TextStyle(
+            fontSize: 16.0, color: bluePurple),),
+        DropdownFormField(
+          expanded: true,
+          value: role6,
+          items: roleDrop.toList(),
+          onChanged: (val) => setState(() {
+            role6 = val;
+            if(val == 'Select One'){
+              transferReportModel.updateTemporaryRecord(widget.edit, Strings.role6, null, widget.jobId, widget.saved, widget.savedId);
+            } else {
+              transferReportModel.updateTemporaryRecord(widget.edit, Strings.role6, GlobalFunctions.encryptString(val), widget.jobId, widget.saved, widget.savedId);
+            }
+
+            FocusScope.of(context).unfocus();
+          }),
+          initialValue: role6,
         ),
         SizedBox(height: 15,),
       ],
@@ -1702,7 +2414,8 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
           height: 10.0,
         ),
         Container(
-          child: Center(
+          color: collectionImageBytes == null ? Color(0xFF0000).withOpacity(0.3) : null,
+child: Center(
             child: GestureDetector(
               onTap: () {
                 FocusScope.of(context).unfocus();
@@ -1883,7 +2596,8 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
           height: 10.0,
         ),
         Container(
-          child: Center(
+          color: destinationImageBytes == null ? Color(0xFF0000).withOpacity(0.3) : null,
+child: Center(
             child: GestureDetector(
               onTap: () {
                 FocusScope.of(context).unfocus();
@@ -2049,6 +2763,9 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
         ),
         TextFormField(
           keyboardType: textInputType,
+          inputFormatters: textInputType == TextInputType.number ? <TextInputFormatter>[
+            FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
+          ] : null,
           validator: (String value) {
             String message;
             if(required){
@@ -2059,7 +2776,7 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
             return message;
           },
           maxLines: lines,
-          decoration: InputDecoration(
+          decoration: InputDecoration(filled: required && controller.text.isEmpty ? true : false, fillColor: Color(0xFF0000).withOpacity(0.3),
               suffixIcon: controller.text == ''
                   ? null
                   : IconButton(
@@ -2102,6 +2819,7 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
             Flexible(
               child: IgnorePointer(
                 child: TextFormField(
+                  decoration: InputDecoration(filled: startTime.text.isEmpty ? true : false, fillColor: Color(0xFF0000).withOpacity(0.3)),
                   enabled: true,
                   initialValue: null,
                   controller: startTime,
@@ -2219,6 +2937,7 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
             Flexible(
               child: IgnorePointer(
                 child: TextFormField(
+                  decoration: InputDecoration(filled: finishTime.text.isEmpty ? true : false, fillColor: Color(0xFF0000).withOpacity(0.3)),
                   enabled: true,
                   initialValue: null,
                   controller: finishTime,
@@ -2338,6 +3057,7 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
             Flexible(
               child: IgnorePointer(
                 child: TextFormField(
+                  decoration: InputDecoration(filled: required && controller.text.isEmpty ? true : false, fillColor: Color(0xFF0000).withOpacity(0.3)),
                   enabled: true,
                   initialValue: null,
                   controller: controller,
@@ -2427,6 +3147,7 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
             Flexible(
               child: IgnorePointer(
                 child: TextFormField(
+                  decoration: InputDecoration(filled: required && controller.text.isEmpty ? true : false, fillColor: Color(0xFF0000).withOpacity(0.3)),
                   enabled: true,
                   initialValue: null,
                   controller: controller,
@@ -2512,16 +3233,40 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
             child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Row(children: [
-                    Expanded(
-                      child: _textFormField('Job Ref', jobRef, 1, true),
-                    ),
-                    SizedBox(width: 100, child: GradientButton('Search', () => _getBookingFormData()),)
+                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Text('TRANSFER REPORT', style: TextStyle(color: bluePurple, fontWeight: FontWeight.bold, fontSize: 18),),
                   ],),
+                  SizedBox(height: 20,),
+                  Row(
+                    children: [
+                      Flexible(child: _buildJobRefDrop()),
+                      Container(width: 10,),
+                      Flexible(child: _textFormField('', jobRef, 1, true, TextInputType.number),),
+                      Container(width: 10,),
+                      SizedBox(width: 100, child: GradientButton('Search', () => _getBookingFormData()),)
+                    ],
+                  ),
                   _buildDateField('Date', date, Strings.date, true, false),
                   SizedBox(height: 20,),
                   Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    Text('TRANSFER REPORT', style: TextStyle(color: bluePurple, fontWeight: FontWeight.bold, fontSize: 18),),
+                    Text('PRE-TRANSFER VEHICLE CHECKLIST', style: TextStyle(color: bluePurple, fontWeight: FontWeight.bold, fontSize: 18),),
+                  ],),
+                  SizedBox(height: 20,),
+                  _textFormField('Completed by', vehicleCompletedBy1, 1, true),
+                  _textFormField('Ambulance Reg', ambulanceReg, 1, true),
+                  //_textFormField('Start Mileage', vehicleStartMileage, 1, true),
+                  _buildNearestTank1Drop(),
+                  _buildDateField('Date', vehicleDate, Strings.vehicleDate, true),
+                  _buildTimeField('Time', vehicleTime, Strings.vehicleTime, true),
+                  SizedBox(height: 10,),
+                  _buildCheckboxRowAmbulanceTidyYes1('• Was the ambulance left clean and tidy?'),
+                  _buildCheckboxRowLightsWorkingYes('• Ambulance lights working?'),
+                  _buildCheckboxRowTyresInflatedYes('• Tyres appear inflated fully?'),
+                  _buildCheckboxRowWarningSignsYes('• Vehicle warning signs showing?'),
+                  _buildCheckboxRowVehicleDamageYes('• Any damage to vehicle / bodywork?'),
+                  SizedBox(height: 20,),
+                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Text('JOB DETAILS', style: TextStyle(color: bluePurple, fontWeight: FontWeight.bold, fontSize: 18),),
                   ],),
                   SizedBox(height: 20,),
                   _buildStartDateTimeField(),
@@ -2584,6 +3329,15 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
                       _buildTimeField('Driving Times', drivingTimes5_2, Strings.drivingTimes5_2),
                     ],
                   ) : Container(),
+                  rowCount >= 6 ? Column(
+                    children: [
+                      _textFormField('Name', name6),
+                      _buildRoleDrop6(),
+                      role6 == 'Other' ? _textFormField('Type role here', other6) : Container(),
+                      _buildTimeField('Driving Times', drivingTimes6_1, Strings.drivingTimes6_1),
+                      _buildTimeField('Driving Times', drivingTimes6_2, Strings.drivingTimes6_2),
+                    ],
+                  ) : Container(),
                   Row(mainAxisAlignment: MainAxisAlignment.end, children: [
                     SizedBox(width: 150, child: GradientButton('Add Staff', () => _increaseRowCount()),),
                   ],),
@@ -2618,7 +3372,7 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
                   SizedBox(height: 20,),
                   Text('Collection Details', style: TextStyle(color: bluePurple, fontWeight: FontWeight.bold),),
                   SizedBox(height: 10,),
-                  Text('This is a legal and binding document and will be retained by the company for reference of any incidents that may occur in the event that we have been given any incorrect information. By signing this form, you are satisfied that all property, section papers and documents listed within this report have been handed over to Pegasus Medical (1808) Ltd.', style: TextStyle(color: bluePurple),),
+                  Text('This is a legal and binding document and will be retained by the company for reference of any incidents that may occur in the event that we have been given any incorrect information. By signing this form, you are satisfied that all property, section papers and documents listed within this report have been handed over from Pegasus Medical (1808) Ltd.', style: TextStyle(color: bluePurple),),
                   SizedBox(height: 10,),
                   Text('Section Papers handed over if required', style: TextStyle(color: bluePurple, fontWeight: FontWeight.bold),),
                   SizedBox(height: 20,),
@@ -2632,7 +3386,7 @@ class _TransferReportSection1State extends State<TransferReportSection1> with Af
                   SizedBox(height: 10,),
                   Text('Destination Details', style: TextStyle(color: bluePurple, fontWeight: FontWeight.bold),),
                   SizedBox(height: 10,),
-                  Text('This is a legal and binding document and will be retained by the company for reference of any incidents that may occur in the event that we have been given any incorrect information. By signing this form, you are satisfied that all property, section papers and documents listed within this report have been handed over to Pegasus Medical (1808) Ltd.', style: TextStyle(color: bluePurple),),
+                  Text('This is a legal and binding document and will be retained by the company for reference of any incidents that may occur in the event that we have been given any incorrect information. By signing this form, you are satisfied that all property, section papers and documents listed within this report have been handed over from Pegasus Medical (1808) Ltd.', style: TextStyle(color: bluePurple),),
                   SizedBox(height: 10,),
                   Text('Section Papers handed over if required', style: TextStyle(color: bluePurple, fontWeight: FontWeight.bold),),
                   SizedBox(height: 20,),

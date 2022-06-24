@@ -1,7 +1,7 @@
-import 'package:firebase_analytics/observer.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:overlay_support/overlay_support.dart';
+import 'package:pegasus_medical_1808/models/job_refs_model.dart';
 import 'package:pegasus_medical_1808/models/patient_observation_model.dart';
 import 'package:pegasus_medical_1808/pages/login_page/change_password_page.dart';
 import 'package:pegasus_medical_1808/pages/login_page/terms_conditions_page.dart';
@@ -13,6 +13,7 @@ import 'package:pegasus_medical_1808/services/navigation_service.dart';
 import 'package:pegasus_medical_1808/shared/global_config.dart';
 import 'package:provider/provider.dart';
 import './models/authentication_model.dart';
+import 'models/bed_rota_model.dart';
 import 'models/booking_form_model.dart';
 import 'models/chat_model.dart';
 import 'models/incident_report_model.dart';
@@ -34,6 +35,7 @@ import 'package:firebase_auth/firebase_auth.dart' as FirebaseAuth;
 
 
 void main() async {
+  print('in main');
   WidgetsFlutterBinding.ensureInitialized();
   sharedPreferences = await SharedPreferences.getInstance();
   setupLocator();
@@ -46,7 +48,21 @@ void main() async {
     messagingSenderId: firebaseMessagingSenderId,
   );
 
-  Firebase.initializeApp(options: firebaseOptions);
+
+  if(Firebase.apps.isEmpty){
+    try {
+      await Firebase.initializeApp(options: firebaseOptions);
+    } catch(e) {
+      print(e);
+    }
+
+  } else {
+    print('else');
+ Firebase.app();
+  }
+
+
+
   setPathUrlStrategy();
   runApp(MyApp());
 }
@@ -163,7 +179,7 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    FirebaseAnalytics analytics = FirebaseAnalytics();
+    FirebaseAnalytics analytics = FirebaseAnalytics.instance;
     return MultiProvider(
       providers: [
         ChangeNotifierProvider<AuthenticationModel>(create: (_) => _authenticationModel),
@@ -179,6 +195,9 @@ class _MyAppState extends State<MyApp> {
         ChangeNotifierProxyProvider<AuthenticationModel, ObservationBookingModel>(
           update: (context, authenticationModel, observationBookingModel) => ObservationBookingModel(authenticationModel),
         ),
+        ChangeNotifierProxyProvider<AuthenticationModel, BedRotaModel>(
+          update: (context, authenticationModel, bedRotaModel) => BedRotaModel(authenticationModel),
+        ),
         ChangeNotifierProxyProvider<AuthenticationModel, SpotChecksModel>(
           update: (context, authenticationModel, spotChecksModel) => SpotChecksModel(authenticationModel),
         ),
@@ -190,6 +209,9 @@ class _MyAppState extends State<MyApp> {
         ),
         ChangeNotifierProxyProvider<AuthenticationModel, ChatModel>(
           update: (context, authenticationModel, chatModel) => ChatModel(authenticationModel),
+        ),
+        ChangeNotifierProxyProvider<AuthenticationModel, JobRefsModel>(
+          update: (context, authenticationModel, manageJobRefsModel) => JobRefsModel(authenticationModel),
         ),
       ],
       child: OverlaySupport(child: MaterialApp(

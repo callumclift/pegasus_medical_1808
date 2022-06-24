@@ -111,10 +111,10 @@ class _SavedObservationBookingsListPageState extends State<SavedObservationBooki
           child: ListTile(
             leading: Icon(Icons.library_books_sharp, color: bluePurple,),
             trailing: IconButton(icon: Icon(Icons.delete, color: bluePurple,), onPressed: () => _deleteForm(observationBookings[index][Strings.localId]),),
-            title: GlobalFunctions.boldTitleText('Job Ref: ', observationBookings[index]['job_ref'], context),
+            title: GlobalFunctions.boldTitleText('Job Ref: ', GlobalFunctions.buildJobRef(observationBookings[index]['job_ref_ref'], observationBookings[index]['job_ref_no']), context),
             subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
-              GlobalFunctions.boldTitleText('Date: ', observationBookings[index][Strings.bfJobDate] == null ? '' : dateFormat.format(
-                  DateTime.parse(observationBookings[index][Strings.bfJobDate])), context),
+              GlobalFunctions.boldTitleText('Date: ', observationBookings[index][Strings.obJobDate] == null ? '' : dateFormat.format(
+                  DateTime.parse(observationBookings[index][Strings.obJobDate])), context),
             ],),
           ),),
         Divider(),

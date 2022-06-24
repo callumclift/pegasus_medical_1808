@@ -45,6 +45,8 @@ class _TransferReportSection5State extends State<TransferReportSection5> {
   bool tyresInflatedNo = false;
   bool warningSignsYes = false;
   bool warningSignsNo = false;
+  bool vehicleDamageYes = false;
+  bool vehicleDamageNo = false;
   bool ambulanceTidyYes2 = false;
   bool ambulanceTidyNo2 = false;
   bool sanitiserCleanYes = false;
@@ -348,6 +350,22 @@ class _TransferReportSection5State extends State<TransferReportSection5> {
             });
           }
         }
+        if (transferReport[Strings.vehicleDamageYes] != null) {
+          if (mounted) {
+            setState(() {
+              vehicleDamageYes = GlobalFunctions.tinyIntToBool(transferReport[Strings.vehicleDamageYes]);
+              if(vehicleDamageYes) mandatoryIssuesFaults = true;
+
+            });
+          }
+        }
+        if (transferReport[Strings.vehicleDamageNo] != null) {
+          if (mounted) {
+            setState(() {
+              vehicleDamageNo = GlobalFunctions.tinyIntToBool(transferReport[Strings.vehicleDamageNo]);
+            });
+          }
+        }
         if (transferReport[Strings.ambulanceTidyYes2] != null) {
           if (mounted) {
             setState(() {
@@ -559,21 +577,24 @@ class _TransferReportSection5State extends State<TransferReportSection5> {
                 ),                                           ]
           ),
         ),
-        DropdownFormField(
-          expanded: true,
-          value: nearestTank1,
-          items: nearestTankDrop.toList(),
-          onChanged: (val) => setState(() {
-            nearestTank1 = val;
-            if(val == 'Select One'){
-              transferReportModel.updateTemporaryRecord(widget.edit, Strings.nearestTank1, null, widget.jobId, widget.saved, widget.savedId);
-            } else {
-              transferReportModel.updateTemporaryRecord(widget.edit, Strings.nearestTank1, GlobalFunctions.encryptString(val), widget.jobId, widget.saved, widget.savedId);
-            }
+        Container(
+          color: nearestTank1 == 'Select One' ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: DropdownFormField(
+            expanded: true,
+            value: nearestTank1,
+            items: nearestTankDrop.toList(),
+            onChanged: (val) => setState(() {
+              nearestTank1 = val;
+              if(val == 'Select One'){
+                transferReportModel.updateTemporaryRecord(widget.edit, Strings.nearestTank1, null, widget.jobId, widget.saved, widget.savedId);
+              } else {
+                transferReportModel.updateTemporaryRecord(widget.edit, Strings.nearestTank1, GlobalFunctions.encryptString(val), widget.jobId, widget.saved, widget.savedId);
+              }
 
-            FocusScope.of(context).unfocus();
-          }),
-          initialValue: nearestTank1,
+              FocusScope.of(context).unfocus();
+            }),
+            initialValue: nearestTank1,
+          ),
         ),
         SizedBox(height: 15,),
       ],
@@ -599,21 +620,24 @@ class _TransferReportSection5State extends State<TransferReportSection5> {
                 ),                                           ]
           ),
         ),
-        DropdownFormField(
-          expanded: true,
-          value: nearestTank2,
-          items: nearestTankDrop.toList(),
-          onChanged: (val) => setState(() {
-            nearestTank2 = val;
-            if(val == 'Select One'){
-              transferReportModel.updateTemporaryRecord(widget.edit, Strings.nearestTank2, null, widget.jobId, widget.saved, widget.savedId);
-            } else {
-              transferReportModel.updateTemporaryRecord(widget.edit, Strings.nearestTank2, GlobalFunctions.encryptString(val), widget.jobId, widget.saved, widget.savedId);
-            }
+        Container(
+          color: nearestTank2 == 'Select One' ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: DropdownFormField(
+            expanded: true,
+            value: nearestTank2,
+            items: nearestTankDrop.toList(),
+            onChanged: (val) => setState(() {
+              nearestTank2 = val;
+              if(val == 'Select One'){
+                transferReportModel.updateTemporaryRecord(widget.edit, Strings.nearestTank2, null, widget.jobId, widget.saved, widget.savedId);
+              } else {
+                transferReportModel.updateTemporaryRecord(widget.edit, Strings.nearestTank2, GlobalFunctions.encryptString(val), widget.jobId, widget.saved, widget.savedId);
+              }
 
-            FocusScope.of(context).unfocus();
-          }),
-          initialValue: nearestTank2,
+              FocusScope.of(context).unfocus();
+            }),
+            initialValue: nearestTank2,
+          ),
         ),
         SizedBox(height: 15,),
       ],
@@ -621,7 +645,7 @@ class _TransferReportSection5State extends State<TransferReportSection5> {
   }
 
 
-  Widget _textFormField(String label, TextEditingController controller, [int lines = 1, bool required = false, TextInputType textInputType = TextInputType.text]) {
+  Widget _textFormField(String label, TextEditingController controller, [int lines = 1, bool required = false, TextInputType textInputType = TextInputType.text, bool patientReport = false]) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -633,7 +657,7 @@ class _TransferReportSection5State extends State<TransferReportSection5> {
               children:
               [
                 TextSpan(
-                  text: required ? ' *' : '',
+                  text: required && patientReport == false ? ' *' : '',
                   style: TextStyle(
                       color: Colors.red,
                       fontSize: 16.0),
@@ -653,6 +677,7 @@ class _TransferReportSection5State extends State<TransferReportSection5> {
           },
           maxLines: lines,
           decoration: InputDecoration(
+              filled: required && controller.text.isEmpty ? true : false, fillColor: Color(0xFF0000).withOpacity(0.3),
               suffixIcon: controller.text == ''
                   ? null
                   : IconButton(
@@ -671,8 +696,6 @@ class _TransferReportSection5State extends State<TransferReportSection5> {
       ],
     );
   }
-
-
   Widget _buildDateField(String label, TextEditingController controller, String value, [bool required = false, bool encrypt = false]) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -697,6 +720,7 @@ class _TransferReportSection5State extends State<TransferReportSection5> {
             Flexible(
               child: IgnorePointer(
                 child: TextFormField(
+                  decoration: InputDecoration(filled: required && controller.text.isEmpty ? true : false, fillColor: Color(0xFF0000).withOpacity(0.3)),
                   enabled: true,
                   initialValue: null,
                   controller: controller,
@@ -747,6 +771,7 @@ class _TransferReportSection5State extends State<TransferReportSection5> {
                         if(encrypt){
                           transferReportModel.updateTemporaryRecord(widget.edit, value, GlobalFunctions.encryptString(DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String()), widget.jobId, widget.saved, widget.savedId);
                         } else {
+
                           transferReportModel.updateTemporaryRecord(widget.edit, value, DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String(), widget.jobId, widget.saved, widget.savedId);
                         }
 
@@ -786,6 +811,7 @@ class _TransferReportSection5State extends State<TransferReportSection5> {
             Flexible(
               child: IgnorePointer(
                 child: TextFormField(
+                  decoration: InputDecoration(filled: required && controller.text.isEmpty ? true : false, fillColor: Color(0xFF0000).withOpacity(0.3)),
                   enabled: true,
                   initialValue: null,
                   controller: controller,
@@ -868,64 +894,70 @@ class _TransferReportSection5State extends State<TransferReportSection5> {
                       fontSize: 16.0),
                 ),                                           ]
           ),
-        ),        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: ambulanceTidyYes1,
-                onChanged: (bool value) => setState(() {
-                  ambulanceTidyYes1 = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.ambulanceTidyYes1, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (ambulanceTidyNo1 == true){
-                    ambulanceTidyNo1 = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.ambulanceTidyNo1, null, widget.jobId, widget.saved, widget.savedId);
-                  }
+        ),        Container(
+          color: ambulanceTidyYes1 == false && ambulanceTidyNo1 == false ? Color(0xFF0000).withOpacity(0.3) : null,
 
-                  if(
-                  (ambulanceTidyNo1 == null || ambulanceTidyNo1 == false) &&
-                      (lightsWorkingNo == null || lightsWorkingNo == false) &&
-                      (tyresInflatedNo == null || tyresInflatedNo == false) &&
-                      (warningSignsYes == null || warningSignsYes == false) &&
-                      (ambulanceTidyNo2 == null || ambulanceTidyNo2 == false) &&
-                      (sanitiserCleanNo == null || sanitiserCleanNo == false)
-                  ) {
-                    mandatoryIssuesFaults = false;
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: ambulanceTidyNo1,
-                onChanged: (bool value) => setState(() {
-                  ambulanceTidyNo1 = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.ambulanceTidyNo1, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (ambulanceTidyYes1 == true){
-                    ambulanceTidyYes1 = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.ambulanceTidyYes1, null, widget.jobId, widget.saved, widget.savedId);
-                  }
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: ambulanceTidyYes1,
+                  onChanged: (bool value) => setState(() {
+                    ambulanceTidyYes1 = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.ambulanceTidyYes1, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (ambulanceTidyNo1 == true){
+                      ambulanceTidyNo1 = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.ambulanceTidyNo1, null, widget.jobId, widget.saved, widget.savedId);
+                    }
 
-                  if(ambulanceTidyNo1 == true){
-                    mandatoryIssuesFaults = true;
-                    if(issuesFaults.text.isEmpty) showIssuesDialog();
-                  } else if(
-                  (ambulanceTidyNo1 == null || ambulanceTidyNo1 == false) &&
-                      (lightsWorkingNo == null || lightsWorkingNo == false) &&
-                      (tyresInflatedNo == null || tyresInflatedNo == false) &&
-                      (warningSignsYes == null || warningSignsYes == false) &&
-                      (ambulanceTidyNo2 == null || ambulanceTidyNo2 == false) &&
-                      (sanitiserCleanNo == null || sanitiserCleanNo == false)
-                  ) {
-                    mandatoryIssuesFaults = false;
-                  }
+                    if(
+                    (ambulanceTidyNo1 == null || ambulanceTidyNo1 == false) &&
+                        (lightsWorkingNo == null || lightsWorkingNo == false) &&
+                        (tyresInflatedNo == null || tyresInflatedNo == false) &&
+                        (warningSignsYes == null || warningSignsYes == false) &&
+                        (vehicleDamageYes == null || vehicleDamageYes == false) &&
+                        (ambulanceTidyNo2 == null || ambulanceTidyNo2 == false) &&
+                        (sanitiserCleanNo == null || sanitiserCleanNo == false)
+                    ) {
+                      mandatoryIssuesFaults = false;
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: ambulanceTidyNo1,
+                  onChanged: (bool value) => setState(() {
+                    ambulanceTidyNo1 = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.ambulanceTidyNo1, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (ambulanceTidyYes1 == true){
+                      ambulanceTidyYes1 = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.ambulanceTidyYes1, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+
+                    if(ambulanceTidyNo1 == true){
+                      mandatoryIssuesFaults = true;
+                      if(issuesFaults.text.isEmpty) showIssuesDialog();
+                    } else if(
+                    (ambulanceTidyNo1 == null || ambulanceTidyNo1 == false) &&
+                        (lightsWorkingNo == null || lightsWorkingNo == false) &&
+                        (tyresInflatedNo == null || tyresInflatedNo == false) &&
+                        (warningSignsYes == null || warningSignsYes == false) &&
+                        (vehicleDamageYes == null || vehicleDamageYes == false) &&
+                        (ambulanceTidyNo2 == null || ambulanceTidyNo2 == false) &&
+                        (sanitiserCleanNo == null || sanitiserCleanNo == false)
+                    ) {
+                      mandatoryIssuesFaults = false;
+                    }
 
 
-                }))
-          ],
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -948,63 +980,69 @@ class _TransferReportSection5State extends State<TransferReportSection5> {
                       fontSize: 16.0),
                 ),                                           ]
           ),
-        ),        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: lightsWorkingYes,
-                onChanged: (bool value) => setState(() {
-                  lightsWorkingYes = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.lightsWorkingYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (lightsWorkingNo == true){
-                    lightsWorkingNo = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.lightsWorkingNo, null, widget.jobId, widget.saved, widget.savedId);
-                  }
+        ),        Container(
+          color: lightsWorkingYes == false && lightsWorkingNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
 
-                  if(
-                  (ambulanceTidyNo1 == null || ambulanceTidyNo1 == false) &&
-                      (lightsWorkingNo == null || lightsWorkingNo == false) &&
-                      (tyresInflatedNo == null || tyresInflatedNo == false) &&
-                      (warningSignsYes == null || warningSignsYes == false) &&
-                      (ambulanceTidyNo2 == null || ambulanceTidyNo2 == false) &&
-                      (sanitiserCleanNo == null || sanitiserCleanNo == false)
-                  ) {
-                    mandatoryIssuesFaults = false;
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: lightsWorkingNo,
-                onChanged: (bool value) => setState(() {
-                  lightsWorkingNo = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.lightsWorkingNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (lightsWorkingYes == true){
-                    lightsWorkingYes = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.lightsWorkingYes, null, widget.jobId, widget.saved, widget.savedId);
-                  }
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: lightsWorkingYes,
+                  onChanged: (bool value) => setState(() {
+                    lightsWorkingYes = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.lightsWorkingYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (lightsWorkingNo == true){
+                      lightsWorkingNo = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.lightsWorkingNo, null, widget.jobId, widget.saved, widget.savedId);
+                    }
 
-                  if(lightsWorkingNo == true){
-                    mandatoryIssuesFaults = true;
-                    if(issuesFaults.text.isEmpty) showIssuesDialog();
+                    if(
+                    (ambulanceTidyNo1 == null || ambulanceTidyNo1 == false) &&
+                        (lightsWorkingNo == null || lightsWorkingNo == false) &&
+                        (tyresInflatedNo == null || tyresInflatedNo == false) &&
+                        (warningSignsYes == null || warningSignsYes == false) &&
+                        (vehicleDamageYes == null || vehicleDamageYes == false) &&
+                        (ambulanceTidyNo2 == null || ambulanceTidyNo2 == false) &&
+                        (sanitiserCleanNo == null || sanitiserCleanNo == false)
+                    ) {
+                      mandatoryIssuesFaults = false;
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: lightsWorkingNo,
+                  onChanged: (bool value) => setState(() {
+                    lightsWorkingNo = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.lightsWorkingNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (lightsWorkingYes == true){
+                      lightsWorkingYes = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.lightsWorkingYes, null, widget.jobId, widget.saved, widget.savedId);
+                    }
 
-                  } else if(
-                  (ambulanceTidyNo1 == null || ambulanceTidyNo1 == false) &&
-                      (lightsWorkingNo == null || lightsWorkingNo == false) &&
-                      (tyresInflatedNo == null || tyresInflatedNo == false) &&
-                      (warningSignsYes == null || warningSignsYes == false) &&
-                      (ambulanceTidyNo2 == null || ambulanceTidyNo2 == false) &&
-                      (sanitiserCleanNo == null || sanitiserCleanNo == false)
-                  ) {
-                    mandatoryIssuesFaults = false;
-                  }
-                }))
-          ],
+                    if(lightsWorkingNo == true){
+                      mandatoryIssuesFaults = true;
+                      if(issuesFaults.text.isEmpty) showIssuesDialog();
+
+                    } else if(
+                    (ambulanceTidyNo1 == null || ambulanceTidyNo1 == false) &&
+                        (lightsWorkingNo == null || lightsWorkingNo == false) &&
+                        (tyresInflatedNo == null || tyresInflatedNo == false) &&
+                        (warningSignsYes == null || warningSignsYes == false) &&
+                        (vehicleDamageYes == null || vehicleDamageYes == false) &&
+                        (ambulanceTidyNo2 == null || ambulanceTidyNo2 == false) &&
+                        (sanitiserCleanNo == null || sanitiserCleanNo == false)
+                    ) {
+                      mandatoryIssuesFaults = false;
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -1027,65 +1065,71 @@ class _TransferReportSection5State extends State<TransferReportSection5> {
                       fontSize: 16.0),
                 ),                                           ]
           ),
-        ),        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: tyresInflatedYes,
-                onChanged: (bool value) => setState(() {
-                  tyresInflatedYes = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.tyresInflatedYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (tyresInflatedNo == true){
-                    tyresInflatedNo = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.tyresInflatedNo, null, widget.jobId, widget.saved, widget.savedId);
-                  }
+        ),        Container(
+          color: tyresInflatedYes == false && tyresInflatedNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
 
-                  if(
-                  (ambulanceTidyNo1 == null || ambulanceTidyNo1 == false) &&
-                      (lightsWorkingNo == null || lightsWorkingNo == false) &&
-                      (tyresInflatedNo == null || tyresInflatedNo == false) &&
-                      (warningSignsYes == null || warningSignsYes == false) &&
-                      (ambulanceTidyNo2 == null || ambulanceTidyNo2 == false) &&
-                      (sanitiserCleanNo == null || sanitiserCleanNo == false)
-                  ) {
-                    mandatoryIssuesFaults = false;
-                  }
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: tyresInflatedYes,
+                  onChanged: (bool value) => setState(() {
+                    tyresInflatedYes = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.tyresInflatedYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (tyresInflatedNo == true){
+                      tyresInflatedNo = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.tyresInflatedNo, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+
+                    if(
+                    (ambulanceTidyNo1 == null || ambulanceTidyNo1 == false) &&
+                        (lightsWorkingNo == null || lightsWorkingNo == false) &&
+                        (tyresInflatedNo == null || tyresInflatedNo == false) &&
+                        (warningSignsYes == null || warningSignsYes == false) &&
+                        (vehicleDamageYes == null || vehicleDamageYes == false) &&
+                        (ambulanceTidyNo2 == null || ambulanceTidyNo2 == false) &&
+                        (sanitiserCleanNo == null || sanitiserCleanNo == false)
+                    ) {
+                      mandatoryIssuesFaults = false;
+                    }
 
 
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: tyresInflatedNo,
-                onChanged: (bool value) => setState(() {
-                  tyresInflatedNo = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.tyresInflatedNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (tyresInflatedYes == true){
-                    tyresInflatedYes = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.tyresInflatedYes, null, widget.jobId, widget.saved, widget.savedId);
-                  }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: tyresInflatedNo,
+                  onChanged: (bool value) => setState(() {
+                    tyresInflatedNo = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.tyresInflatedNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (tyresInflatedYes == true){
+                      tyresInflatedYes = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.tyresInflatedYes, null, widget.jobId, widget.saved, widget.savedId);
+                    }
 
-                  if(tyresInflatedNo == true){
-                    mandatoryIssuesFaults = true;
-                    if(issuesFaults.text.isEmpty) showIssuesDialog();
+                    if(tyresInflatedNo == true){
+                      mandatoryIssuesFaults = true;
+                      if(issuesFaults.text.isEmpty) showIssuesDialog();
 
-                  } else if(
-                  (ambulanceTidyNo1 == null || ambulanceTidyNo1 == false) &&
-                      (lightsWorkingNo == null || lightsWorkingNo == false) &&
-                      (tyresInflatedNo == null || tyresInflatedNo == false) &&
-                      (warningSignsYes == null || warningSignsYes == false) &&
-                      (ambulanceTidyNo2 == null || ambulanceTidyNo2 == false) &&
-                      (sanitiserCleanNo == null || sanitiserCleanNo == false)
-                  ) {
-                    mandatoryIssuesFaults = false;
-                  }
-                }))
-          ],
+                    } else if(
+                    (ambulanceTidyNo1 == null || ambulanceTidyNo1 == false) &&
+                        (lightsWorkingNo == null || lightsWorkingNo == false) &&
+                        (tyresInflatedNo == null || tyresInflatedNo == false) &&
+                        (warningSignsYes == null || warningSignsYes == false) &&
+                        (vehicleDamageYes == null || vehicleDamageYes == false) &&
+                        (ambulanceTidyNo2 == null || ambulanceTidyNo2 == false) &&
+                        (sanitiserCleanNo == null || sanitiserCleanNo == false)
+                    ) {
+                      mandatoryIssuesFaults = false;
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -1108,63 +1152,154 @@ class _TransferReportSection5State extends State<TransferReportSection5> {
                       fontSize: 16.0),
                 ),                                           ]
           ),
-        ),        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: warningSignsYes,
-                onChanged: (bool value) => setState(() {
-                  warningSignsYes = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.warningSignsYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (warningSignsNo == true){
-                    warningSignsNo = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.warningSignsNo, null, widget.jobId, widget.saved, widget.savedId);
-                  }
+        ),        Container(
+          color: warningSignsYes == false && warningSignsNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
 
-                  if(warningSignsYes == true){
-                    mandatoryIssuesFaults = true;
-                    if(issuesFaults.text.isEmpty) showIssuesDialog();
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: warningSignsYes,
+                  onChanged: (bool value) => setState(() {
+                    warningSignsYes = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.warningSignsYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (warningSignsNo == true){
+                      warningSignsNo = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.warningSignsNo, null, widget.jobId, widget.saved, widget.savedId);
+                    }
 
-                  } else if(
-                  (ambulanceTidyNo1 == null || ambulanceTidyNo1 == false) &&
-                      (lightsWorkingNo == null || lightsWorkingNo == false) &&
-                      (tyresInflatedNo == null || tyresInflatedNo == false) &&
-                      (warningSignsYes == null || warningSignsYes == false) &&
-                      (ambulanceTidyNo2 == null || ambulanceTidyNo2 == false) &&
-                      (sanitiserCleanNo == null || sanitiserCleanNo == false)
-                  ) {
-                    mandatoryIssuesFaults = false;
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: warningSignsNo,
-                onChanged: (bool value) => setState(() {
-                  warningSignsNo = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.warningSignsNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (warningSignsYes == true){
-                    warningSignsYes = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.warningSignsYes, null, widget.jobId, widget.saved, widget.savedId);
-                  }
+                    if(warningSignsYes == true){
+                      mandatoryIssuesFaults = true;
+                      if(issuesFaults.text.isEmpty) showIssuesDialog();
 
-                  if(
-                  (ambulanceTidyNo1 == null || ambulanceTidyNo1 == false) &&
-                      (lightsWorkingNo == null || lightsWorkingNo == false) &&
-                      (tyresInflatedNo == null || tyresInflatedNo == false) &&
-                      (warningSignsYes == null || warningSignsYes == false) &&
-                      (ambulanceTidyNo2 == null || ambulanceTidyNo2 == false) &&
-                      (sanitiserCleanNo == null || sanitiserCleanNo == false)
-                  ) {
-                    mandatoryIssuesFaults = false;
-                  }
-                }))
-          ],
+                    } else if(
+                    (ambulanceTidyNo1 == null || ambulanceTidyNo1 == false) &&
+                        (lightsWorkingNo == null || lightsWorkingNo == false) &&
+                        (tyresInflatedNo == null || tyresInflatedNo == false) &&
+                        (warningSignsYes == null || warningSignsYes == false) &&
+                        (vehicleDamageYes == null || vehicleDamageYes == false) &&
+                        (ambulanceTidyNo2 == null || ambulanceTidyNo2 == false) &&
+                        (sanitiserCleanNo == null || sanitiserCleanNo == false)
+                    ) {
+                      mandatoryIssuesFaults = false;
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: warningSignsNo,
+                  onChanged: (bool value) => setState(() {
+                    warningSignsNo = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.warningSignsNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (warningSignsYes == true){
+                      warningSignsYes = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.warningSignsYes, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+
+                    if(
+                    (ambulanceTidyNo1 == null || ambulanceTidyNo1 == false) &&
+                        (lightsWorkingNo == null || lightsWorkingNo == false) &&
+                        (tyresInflatedNo == null || tyresInflatedNo == false) &&
+                        (warningSignsYes == null || warningSignsYes == false) &&
+                        (vehicleDamageYes == null || vehicleDamageYes == false) &&
+                        (ambulanceTidyNo2 == null || ambulanceTidyNo2 == false) &&
+                        (sanitiserCleanNo == null || sanitiserCleanNo == false)
+                    ) {
+                      mandatoryIssuesFaults = false;
+                    }
+                  }))
+            ],
+          ),
+        )
+      ],
+    );
+  }
+  Widget _buildCheckboxRowVehicleDamageYes(String text) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        RichText(
+          text: TextSpan(
+              text: text,
+              style: TextStyle(
+                  fontSize: 16.0, fontFamily: 'Open Sans', color: bluePurple),
+              children:
+              [
+                TextSpan(
+                  text: ' *',
+                  style: TextStyle(
+                      color: Colors.red,
+                      fontSize: 16.0),
+                ),                                           ]
+          ),
+        ),        Container(
+          color: vehicleDamageYes == false && vehicleDamageNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
+
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: vehicleDamageYes,
+                  onChanged: (bool value) => setState(() {
+                    vehicleDamageYes = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.vehicleDamageYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (vehicleDamageNo == true){
+                      vehicleDamageNo = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.vehicleDamageNo, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+
+                    if(vehicleDamageYes == true){
+                      mandatoryIssuesFaults = true;
+                      if(issuesFaults.text.isEmpty) showIssuesDialog();
+
+                    } else if(
+                    (ambulanceTidyNo1 == null || ambulanceTidyNo1 == false) &&
+                        (lightsWorkingNo == null || lightsWorkingNo == false) &&
+                        (tyresInflatedNo == null || tyresInflatedNo == false) &&
+                        (warningSignsYes == null || warningSignsYes == false) &&
+                        (vehicleDamageYes == null || vehicleDamageYes == false) &&
+                        (ambulanceTidyNo2 == null || ambulanceTidyNo2 == false) &&
+                        (sanitiserCleanNo == null || sanitiserCleanNo == false)
+                    ) {
+                      mandatoryIssuesFaults = false;
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: vehicleDamageNo,
+                  onChanged: (bool value) => setState(() {
+                    vehicleDamageNo = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.vehicleDamageNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (vehicleDamageYes == true){
+                      vehicleDamageYes = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.vehicleDamageYes, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+
+                    if(
+                    (ambulanceTidyNo1 == null || ambulanceTidyNo1 == false) &&
+                        (lightsWorkingNo == null || lightsWorkingNo == false) &&
+                        (tyresInflatedNo == null || tyresInflatedNo == false) &&
+                        (warningSignsNo == null || warningSignsNo == false) &&
+                        (vehicleDamageYes == null || vehicleDamageYes == false) &&
+                        (ambulanceTidyNo2 == null || ambulanceTidyNo2 == false) &&
+                        (sanitiserCleanNo == null || sanitiserCleanNo == false)
+                    ) {
+                      mandatoryIssuesFaults = false;
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -1188,63 +1323,68 @@ class _TransferReportSection5State extends State<TransferReportSection5> {
                 ),                                           ]
           ),
         ),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: ambulanceTidyYes2,
-                onChanged: (bool value) => setState(() {
-                  ambulanceTidyYes2 = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.ambulanceTidyYes2, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (ambulanceTidyNo2 == true){
-                    ambulanceTidyNo2 = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.ambulanceTidyNo2, null, widget.jobId, widget.saved, widget.savedId);
-                  }
+        Container(
+          color: ambulanceTidyYes2 == false && ambulanceTidyNo2 == false ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: ambulanceTidyYes2,
+                  onChanged: (bool value) => setState(() {
+                    ambulanceTidyYes2 = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.ambulanceTidyYes2, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (ambulanceTidyNo2 == true){
+                      ambulanceTidyNo2 = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.ambulanceTidyNo2, null, widget.jobId, widget.saved, widget.savedId);
+                    }
 
-                  if(
-                  (ambulanceTidyNo1 == null || ambulanceTidyNo1 == false) &&
-                      (lightsWorkingNo == null || lightsWorkingNo == false) &&
-                      (tyresInflatedNo == null || tyresInflatedNo == false) &&
-                      (warningSignsYes == null || warningSignsYes == false) &&
-                      (ambulanceTidyNo2 == null || ambulanceTidyNo2 == false) &&
-                      (sanitiserCleanNo == null || sanitiserCleanNo == false)
-                  ) {
-                    mandatoryIssuesFaults = false;
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: ambulanceTidyNo2,
-                onChanged: (bool value) => setState(() {
-                  ambulanceTidyNo2 = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.ambulanceTidyNo2, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (ambulanceTidyYes2 == true){
-                    ambulanceTidyYes2 = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.ambulanceTidyYes2, null, widget.jobId, widget.saved, widget.savedId);
-                  }
+                    if(
+                    (ambulanceTidyNo1 == null || ambulanceTidyNo1 == false) &&
+                        (lightsWorkingNo == null || lightsWorkingNo == false) &&
+                        (tyresInflatedNo == null || tyresInflatedNo == false) &&
+                        (warningSignsYes == null || warningSignsYes == false) &&
+                        (vehicleDamageYes == null || vehicleDamageYes == false) &&
+                        (ambulanceTidyNo2 == null || ambulanceTidyNo2 == false) &&
+                        (sanitiserCleanNo == null || sanitiserCleanNo == false)
+                    ) {
+                      mandatoryIssuesFaults = false;
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: ambulanceTidyNo2,
+                  onChanged: (bool value) => setState(() {
+                    ambulanceTidyNo2 = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.ambulanceTidyNo2, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (ambulanceTidyYes2 == true){
+                      ambulanceTidyYes2 = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.ambulanceTidyYes2, null, widget.jobId, widget.saved, widget.savedId);
+                    }
 
-                  if(ambulanceTidyNo2 == true){
-                    mandatoryIssuesFaults = true;
-                    if(issuesFaults.text.isEmpty) showIssuesDialog();
+                    if(ambulanceTidyNo2 == true){
+                      mandatoryIssuesFaults = true;
+                      if(issuesFaults.text.isEmpty) showIssuesDialog();
 
-                  } else if(
-                  (ambulanceTidyNo1 == null || ambulanceTidyNo1 == false) &&
-                      (lightsWorkingNo == null || lightsWorkingNo == false) &&
-                      (tyresInflatedNo == null || tyresInflatedNo == false) &&
-                      (warningSignsYes == null || warningSignsYes == false) &&
-                      (ambulanceTidyNo2 == null || ambulanceTidyNo2 == false) &&
-                      (sanitiserCleanNo == null || sanitiserCleanNo == false)
-                  ) {
-                    mandatoryIssuesFaults = false;
-                  }
-                }))
-          ],
+                    } else if(
+                    (ambulanceTidyNo1 == null || ambulanceTidyNo1 == false) &&
+                        (lightsWorkingNo == null || lightsWorkingNo == false) &&
+                        (tyresInflatedNo == null || tyresInflatedNo == false) &&
+                        (warningSignsYes == null || warningSignsYes == false) &&
+                        (vehicleDamageYes == null || vehicleDamageYes == false) &&
+                        (ambulanceTidyNo2 == null || ambulanceTidyNo2 == false) &&
+                        (sanitiserCleanNo == null || sanitiserCleanNo == false)
+                    ) {
+                      mandatoryIssuesFaults = false;
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -1268,63 +1408,68 @@ class _TransferReportSection5State extends State<TransferReportSection5> {
                 ),                                           ]
           ),
         ),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: sanitiserCleanYes,
-                onChanged: (bool value) => setState(() {
-                  sanitiserCleanYes = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.sanitiserCleanYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (sanitiserCleanNo == true){
-                    sanitiserCleanNo = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.sanitiserCleanNo, null, widget.jobId, widget.saved, widget.savedId);
-                  }
+        Container(
+          color: sanitiserCleanYes == false && sanitiserCleanNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: sanitiserCleanYes,
+                  onChanged: (bool value) => setState(() {
+                    sanitiserCleanYes = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.sanitiserCleanYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (sanitiserCleanNo == true){
+                      sanitiserCleanNo = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.sanitiserCleanNo, null, widget.jobId, widget.saved, widget.savedId);
+                    }
 
-                  if(
-                  (ambulanceTidyNo1 == null || ambulanceTidyNo1 == false) &&
-                      (lightsWorkingNo == null || lightsWorkingNo == false) &&
-                      (tyresInflatedNo == null || tyresInflatedNo == false) &&
-                      (warningSignsYes == null || warningSignsYes == false) &&
-                      (ambulanceTidyNo2 == null || ambulanceTidyNo2 == false) &&
-                      (sanitiserCleanNo == null || sanitiserCleanNo == false)
-                  ) {
-                    mandatoryIssuesFaults = false;
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: sanitiserCleanNo,
-                onChanged: (bool value) => setState(() {
-                  sanitiserCleanNo = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.sanitiserCleanNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (sanitiserCleanYes == true){
-                    sanitiserCleanYes = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.sanitiserCleanYes, null, widget.jobId, widget.saved, widget.savedId);
-                  }
+                    if(
+                    (ambulanceTidyNo1 == null || ambulanceTidyNo1 == false) &&
+                        (lightsWorkingNo == null || lightsWorkingNo == false) &&
+                        (tyresInflatedNo == null || tyresInflatedNo == false) &&
+                        (warningSignsYes == null || warningSignsYes == false) &&
+                        (vehicleDamageYes == null || vehicleDamageYes == false) &&
+                        (ambulanceTidyNo2 == null || ambulanceTidyNo2 == false) &&
+                        (sanitiserCleanNo == null || sanitiserCleanNo == false)
+                    ) {
+                      mandatoryIssuesFaults = false;
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: sanitiserCleanNo,
+                  onChanged: (bool value) => setState(() {
+                    sanitiserCleanNo = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.sanitiserCleanNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (sanitiserCleanYes == true){
+                      sanitiserCleanYes = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.sanitiserCleanYes, null, widget.jobId, widget.saved, widget.savedId);
+                    }
 
-                  if(sanitiserCleanNo == true){
-                    mandatoryIssuesFaults = true;
-                    if(issuesFaults.text.isEmpty) showIssuesDialog();
+                    if(sanitiserCleanNo == true){
+                      mandatoryIssuesFaults = true;
+                      if(issuesFaults.text.isEmpty) showIssuesDialog();
 
-                  } else if(
-                  (ambulanceTidyNo1 == null || ambulanceTidyNo1 == false) &&
-                      (lightsWorkingNo == null || lightsWorkingNo == false) &&
-                      (tyresInflatedNo == null || tyresInflatedNo == false) &&
-                      (warningSignsYes == null || warningSignsYes == false) &&
-                      (ambulanceTidyNo2 == null || ambulanceTidyNo2 == false) &&
-                      (sanitiserCleanNo == null || sanitiserCleanNo == false)
-                  ) {
-                    mandatoryIssuesFaults = false;
-                  }
-                }))
-          ],
+                    } else if(
+                    (ambulanceTidyNo1 == null || ambulanceTidyNo1 == false) &&
+                        (lightsWorkingNo == null || lightsWorkingNo == false) &&
+                        (tyresInflatedNo == null || tyresInflatedNo == false) &&
+                        (warningSignsYes == null || warningSignsYes == false) &&
+                        (vehicleDamageYes == null || vehicleDamageYes == false) &&
+                        (ambulanceTidyNo2 == null || ambulanceTidyNo2 == false) &&
+                        (sanitiserCleanNo == null || sanitiserCleanNo == false)
+                    ) {
+                      mandatoryIssuesFaults = false;
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -1351,22 +1496,23 @@ class _TransferReportSection5State extends State<TransferReportSection5> {
                   Text('TRANSFER REPORT', style: TextStyle(color: bluePurple, fontWeight: FontWeight.bold, fontSize: 18),),
                 ],),
                 SizedBox(height: 10,),
-                Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Text('PRE-TRANSFER VEHICLE CHECKLIST', style: TextStyle(color: bluePurple, fontWeight: FontWeight.bold, fontSize: 18),),
-                ],),
-                SizedBox(height: 20,),
-                _textFormField('Completed by', vehicleCompletedBy1, 1, true),
-                _textFormField('Ambulance Reg', ambulanceReg, 1, true),
-                //_textFormField('Start Mileage', vehicleStartMileage, 1, true),
-                _buildNearestTank1Drop(),
-                _buildDateField('Date', vehicleDate, Strings.vehicleDate, true),
-                _buildTimeField('Time', vehicleTime, Strings.vehicleTime, true),
-                SizedBox(height: 10,),
-                _buildCheckboxRowAmbulanceTidyYes1('• Was the ambulance left clean and tidy?'),
-                _buildCheckboxRowLightsWorkingYes('• Ambulance lights working?'),
-                _buildCheckboxRowTyresInflatedYes('• Tyres appear inflated fully?'),
-                _buildCheckboxRowWarningSignsYes('• Vehicle warning signs showing?'),
-                SizedBox(height: 20,),
+                // Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                //   Text('PRE-TRANSFER VEHICLE CHECKLIST', style: TextStyle(color: bluePurple, fontWeight: FontWeight.bold, fontSize: 18),),
+                // ],),
+                // SizedBox(height: 20,),
+                // _textFormField('Completed by', vehicleCompletedBy1, 1, true),
+                // _textFormField('Ambulance Reg', ambulanceReg, 1, true),
+                // //_textFormField('Start Mileage', vehicleStartMileage, 1, true),
+                // _buildNearestTank1Drop(),
+                // _buildDateField('Date', vehicleDate, Strings.vehicleDate, true),
+                // _buildTimeField('Time', vehicleTime, Strings.vehicleTime, true),
+                // SizedBox(height: 10,),
+                // _buildCheckboxRowAmbulanceTidyYes1('• Was the ambulance left clean and tidy?'),
+                // _buildCheckboxRowLightsWorkingYes('• Ambulance lights working?'),
+                // _buildCheckboxRowTyresInflatedYes('• Tyres appear inflated fully?'),
+                // _buildCheckboxRowWarningSignsYes('• Vehicle warning signs showing?'),
+                // _buildCheckboxRowVehicleDamageYes('• Any damage to vehicle / bodywork?'),
+                // SizedBox(height: 20,),
                 Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                   Text('POST-TRANSFER VEHICLE CHECKLIST', style: TextStyle(color: bluePurple, fontWeight: FontWeight.bold, fontSize: 18),),
                 ],),
@@ -1401,7 +1547,7 @@ class _TransferReportSection5State extends State<TransferReportSection5> {
                   ),
                 ),
                 SizedBox(height: 10,),
-                _textFormField('', issuesFaults, 5, false, TextInputType.multiline),
+                _textFormField('', issuesFaults, 5, mandatoryIssuesFaults == null || mandatoryIssuesFaults == false ? false : true, TextInputType.multiline, true),
                 SizedBox(height: 10,),
               ]),
         ),

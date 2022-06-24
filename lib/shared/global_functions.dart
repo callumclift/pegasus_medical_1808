@@ -7,7 +7,7 @@ import 'package:connectivity/connectivity.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_image_compress/flutter_image_compress.dart';
+// import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:random_string/random_string.dart';
 import 'package:encrypt/encrypt.dart' as Encrypt;
@@ -34,6 +34,17 @@ class GlobalFunctions {
 
   static void showToast(String message) {
     BotToast.showText(text: message, align: Alignment.center, duration: Duration(milliseconds: 2500));
+  }
+
+  static String buildJobRef(var ref, var refNo){
+    String returnedValue = '';
+    if(ref != null && ref != 'Select One'){
+      returnedValue = ref;
+    }
+    if(refNo != null){
+      returnedValue = returnedValue + refNo;
+    }
+    return returnedValue;
   }
 
 
@@ -344,11 +355,11 @@ class GlobalFunctions {
     return value;
   }
 
-  static Future<List<int>> getImageBytes(File image) async {
-    List<int> imageBytes = await FlutterImageCompress.compressWithFile(
-        image.absolute.path, quality: 90, keepExif: true);
-    return imageBytes;
-  }
+  // static Future<List<int>> getImageBytes(File image) async {
+  //   List<int> imageBytes = await FlutterImageCompress.compressWithFile(
+  //       image.absolute.path, quality: 90, keepExif: true);
+  //   return imageBytes;
+  // }
 
   static String getBase64Image(List<int> imageBytes) {
     String base64Image = base64Encode(imageBytes);

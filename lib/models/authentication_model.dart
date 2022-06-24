@@ -182,7 +182,6 @@ class AuthenticationModel extends ChangeNotifier {
     _loginErrorMessage = '';
     notifyListeners();
 
-
     try {
 
 
@@ -193,12 +192,12 @@ class AuthenticationModel extends ChangeNotifier {
       String token = tokenResult.token;
 
 
+
+
       if(!emailVerified){
         _loginErrorMessage = 'Please verify your email before signing in';
       } else {
         if(token != null){
-
-
 
           DocumentSnapshot snapshot = await FirebaseFirestore.instance.collection('users').doc(firebaseUser.uid).get();
           Map<String, dynamic> snapshotData = snapshot.data();
@@ -213,8 +212,10 @@ class AuthenticationModel extends ChangeNotifier {
             if(!kIsWeb) {
               _secureStorage.writeSecureData('email', email);
               _secureStorage.writeSecureData('password', password);
+
             }
             await createOnlineAuthenticatedUser(uid: firebaseUser.uid, email: email, token: token, tokenExpiryTime: expiryTimeString, snapshotData: snapshotData);
+
             //if(!isWeb) await createTemporaryForms();
             _loginErrorMessage = '';
 
@@ -230,11 +231,14 @@ class AuthenticationModel extends ChangeNotifier {
 
 
 
-
-
-
             if(user.termsAccepted && user.forcePasswordReset == false) {
-              _navigationService.navigateToReplacement(routes.TransferReportPageRoute);
+              if(user.role != 'Normal User'){
+                _navigationService.navigateToReplacement(routes.TransferReportPageRoute);
+
+              } else {
+                _navigationService.navigateToReplacement(routes.PatientObservationPageRoute);
+
+              }
 
             } else if(user.termsAccepted && user.forcePasswordReset == true){
 
@@ -593,7 +597,7 @@ class AuthenticationModel extends ChangeNotifier {
         name: GlobalFunctions.decryptString(sharedPreferences.get(Strings.name)),
         nameLowercase: GlobalFunctions.decryptString(sharedPreferences.get(Strings.nameLowercase)),
         groups: groups.isEmpty ? null : groups,
-        mobile: GlobalFunctions.decryptString(sharedPreferences.get(Strings.mobile)),
+        mobile: sharedPreferences.get(Strings.mobile) == null ? '' : GlobalFunctions.decryptString(sharedPreferences.get(Strings.mobile)),
         role: sharedPreferences.get(Strings.role),
         token: sharedPreferences.get(Strings.token),
         tokenExpiryTime: sharedPreferences.get(Strings.tokenExpiryTime),
@@ -601,7 +605,7 @@ class AuthenticationModel extends ChangeNotifier {
         deleted: sharedPreferences.getBool(Strings.deleted),
         termsAccepted: sharedPreferences.getBool(Strings.termsAccepted),
         forcePasswordReset: sharedPreferences.getBool(Strings.forcePasswordReset),
-        profilePicture: sharedPreferences.get(Strings.profilePicture),
+        profilePicture: sharedPreferences.get(Strings.profilePicture) == null ? '' : sharedPreferences.get(Strings.profilePicture),
 
     );
   }
@@ -640,10 +644,12 @@ class AuthenticationModel extends ChangeNotifier {
     if(kIsWeb){
       sharedPreferences.setString(Strings.email, GlobalFunctions.encryptString(user.email));
     }
+
     sharedPreferences.setString(Strings.name, GlobalFunctions.encryptString(user.name));
     sharedPreferences.setString(Strings.nameLowercase, GlobalFunctions.encryptString(user.nameLowercase));
-    sharedPreferences.setString(Strings.groups, groups.isEmpty ? null : jsonEncode(groups));
-    sharedPreferences.setString(Strings.mobile, GlobalFunctions.encryptString(user.mobile));
+
+    sharedPreferences.setString(Strings.groups, groups.isEmpty ? jsonEncode([]) : jsonEncode(groups));
+    sharedPreferences.setString(Strings.mobile, user.mobile == null ? GlobalFunctions.encryptString('') : GlobalFunctions.encryptString(user.mobile));
     sharedPreferences.setString(Strings.role, user.role);
     sharedPreferences.setString(Strings.token, token);
     sharedPreferences.setString(Strings.tokenExpiryTime, tokenExpiryTime);
@@ -652,10 +658,13 @@ class AuthenticationModel extends ChangeNotifier {
     sharedPreferences.setBool(Strings.termsAccepted, user.termsAccepted);
     sharedPreferences.setBool(Strings.forcePasswordReset, user.forcePasswordReset);
     sharedPreferences.setBool(Strings.rememberMe, true);
-    sharedPreferences.setString(Strings.profilePicture, user.profilePicture);
+    sharedPreferences.setString(Strings.profilePicture, user.profilePicture == null ? '' : user.profilePicture);
 
 
-      //Store user information in local database
+
+
+
+    //Store user information in local database
       Map<String, dynamic> localData = {
         Strings.uid: GlobalFunctions.databaseValueString(uid),
         Strings.email: GlobalFunctions.encryptString(snapshotData[Strings.email]),
@@ -892,7 +901,13 @@ class AuthenticationModel extends ChangeNotifier {
     GlobalFunctions.dismissLoadingDialog();
     if(message != '') GlobalFunctions.showToast(message);
     if(success && user.forcePasswordReset == false){
-      _navigationService.navigateToReplacement(routes.TransferReportPageRoute);
+      if(user.role != 'Normal User'){
+        _navigationService.navigateToReplacement(routes.TransferReportPageRoute);
+
+      } else {
+        _navigationService.navigateToReplacement(routes.PatientObservationPageRoute);
+
+      }
 
     } else if(success && user.forcePasswordReset == true){
       _navigationService.navigateToReplacement(routes.ChangePasswordPageRoute);

@@ -624,6 +624,33 @@ class _CompletedTransferReportSection2State extends State<CompletedTransferRepor
     );
   }
 
+  Widget _buildAcceptPpeRow() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text('Did patient accept PPE?', style: TextStyle(color: Colors.grey, fontSize: 12),),
+        Row(
+          children: <Widget>[
+            Text(
+              'Yes',
+            ),
+            Checkbox(
+                activeColor: bluePurple,
+                value: transferReportModel.selectedTransferReport[Strings.acceptPpeYes] == null || transferReportModel.selectedTransferReport[Strings.acceptPpeYes] == 0 ? false : true,
+                onChanged: (bool value){}),
+            Text(
+              'No',
+            ),
+            Checkbox(
+                activeColor: bluePurple,
+                value: transferReportModel.selectedTransferReport[Strings.acceptPpeNo] == null || transferReportModel.selectedTransferReport[Strings.acceptPpeNo] == 0 ? false : true,
+                onChanged: (bool value){}),
+          ],
+        )
+      ],
+    );
+  }
+
 
 
 
@@ -846,6 +873,7 @@ class _CompletedTransferReportSection2State extends State<CompletedTransferRepor
                 Text('Patient Report - please include: mental state, risk, physical health concerns, delays', style: TextStyle(color: bluePurple, fontWeight: FontWeight.bold),),
                 SizedBox(height: 10,),
                 _textFormField('', GlobalFunctions.decryptString(transferReportModel.selectedTransferReport[Strings.patientReport])),
+                _buildAcceptPpeRow(),
                 _textFormField('Print Name', GlobalFunctions.decryptString(transferReportModel.selectedTransferReport[Strings.patientReportPrintName])),
                 _textFormField('Role', GlobalFunctions.decryptString(transferReportModel.selectedTransferReport[Strings.patientReportRole])),
                 _buildPatientReportSignatureRow(),

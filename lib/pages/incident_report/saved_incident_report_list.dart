@@ -111,10 +111,10 @@ class _SavedIncidentReportsListPageState extends State<SavedIncidentReportsListP
           child: ListTile(
             leading: Icon(Icons.library_books_sharp, color: bluePurple,),
             trailing: IconButton(icon: Icon(Icons.delete, color: bluePurple,), onPressed: () => _deleteForm(incidentReports[index][Strings.localId]),),
-            title: GlobalFunctions.boldTitleText('Job Ref: ', incidentReports[index]['job_ref'], context),
+            title: GlobalFunctions.boldTitleText('Job Ref: ', GlobalFunctions.buildJobRef(incidentReports[index]['job_ref_ref'], incidentReports[index]['job_ref_no']), context),
             subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
-              GlobalFunctions.boldTitleText('Date: ', incidentReports[index][Strings.bfJobDate] == null ? '' : dateFormat.format(
-                  DateTime.parse(incidentReports[index][Strings.bfJobDate])), context),
+              GlobalFunctions.boldTitleText('Date: ', incidentReports[index][Strings.incidentDate] == null ? '' : dateFormat.format(
+                  DateTime.parse(incidentReports[index][Strings.incidentDate])), context),
             ],),
           ),),
         Divider(),

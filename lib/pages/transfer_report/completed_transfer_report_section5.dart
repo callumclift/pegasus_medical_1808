@@ -79,110 +79,11 @@ class _CompletedTransferReportSection5State extends State<CompletedTransferRepor
     );
   }
 
-  Widget _buildCheckboxRowAmbulanceTidyYes1(String text) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(text, style: TextStyle(color: bluePurple),),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: transferReportModel.selectedTransferReport[Strings.ambulanceTidyYes1] == null || transferReportModel.selectedTransferReport[Strings.ambulanceTidyYes1] == 0 ? false : true,
-                onChanged: (bool value){}),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: transferReportModel.selectedTransferReport[Strings.ambulanceTidyNo1] == null || transferReportModel.selectedTransferReport[Strings.ambulanceTidyNo1] == 0 ? false : true,
-                onChanged: (bool value){}),
-          ],
-        )
-      ],
-    );
-  }
-  Widget _buildCheckboxRowLightsWorkingYes(String text) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(text, style: TextStyle(color: bluePurple),),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: transferReportModel.selectedTransferReport[Strings.lightsWorkingYes] == null || transferReportModel.selectedTransferReport[Strings.lightsWorkingYes] == 0 ? false : true,
-                onChanged: (bool value){}),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: transferReportModel.selectedTransferReport[Strings.lightsWorkingNo] == null || transferReportModel.selectedTransferReport[Strings.lightsWorkingNo] == 0 ? false : true,
-                onChanged: (bool value){}),
-          ],
-        )
-      ],
-    );
-  }
-  Widget _buildCheckboxRowTyresInflatedYes(String text) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(text, style: TextStyle(color: bluePurple),),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: transferReportModel.selectedTransferReport[Strings.tyresInflatedYes] == null || transferReportModel.selectedTransferReport[Strings.tyresInflatedYes] == 0 ? false : true,
-                onChanged: (bool value){}),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: transferReportModel.selectedTransferReport[Strings.tyresInflatedNo] == null || transferReportModel.selectedTransferReport[Strings.tyresInflatedNo] == 0 ? false : true,
-                onChanged: (bool value){}),
-          ],
-        )
-      ],
-    );
-  }
-  Widget _buildCheckboxRowWarningSignsYes(String text) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(text, style: TextStyle(color: bluePurple),),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: transferReportModel.selectedTransferReport[Strings.warningSignsYes] == null || transferReportModel.selectedTransferReport[Strings.warningSignsYes] == 0 ? false : true,
-                onChanged: (bool value){}),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: transferReportModel.selectedTransferReport[Strings.warningSignsNo] == null || transferReportModel.selectedTransferReport[Strings.warningSignsNo] == 0 ? false : true,
-                onChanged: (bool value){}),
-          ],
-        )
-      ],
-    );
-  }
+
+
+
+
+
   Widget _buildCheckboxRowAmbulanceTidyYes2(String text) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -257,22 +158,6 @@ class _CompletedTransferReportSection5State extends State<CompletedTransferRepor
                   Text('TRANSFER REPORT', style: TextStyle(color: bluePurple, fontWeight: FontWeight.bold, fontSize: 16),),
                 ],),
                 SizedBox(height: 10,),
-                Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Text('PRE-TRANSFER VEHICLE CHECKLIST', style: TextStyle(color: bluePurple, fontWeight: FontWeight.bold, fontSize: 16),),
-                ],),
-                SizedBox(height: 20,),
-                _textFormField('Completed by', GlobalFunctions.decryptString(transferReportModel.selectedTransferReport[Strings.vehicleCompletedBy1])),
-                _textFormField('Ambulance Reg', GlobalFunctions.decryptString(transferReportModel.selectedTransferReport[Strings.ambulanceReg])),
-                //_textFormField('Start Mileage', GlobalFunctions.decryptString(transferReportModel.selectedTransferReport[Strings.vehicleStartMileage])),
-                _textFormField('Fuel to the nearest 1/4 tank', GlobalFunctions.decryptString(transferReportModel.selectedTransferReport[Strings.nearestTank1])),
-                _buildDateField('Date', GlobalFunctions.databaseValueDate(transferReportModel.selectedTransferReport[Strings.vehicleDate])),
-                _buildTimeField('Time', GlobalFunctions.databaseValueTime(transferReportModel.selectedTransferReport[Strings.vehicleTime])),
-                SizedBox(height: 10,),
-                _buildCheckboxRowAmbulanceTidyYes1('• Was the ambulance left clean and tidy?'),
-                _buildCheckboxRowLightsWorkingYes('• Ambulance lights working?'),
-                _buildCheckboxRowTyresInflatedYes('• Tyres appear inflated fully?'),
-                _buildCheckboxRowWarningSignsYes('• Vehicle warning signs showing?'),
-                SizedBox(height: 20,),
                 Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                   Text('POST-TRANSFER VEHICLE CHECKLIST', style: TextStyle(color: bluePurple, fontWeight: FontWeight.bold, fontSize: 16),),
                 ],),

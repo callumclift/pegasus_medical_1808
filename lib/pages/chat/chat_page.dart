@@ -171,7 +171,7 @@ class _ChatPageState extends State<ChatPage> {
 
                   if (userSnapshot.hasData) {
 
-                    return userSnapshot.data[Strings.profilePicture] == null ? CircleAvatar(
+                    return userSnapshot.data[Strings.profilePicture] == null || userSnapshot.data[Strings.profilePicture] == '' ? CircleAvatar(
                       backgroundColor: Colors.white,
                       child: Text(widget.title[0], style: TextStyle(color: bluePurple),),
                     ) : CircleAvatar(
@@ -231,7 +231,7 @@ class _ChatPageState extends State<ChatPage> {
                         }
 
 
-                        final data = snapshot.data.docs[index].data();
+                        final data = snapshot.data.docs[index].data() as Map<String, dynamic>;
                         final messageId = snapshot.data.docs[index].id;
                         final user = FirebaseAuth.instance.currentUser;
 

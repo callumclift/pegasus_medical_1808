@@ -1,6 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
+import 'package:pegasus_medical_1808/models/bed_rota_model.dart';
+import 'package:pegasus_medical_1808/models/patient_observation_model.dart';
+import 'package:pegasus_medical_1808/models/spot_checks_model.dart';
 import 'package:pegasus_medical_1808/pages/settings/profile_picture_edit.dart';
 import 'package:pegasus_medical_1808/services/secure_storage.dart';
 import 'package:pegasus_medical_1808/shared/strings.dart';
@@ -56,7 +59,10 @@ class _SettingsPageState extends State<SettingsPage>{
   bool transferReports = false;
   bool incidentReports = false;
   bool observationBookings = false;
+  bool bedRotas = false;
   bool bookingForms = false;
+  bool patientObservations = false;
+  bool spotChecks = false;
 
   @override
   void initState() {
@@ -386,12 +392,61 @@ class _SettingsPageState extends State<SettingsPage>{
             }
           }
         }
+        if(bedRotas){
+          QuerySnapshot snapshot = await FirebaseFirestore.instance.collection('bed_rotas').where(Strings.weekCommencing, isLessThanOrEqualTo: lastYear).get().timeout(Duration(seconds: 60));
+
+          if(snapshot.docs.length > 1){
+            for(DocumentSnapshot snap in snapshot.docs){
+              await FirebaseFirestore.instance.collection('bed_rotas').doc(snap.id).delete().timeout(Duration(seconds: 60));
+            }
+          }
+        }
         if(bookingForms){
           QuerySnapshot snapshot = await FirebaseFirestore.instance.collection('booking_forms').where(Strings.bfJobDate, isLessThanOrEqualTo: lastYear).get().timeout(Duration(seconds: 60));
 
           if(snapshot.docs.length > 1){
             for(DocumentSnapshot snap in snapshot.docs){
               await FirebaseFirestore.instance.collection('booking_forms').doc(snap.id).delete().timeout(Duration(seconds: 60));
+            }
+          }
+        }
+        if(patientObservations){
+          QuerySnapshot snapshot = await FirebaseFirestore.instance.collection('patient_observation_timesheets').where(Strings.incidentDate, isLessThanOrEqualTo: lastYear).get().timeout(Duration(seconds: 60));
+
+          if(snapshot.docs.length > 1){
+            for(DocumentSnapshot snap in snapshot.docs){
+              await FirebaseFirestore.instance.collection('patient_observation_timesheets').doc(snap.id).delete().timeout(Duration(seconds: 60));
+              if(kIsWeb){
+                try {
+                  await FirebaseStorage.instance.ref().child(firebaseStorageBucket + '/patientObservationImages/' + snap.id + '/patientObservationSignature.jpg').delete();
+                } catch(e) {
+                }
+              } else {
+                try {
+                  await FirebaseStorage.instance.ref().child('patientObservationImages/' + snap.id + '/patientObservationSignature.jpg').delete();
+                } catch(e){
+                }
+              }
+            }
+          }
+        }
+        if(spotChecks){
+          QuerySnapshot snapshot = await FirebaseFirestore.instance.collection('spot_checks').where(Strings.incidentDate, isLessThanOrEqualTo: lastYear).get().timeout(Duration(seconds: 60));
+
+          if(snapshot.docs.length > 1){
+            for(DocumentSnapshot snap in snapshot.docs){
+              await FirebaseFirestore.instance.collection('patient_observation_timesheets').doc(snap.id).delete().timeout(Duration(seconds: 60));
+              if(kIsWeb){
+                try {
+                  await FirebaseStorage.instance.ref().child(firebaseStorageBucket + '/spotChecksImages/' + snap.id + '/scSignature.jpg').delete();
+                } catch(e) {
+                }
+              } else {
+                try {
+                  await FirebaseStorage.instance.ref().child('spotChecksImages/' + snap.id + '/scSignature.jpg').delete();
+                } catch(e){
+                }
+              }
             }
           }
         }
@@ -462,7 +517,10 @@ class _SettingsPageState extends State<SettingsPage>{
         await context.read<IncidentReportModel>().deleteAllRows();
         await context.read<TransferReportModel>().deleteAllRows();
         await context.read<ObservationBookingModel>().deleteAllRows();
+        await context.read<BedRotaModel>().deleteAllRows();
         await context.read<BookingFormModel>().deleteAllRows();
+        await context.read<PatientObservationModel>().deleteAllRows();
+        await context.read<SpotChecksModel>().deleteAllRows();
         imageCache.clear();
         GlobalFunctions.dismissLoadingDialog();
 
@@ -532,7 +590,7 @@ class _SettingsPageState extends State<SettingsPage>{
                       user.profilePicture = user.profilePicture;
                     });
                   }),
-            child: user.profilePicture == null ? CircleAvatar(
+            child: user.profilePicture == null || user.profilePicture == '' ? CircleAvatar(
               radius: MediaQuery.of(context).size.width *0.15,
               backgroundColor: bluePurple,
               child: FittedBox(
@@ -602,8 +660,17 @@ class _SettingsPageState extends State<SettingsPage>{
               CheckboxListTile(title: Text('Observation Booking'), value: observationBookings, onChanged: (val) => setState((){
                 observationBookings = val;
               }),),
+              CheckboxListTile(title: Text('Bed Watch Rota'), value: bedRotas, onChanged: (val) => setState((){
+                bedRotas = val;
+              }),),
               CheckboxListTile(title: Text('Transport Booking'), value: bookingForms, onChanged: (val) => setState((){
                 bookingForms = val;
+              }),),
+              CheckboxListTile(title: Text('Patient Observation Timesheet'), value: patientObservations, onChanged: (val) => setState((){
+                patientObservations = val;
+              }),),
+              CheckboxListTile(title: Text('Spot Checks'), value: spotChecks, onChanged: (val) => setState((){
+                spotChecks = val;
               }),),
               _buildDeleteDatabaseButton(),
               SizedBox(height: 10.0,),

@@ -29,7 +29,7 @@ import 'package:image/image.dart' as FlutterImage;
 import 'package:flutter/material.dart' as Material;
 import '../models/share_option.dart';
 import '../models/text_option.dart';
-import 'package:flutter_image_compress/flutter_image_compress.dart';
+//import 'package:flutter_image_compress/flutter_image_compress.dart';
 import '../utils/database.dart';
 import 'package:sembast/sembast.dart' as Db;
 import 'package:random_string/random_string.dart' as random_string;
@@ -243,10 +243,9 @@ class TransferReportModel extends ChangeNotifier {
   }
 
   Future<void> updateTemporaryRecord(bool edit, String field, var value, String selectedJobId, bool saved, int savedId) async {
-
     if(edit){
       final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
-          [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, selectedJobId)]
+          [Db.Filter.equals(Strings.documentId, selectedTransferReport[Strings.documentId]), Db.Filter.equals(Strings.jobId, selectedJobId)]
       ));
       await _editedTransferReportsStore.update(await _db, {field: value},
           finder: finder);
@@ -307,6 +306,8 @@ class TransferReportModel extends ChangeNotifier {
       Strings.jobId: '1',
       Strings.formVersion: '1',
       Strings.jobRef: transferReport[Strings.jobRef],
+      Strings.jobRefRef: transferReport[Strings.jobRefRef],
+      Strings.jobRefNo: transferReport[Strings.jobRefNo],
       Strings.date: transferReport[Strings.date],
       Strings.startTime: transferReport[Strings.startTime],
       Strings.finishTime: transferReport[Strings.finishTime],
@@ -446,6 +447,8 @@ class TransferReportModel extends ChangeNotifier {
       Strings.physicalObservations: transferReport[Strings.physicalObservations],
       Strings.relevantInformation: transferReport[Strings.relevantInformation],
       Strings.patientReport: transferReport[Strings.patientReport],
+      Strings.acceptPpeYes: transferReport[Strings.acceptPpeYes],
+      Strings.acceptPpeNo: transferReport[Strings.acceptPpeNo],
       Strings.patientReportPrintName: transferReport[Strings.patientReportPrintName],
       Strings.patientReportRole: transferReport[Strings.patientReportRole],
       Strings.patientReportDate: transferReport[Strings.patientReportDate],
@@ -630,6 +633,8 @@ class TransferReportModel extends ChangeNotifier {
       Strings.tyresInflatedNo: transferReport[Strings.tyresInflatedNo],
       Strings.warningSignsYes: transferReport[Strings.warningSignsYes],
       Strings.warningSignsNo: transferReport[Strings.warningSignsNo],
+      Strings.vehicleDamageYes: transferReport[Strings.vehicleDamageYes],
+      Strings.vehicleDamageNo: transferReport[Strings.vehicleDamageNo],
       Strings.vehicleCompletedBy2: transferReport[Strings.vehicleCompletedBy2],
       Strings.nearestTank2: transferReport[Strings.nearestTank2],
       Strings.vehicleFinishMileage: transferReport[Strings.vehicleFinishMileage],
@@ -661,6 +666,7 @@ class TransferReportModel extends ChangeNotifier {
   Future<void> getSavedRecordsList() async{
 
     _isLoading = true;
+    _transferReports = [];
     notifyListeners();
     String message = '';
 
@@ -677,7 +683,7 @@ class TransferReportModel extends ChangeNotifier {
 
         _transferReports = List.from(_fetchedRecordList.reversed);
       } else {
-        message = 'No saved records available';
+        //message = 'No saved records available';
       }
 
     } catch(e){
@@ -707,6 +713,8 @@ class TransferReportModel extends ChangeNotifier {
     await _temporaryTransferReportsStore.update(await _db, {
       Strings.formVersion: 1,
       Strings.jobRef: null,
+      Strings.jobRefRef: null,
+      Strings.jobRefNo: null,
       Strings.date: null,
       Strings.startTime: null,
       Strings.finishTime: null,
@@ -849,6 +857,8 @@ class TransferReportModel extends ChangeNotifier {
       Strings.physicalObservations: null,
       Strings.relevantInformation: null,
       Strings.patientReport: null,
+      Strings.acceptPpeYes: null,
+      Strings.acceptPpeNo: null,
       Strings.patientReportPrintName: null,
       Strings.patientReportRole: null,
       Strings.patientReportDate: null,
@@ -1038,6 +1048,8 @@ class TransferReportModel extends ChangeNotifier {
       Strings.tyresInflatedNo: null,
       Strings.warningSignsYes: null,
       Strings.warningSignsNo: null,
+      Strings.vehicleDamageYes: null,
+      Strings.vehicleDamageNo: null,
       Strings.vehicleCompletedBy2: null,
       Strings.nearestTank2: null,
       Strings.vehicleFinishMileage: null,
@@ -1063,8 +1075,11 @@ class TransferReportModel extends ChangeNotifier {
     Map<String, dynamic> transferReport = await getTemporaryRecord(edit, jobId, saved, savedId);
 
 
+    if(transferReport[Strings.jobRefNo]== null || transferReport[Strings.jobRefNo].toString().trim() == ''){
+      successJobDetails = false;
+    }
 
-    if(transferReport[Strings.jobRef]== null || transferReport[Strings.jobRef].toString().trim() == ''){
+    if(transferReport[Strings.jobRefRef]== null || transferReport[Strings.jobRefRef]== 'Select One'){
       successJobDetails = false;
     }
 
@@ -1483,6 +1498,18 @@ class TransferReportModel extends ChangeNotifier {
     if(transferReport[Strings.patientReport]== null || transferReport[Strings.patientReport].toString().trim() == ''){
       successPatientDetails = false;
     }
+    if(transferReport[Strings.acceptPpeYes] == null && transferReport[Strings.acceptPpeNo] == null){
+      successPatientDetails = false;
+    }
+    if(transferReport[Strings.acceptPpeYes] == 0 && transferReport[Strings.acceptPpeNo] == 0){
+      successPatientDetails = false;
+    }
+    if(transferReport[Strings.acceptPpeYes] == null && transferReport[Strings.acceptPpeNo] == 0){
+      successPatientDetails = false;
+    }
+    if(transferReport[Strings.acceptPpeYes] == 0 && transferReport[Strings.acceptPpeNo] == null){
+      successPatientDetails = false;
+    }
     if(transferReport[Strings.patientReportPrintName]== null || transferReport[Strings.patientReportPrintName].toString().trim() == ''){
       successPatientDetails = false;
     }
@@ -1551,19 +1578,19 @@ class TransferReportModel extends ChangeNotifier {
 
 
     if(transferReport[Strings.vehicleCompletedBy1]== null || transferReport[Strings.vehicleCompletedBy1].toString().trim() == ''){
-      successVehicleChecklist = false;
+      successJobDetails = false;
     }
 
     if(transferReport[Strings.vehicleDate] == null){
-      successVehicleChecklist = false;
+      successJobDetails = false;
     }
 
     if(transferReport[Strings.vehicleTime] == null){
-      successVehicleChecklist = false;
+      successJobDetails = false;
     }
 
     if(transferReport[Strings.ambulanceReg]== null || transferReport[Strings.ambulanceReg].toString().trim() == ''){
-      successVehicleChecklist = false;
+      successJobDetails = false;
     }
 
     // if(transferReport[Strings.vehicleStartMileage]== null || transferReport[Strings.vehicleStartMileage].toString().trim() == ''){
@@ -1571,60 +1598,76 @@ class TransferReportModel extends ChangeNotifier {
     // }
 
     if(transferReport[Strings.nearestTank1]== null || transferReport[Strings.nearestTank1].toString().trim() == ''){
-      successVehicleChecklist = false;
+      successJobDetails = false;
     }
 
     if(transferReport[Strings.ambulanceTidyYes1] == null && transferReport[Strings.ambulanceTidyNo1] == null){
-      successVehicleChecklist = false;
+      successJobDetails = false;
     }
     if(transferReport[Strings.ambulanceTidyYes1] == 0 && transferReport[Strings.ambulanceTidyNo1] == 0){
-      successVehicleChecklist = false;
+      successJobDetails = false;
     }
     if(transferReport[Strings.ambulanceTidyYes1] == null && transferReport[Strings.ambulanceTidyNo1] == 0){
-      successVehicleChecklist = false;
+      successJobDetails = false;
     }
     if(transferReport[Strings.ambulanceTidyYes1] == 0 && transferReport[Strings.ambulanceTidyNo1] == null){
-      successVehicleChecklist = false;
+      successJobDetails = false;
     }
 
     if(transferReport[Strings.lightsWorkingYes] == null && transferReport[Strings.lightsWorkingNo] == null){
-      successVehicleChecklist = false;
+      successJobDetails = false;
     }
     if(transferReport[Strings.lightsWorkingYes] == 0 && transferReport[Strings.lightsWorkingNo] == 0){
-      successVehicleChecklist = false;
+      successJobDetails = false;
     }
     if(transferReport[Strings.lightsWorkingYes] == null && transferReport[Strings.lightsWorkingNo] == 0){
-      successVehicleChecklist = false;
+      successJobDetails = false;
     }
     if(transferReport[Strings.lightsWorkingYes] == 0 && transferReport[Strings.lightsWorkingNo] == null){
-      successVehicleChecklist = false;
+      successJobDetails = false;
     }
 
     if(transferReport[Strings.tyresInflatedYes] == null && transferReport[Strings.tyresInflatedNo] == null){
-      successVehicleChecklist = false;
+      successJobDetails = false;
     }
     if(transferReport[Strings.tyresInflatedYes] == 0 && transferReport[Strings.tyresInflatedNo] == 0){
-      successVehicleChecklist = false;
+      successJobDetails = false;
     }
     if(transferReport[Strings.tyresInflatedYes] == null && transferReport[Strings.tyresInflatedNo] == 0){
-      successVehicleChecklist = false;
+      successJobDetails = false;
     }
     if(transferReport[Strings.tyresInflatedYes] == 0 && transferReport[Strings.tyresInflatedNo] == null){
-      successVehicleChecklist = false;
+      successJobDetails = false;
     }
 
     if(transferReport[Strings.warningSignsYes] == null && transferReport[Strings.warningSignsNo] == null){
-      successVehicleChecklist = false;
+      successJobDetails = false;
     }
     if(transferReport[Strings.warningSignsYes] == 0 && transferReport[Strings.warningSignsNo] == 0){
-      successVehicleChecklist = false;
+      successJobDetails = false;
     }
     if(transferReport[Strings.warningSignsYes] == null && transferReport[Strings.warningSignsNo] == 0){
-      successVehicleChecklist = false;
+      successJobDetails = false;
     }
     if(transferReport[Strings.warningSignsYes] == 0 && transferReport[Strings.warningSignsNo] == null){
-      successVehicleChecklist = false;
+      successJobDetails = false;
     }
+
+
+    if(transferReport[Strings.vehicleDamageYes] == null && transferReport[Strings.vehicleDamageNo] == null){
+      successJobDetails = false;
+    }
+    if(transferReport[Strings.vehicleDamageYes] == 0 && transferReport[Strings.vehicleDamageNo] == 0){
+      successJobDetails = false;
+    }
+    if(transferReport[Strings.vehicleDamageYes] == null && transferReport[Strings.vehicleDamageNo] == 0){
+      successJobDetails = false;
+    }
+    if(transferReport[Strings.vehicleDamageYes] == 0 && transferReport[Strings.vehicleDamageNo] == null){
+      successJobDetails = false;
+    }
+
+
 
     if(transferReport[Strings.vehicleCompletedBy2]== null || transferReport[Strings.vehicleCompletedBy2].toString().trim() == ''){
       successVehicleChecklist = false;
@@ -1668,7 +1711,7 @@ class TransferReportModel extends ChangeNotifier {
       successVehicleChecklist = false;
     }
 
-    if(transferReport[Strings.ambulanceTidyNo1] == 1 || transferReport[Strings.lightsWorkingNo] == 1 || transferReport[Strings.tyresInflatedNo] == 1 || transferReport[Strings.warningSignsNo] == 1 || transferReport[Strings.ambulanceTidyNo2] == 1 || transferReport[Strings.sanitiserCleanNo] == 1){
+    if(transferReport[Strings.ambulanceTidyNo1] == 1 || transferReport[Strings.lightsWorkingNo] == 1 || transferReport[Strings.tyresInflatedNo] == 1 || transferReport[Strings.warningSignsYes] == 1 || transferReport[Strings.vehicleDamageYes] == 1 || transferReport[Strings.ambulanceTidyNo2] == 1 || transferReport[Strings.sanitiserCleanNo] == 1){
       if(transferReport[Strings.issuesFaults]== null || transferReport[Strings.issuesFaults].toString().trim() == ''){
         successVehicleChecklist = false;
       }
@@ -1703,7 +1746,9 @@ class TransferReportModel extends ChangeNotifier {
       Strings.uid: user.uid,
       Strings.jobId: '1',
       Strings.formVersion: '1',
-      Strings.jobRef: transferReport[Strings.jobRef],
+      Strings.jobRef: transferReport[Strings.jobRefRef] + transferReport[Strings.jobRefNo],
+      Strings.jobRefRef: transferReport[Strings.jobRefRef],
+      Strings.jobRefNo: transferReport[Strings.jobRefNo],
       Strings.date: transferReport[Strings.date],
       Strings.startTime: transferReport[Strings.startTime],
       Strings.finishTime: transferReport[Strings.finishTime],
@@ -1843,6 +1888,8 @@ class TransferReportModel extends ChangeNotifier {
       Strings.physicalObservations: transferReport[Strings.physicalObservations],
       Strings.relevantInformation: transferReport[Strings.relevantInformation],
       Strings.patientReport: transferReport[Strings.patientReport],
+      Strings.acceptPpeYes: transferReport[Strings.acceptPpeYes],
+      Strings.acceptPpeNo: transferReport[Strings.acceptPpeNo],
       Strings.patientReportPrintName: transferReport[Strings.patientReportPrintName],
       Strings.patientReportRole: transferReport[Strings.patientReportRole],
       Strings.patientReportDate: transferReport[Strings.patientReportDate],
@@ -2027,6 +2074,8 @@ class TransferReportModel extends ChangeNotifier {
       Strings.tyresInflatedNo: transferReport[Strings.tyresInflatedNo],
       Strings.warningSignsYes: transferReport[Strings.warningSignsYes],
       Strings.warningSignsNo: transferReport[Strings.warningSignsNo],
+      Strings.vehicleDamageYes: transferReport[Strings.vehicleDamageYes],
+      Strings.vehicleDamageNo: transferReport[Strings.vehicleDamageNo],
       Strings.vehicleCompletedBy2: transferReport[Strings.vehicleCompletedBy2],
       Strings.nearestTank2: transferReport[Strings.nearestTank2],
       Strings.vehicleFinishMileage: transferReport[Strings.vehicleFinishMileage],
@@ -2071,8 +2120,10 @@ class TransferReportModel extends ChangeNotifier {
             Strings.uid: user.uid,
             Strings.jobId: '1',
             Strings.formVersion: '1',
-            Strings.jobRef: GlobalFunctions.databaseValueString(transferReport[Strings.jobRef]),
-            Strings.jobRefLowercase: GlobalFunctions.databaseValueString(transferReport[Strings.jobRef]).toLowerCase(),
+            Strings.jobRef: GlobalFunctions.databaseValueString(transferReport[Strings.jobRefRef]) + GlobalFunctions.databaseValueString(transferReport[Strings.jobRefNo]),
+            Strings.jobRefLowercase: GlobalFunctions.databaseValueString(transferReport[Strings.jobRefRef]).toLowerCase() + GlobalFunctions.databaseValueString(transferReport[Strings.jobRefNo]).toLowerCase(),
+            Strings.jobRefRef: GlobalFunctions.databaseValueString(transferReport[Strings.jobRefRef]),
+            Strings.jobRefNo:  int.parse(transferReport[Strings.jobRefNo]),
             Strings.date: transferReport[Strings.date] == null ? null : DateTime.parse(transferReport[Strings.date]),
             Strings.startTime: transferReport[Strings.startTime],
             Strings.finishTime: transferReport[Strings.finishTime],
@@ -2212,6 +2263,8 @@ class TransferReportModel extends ChangeNotifier {
             Strings.physicalObservations: transferReport[Strings.physicalObservations],
             Strings.relevantInformation: transferReport[Strings.relevantInformation],
             Strings.patientReport: transferReport[Strings.patientReport],
+            Strings.acceptPpeYes: transferReport[Strings.acceptPpeYes],
+            Strings.acceptPpeNo: transferReport[Strings.acceptPpeNo],
             Strings.patientReportPrintName: transferReport[Strings.patientReportPrintName],
             Strings.patientReportRole: transferReport[Strings.patientReportRole],
             Strings.patientReportDate: transferReport[Strings.patientReportDate],
@@ -2396,6 +2449,8 @@ class TransferReportModel extends ChangeNotifier {
             Strings.tyresInflatedNo: transferReport[Strings.tyresInflatedNo],
             Strings.warningSignsYes: transferReport[Strings.warningSignsYes],
             Strings.warningSignsNo: transferReport[Strings.warningSignsNo],
+            Strings.vehicleDamageYes: transferReport[Strings.vehicleDamageYes],
+            Strings.vehicleDamageNo: transferReport[Strings.vehicleDamageNo],
             Strings.vehicleCompletedBy2: transferReport[Strings.vehicleCompletedBy2],
             Strings.nearestTank2: transferReport[Strings.nearestTank2],
             Strings.vehicleFinishMileage: transferReport[Strings.vehicleFinishMileage],
@@ -2407,6 +2462,27 @@ class TransferReportModel extends ChangeNotifier {
             Strings.timestamp: FieldValue.serverTimestamp(),
             Strings.serverUploaded: 1,
           });
+
+          QuerySnapshot transportBookingSnapshot = await FirebaseFirestore.instance.collection('booking_forms').where(Strings.jobRef, isEqualTo: GlobalFunctions.databaseValueString(transferReport[Strings.jobRefRef]) + GlobalFunctions.databaseValueString(transferReport[Strings.jobRefNo])).get();
+
+          if(transportBookingSnapshot.docs.length > 0) {
+            Map<String, dynamic> transportBooking = transportBookingSnapshot.docs[0].data() as Map<String, dynamic>;
+            if(transportBooking.containsKey(Strings.transferReportCreated)){
+              if (transportBooking[Strings.transferReportCreated] == false){
+                if(transportBooking.containsKey('assigned_users')){
+                  List<dynamic> assignedUsers = transportBooking['assigned_users'];
+
+                  for(dynamic assignedUser in assignedUsers){
+                    FirebaseFirestore.instance.collection('users').doc(assignedUser.toString()).update({'transport_bookings' : FieldValue.increment(-1)});
+
+                  }
+                }
+
+              }
+
+            }
+            FirebaseFirestore.instance.collection('booking_forms').doc(transportBookingSnapshot.docs[0].id).update({Strings.transferReportCreated : true});
+          }
 
           DocumentSnapshot snap = await ref.get();
 
@@ -2495,16 +2571,16 @@ class TransferReportModel extends ChangeNotifier {
 
             Uint8List compressedImage;
 
-            if(kIsWeb){
+            //if(kIsWeb){
               compressedImage = decryptedImage;
 
-            } else {
-              compressedImage = await FlutterImageCompress.compressWithList(
-                  decryptedImage,
-                  quality: 50,
-                  keepExif: true
-              );
-            }
+            // } else {
+            //   compressedImage = await FlutterImageCompress.compressWithList(
+            //       decryptedImage,
+            //       quality: 50,
+            //       keepExif: true
+            //   );
+            // }
 
 
             Uint8List encryptedImage = await GlobalFunctions.encryptSignature(compressedImage);
@@ -2718,8 +2794,10 @@ class TransferReportModel extends ChangeNotifier {
           await FirebaseFirestore.instance.collection('transfer_reports').doc(transferReport[Strings.documentId]).update({
             Strings.jobId: '1',
             Strings.formVersion: '1',
-            Strings.jobRef: GlobalFunctions.databaseValueString(transferReport[Strings.jobRef]),
-            Strings.jobRefLowercase: GlobalFunctions.databaseValueString(transferReport[Strings.jobRef]).toLowerCase(),
+            Strings.jobRef: GlobalFunctions.databaseValueString(transferReport[Strings.jobRefRef]) + GlobalFunctions.databaseValueString(transferReport[Strings.jobRefNo]),
+            Strings.jobRefLowercase: GlobalFunctions.databaseValueString(transferReport[Strings.jobRefRef]).toLowerCase() + GlobalFunctions.databaseValueString(transferReport[Strings.jobRefNo]).toLowerCase(),
+            Strings.jobRefRef: GlobalFunctions.databaseValueString(transferReport[Strings.jobRefRef]),
+            Strings.jobRefNo:  int.parse(transferReport[Strings.jobRefNo]),
             Strings.date: transferReport[Strings.date] == null ? null : DateTime.parse(transferReport[Strings.date]),
             Strings.startTime: transferReport[Strings.startTime],
             Strings.finishTime: transferReport[Strings.finishTime],
@@ -2856,6 +2934,8 @@ class TransferReportModel extends ChangeNotifier {
             Strings.physicalObservations: transferReport[Strings.physicalObservations],
             Strings.relevantInformation: transferReport[Strings.relevantInformation],
             Strings.patientReport: transferReport[Strings.patientReport],
+            Strings.acceptPpeYes: transferReport[Strings.acceptPpeYes],
+            Strings.acceptPpeNo: transferReport[Strings.acceptPpeNo],
             Strings.patientReportPrintName: transferReport[Strings.patientReportPrintName],
             Strings.patientReportRole: transferReport[Strings.patientReportRole],
             Strings.patientReportDate: transferReport[Strings.patientReportDate],
@@ -3035,6 +3115,8 @@ class TransferReportModel extends ChangeNotifier {
             Strings.tyresInflatedNo: transferReport[Strings.tyresInflatedNo],
             Strings.warningSignsYes: transferReport[Strings.warningSignsYes],
             Strings.warningSignsNo: transferReport[Strings.warningSignsNo],
+            Strings.vehicleDamageYes: transferReport[Strings.vehicleDamageYes],
+            Strings.vehicleDamageNo: transferReport[Strings.vehicleDamageNo],
             Strings.vehicleCompletedBy2: transferReport[Strings.vehicleCompletedBy2],
             Strings.nearestTank2: transferReport[Strings.nearestTank2],
             Strings.vehicleFinishMileage: transferReport[Strings.vehicleFinishMileage],
@@ -3126,14 +3208,14 @@ class TransferReportModel extends ChangeNotifier {
 
           if(user.role == 'Super User'){
             try{
-              snapshot = await FirebaseFirestore.instance.collection('transfer_reports').orderBy('timestamp', descending: true).limit(10).get().timeout(Duration(seconds: 90));
+              snapshot = await FirebaseFirestore.instance.collection('transfer_reports').orderBy('job_ref_no', descending: true).limit(10).get().timeout(Duration(seconds: 90));
             } catch(e){
               print(e);
             }
           } else {
             try{
               snapshot = await FirebaseFirestore.instance.collection('transfer_reports').where(
-                  'uid', isEqualTo: user.uid).orderBy('timestamp', descending: true).limit(10).get().timeout(Duration(seconds: 90));
+                  'uid', isEqualTo: user.uid).orderBy('job_ref_no', descending: true).limit(10).get().timeout(Duration(seconds: 90));
             } catch(e){
               print(e);
             }
@@ -3297,13 +3379,13 @@ class TransferReportModel extends ChangeNotifier {
 
           QuerySnapshot snapshot;
           int currentLength = _transferReports.length;
-          DateTime latestDate = DateTime.parse(_transferReports[currentLength - 1][Strings.timestamp]);
+          int latestNo = int.parse(_transferReports[currentLength - 1][Strings.jobRefNo]);
+
 
           if(user.role == 'Super User'){
             try {
-              snapshot = await FirebaseFirestore.instance.collection('transfer_reports').orderBy(
-                  'timestamp', descending: true).startAfter(
-                  [Timestamp.fromDate(latestDate)]).limit(10)
+              snapshot = await FirebaseFirestore.instance.collection('transfer_reports').where(Strings.jobRefNo, isLessThan: latestNo).orderBy(
+                  'job_ref_no', descending: true).limit(10)
                   .get()
                   .timeout(Duration(seconds: 90));
             } catch(e) {
@@ -3313,9 +3395,8 @@ class TransferReportModel extends ChangeNotifier {
           } else {
             try {
               snapshot = await FirebaseFirestore.instance.collection('transfer_reports').where(
-                  'uid', isEqualTo: user.uid).orderBy(
-                  'timestamp', descending: true).startAfter(
-                  [Timestamp.fromDate(latestDate)]).limit(10)
+                  'uid', isEqualTo: user.uid).where(Strings.jobRefNo, isLessThan: latestNo).orderBy(
+                  'job_ref_no', descending: true).limit(10)
                   .get()
                   .timeout(Duration(seconds: 90));
             } catch(e) {
@@ -3454,7 +3535,7 @@ class TransferReportModel extends ChangeNotifier {
 
   }
 
-  Future<bool> searchTransferReports(DateTime dateFrom, DateTime dateTo, String jobRef, String selectedGender, String selectedUser, bool handcuffs, bool physicalIntervention) async{
+  Future<bool> searchTransferReports(DateTime dateFrom, DateTime dateTo, String jobRefRef, int jobRefNo, String selectedGender, String selectedUser, bool handcuffs, bool physicalIntervention) async{
 
     _isLoading = true;
     notifyListeners();
@@ -3463,8 +3544,7 @@ class TransferReportModel extends ChangeNotifier {
     GlobalFunctions.showLoadingDialog('Searching Forms');
     List<Map<String, dynamic>> _fetchedTransferReportList = [];
 
-    print(dateFrom);
-    print(dateTo);
+
 
     var handCuffsValue = handcuffs == false ? null : 1;
     var physicalInterventionValue = physicalIntervention == false ? null : 1;
@@ -3493,21 +3573,20 @@ class TransferReportModel extends ChangeNotifier {
           if(user.role == 'Super User'){
 
 
+
             if(dateFrom != null && dateTo != null){
 
 
-              if(jobRef == null || jobRef.trim() == ''){
+              if(jobRefRef == 'Select One' && (jobRefNo == null)){
 
 
                 if(selectedUser != null){
                   try{
                     snapshot =
-                    await FirebaseFirestore.instance.collection('transfer_reports')
-                        .where(Strings.uid, isEqualTo: selectedUser)
-                        .where(Strings.gender, isEqualTo: selectedGender)
+                    await FirebaseFirestore.instance.collection('transfer_reports').where(Strings.gender, isEqualTo: selectedGender)
                         .where(Strings.handcuffsUsedYes, isEqualTo: handCuffsValue)
-                        .where(Strings.physicalInterventionYes, isEqualTo: physicalInterventionValue).orderBy('timestamp', descending: true)
-                        .startAt([dateTo]).endAt([dateFrom]).get()
+                        .where(Strings.physicalInterventionYes, isEqualTo: physicalInterventionValue).where(Strings.uid, isEqualTo: selectedUser).where(Strings.date, isGreaterThanOrEqualTo: dateFrom).where(Strings.date, isLessThanOrEqualTo: dateTo)
+                        .get()
                         .timeout(Duration(seconds: 90));
                   } catch(e){
                     print(e);
@@ -3515,11 +3594,10 @@ class TransferReportModel extends ChangeNotifier {
                 } else {
                   try{
                     snapshot =
-                    await FirebaseFirestore.instance.collection('transfer_reports')
-                        .where(Strings.gender, isEqualTo: selectedGender)
+                    await FirebaseFirestore.instance.collection('transfer_reports').where(Strings.gender, isEqualTo: selectedGender)
                         .where(Strings.handcuffsUsedYes, isEqualTo: handCuffsValue)
-                        .where(Strings.physicalInterventionYes, isEqualTo: physicalInterventionValue).orderBy('timestamp', descending: true)
-                        .startAt([dateTo]).endAt([dateFrom]).get()
+                        .where(Strings.physicalInterventionYes, isEqualTo: physicalInterventionValue).where(Strings.date, isGreaterThanOrEqualTo: dateFrom).where(Strings.date, isLessThanOrEqualTo: dateTo)
+                        .get()
                         .timeout(Duration(seconds: 90));
                   } catch(e){
                     print(e);
@@ -3527,20 +3605,15 @@ class TransferReportModel extends ChangeNotifier {
                 }
 
 
-
-
-              } else {
+              } else if(jobRefRef != 'Select One' && jobRefNo != null) {
 
                 if(selectedUser != null){
                   try{
                     snapshot =
-                    await FirebaseFirestore.instance.collection('transfer_reports')
-                        .where(Strings.jobRefLowercase, isEqualTo: jobRef.toLowerCase())
-                        .where(Strings.uid, isEqualTo: selectedUser)
-                        .where(Strings.gender, isEqualTo: selectedGender)
+                    await FirebaseFirestore.instance.collection('transfer_reports').where(Strings.gender, isEqualTo: selectedGender)
                         .where(Strings.handcuffsUsedYes, isEqualTo: handCuffsValue)
-                        .where(Strings.physicalInterventionYes, isEqualTo: physicalInterventionValue).orderBy('timestamp', descending: true)
-                        .startAt([dateTo]).endAt([dateFrom]).get()
+                        .where(Strings.physicalInterventionYes, isEqualTo: physicalInterventionValue).where(Strings.uid, isEqualTo: selectedUser).where(Strings.date, isGreaterThanOrEqualTo: dateFrom).where(Strings.date, isLessThanOrEqualTo: dateTo)
+                        .where(Strings.jobRefRef, isEqualTo: jobRefRef).where(Strings.jobRefNo, isEqualTo: jobRefNo).get()
                         .timeout(Duration(seconds: 90));
                   } catch(e){
                     print(e);
@@ -3548,36 +3621,84 @@ class TransferReportModel extends ChangeNotifier {
                 } else {
                   try{
                     snapshot =
-                    await FirebaseFirestore.instance.collection('transfer_reports')
-                        .where(Strings.jobRefLowercase, isEqualTo: jobRef.toLowerCase())
-                        .where(Strings.gender, isEqualTo: selectedGender)
+                    await FirebaseFirestore.instance.collection('transfer_reports').where(Strings.gender, isEqualTo: selectedGender)
                         .where(Strings.handcuffsUsedYes, isEqualTo: handCuffsValue)
-                        .where(Strings.physicalInterventionYes, isEqualTo: physicalInterventionValue).orderBy('timestamp', descending: true)
-                        .startAt([dateTo]).endAt([dateFrom]).get()
+                        .where(Strings.physicalInterventionYes, isEqualTo: physicalInterventionValue).where(Strings.date, isGreaterThanOrEqualTo: dateFrom).where(Strings.date, isLessThanOrEqualTo: dateTo)
+                        .where(Strings.jobRefRef, isEqualTo: jobRefRef).where(Strings.jobRefNo, isEqualTo: jobRefNo)
+                        .get()
                         .timeout(Duration(seconds: 90));
                   } catch(e){
                     print(e);
                   }
                 }
 
+              } else if(jobRefRef != 'Select One' && (jobRefNo == null)) {
 
+                if(selectedUser != null){
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('transfer_reports').where(Strings.gender, isEqualTo: selectedGender)
+                        .where(Strings.handcuffsUsedYes, isEqualTo: handCuffsValue)
+                        .where(Strings.physicalInterventionYes, isEqualTo: physicalInterventionValue).where(Strings.uid, isEqualTo: selectedUser).where(Strings.date, isGreaterThanOrEqualTo: dateFrom).where(Strings.date, isLessThanOrEqualTo: dateTo)
+                        .where(Strings.jobRefRef, isEqualTo: jobRefRef).get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                } else {
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('transfer_reports').where(Strings.gender, isEqualTo: selectedGender)
+                        .where(Strings.handcuffsUsedYes, isEqualTo: handCuffsValue)
+                        .where(Strings.physicalInterventionYes, isEqualTo: physicalInterventionValue).where(Strings.date, isGreaterThanOrEqualTo: dateFrom).where(Strings.date, isLessThanOrEqualTo: dateTo)
+                        .where(Strings.jobRefRef, isEqualTo: jobRefRef)
+                        .get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                }
 
+              } else if(jobRefRef == 'Select One' && jobRefNo != null) {
 
+                if(selectedUser != null){
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('transfer_reports').where(Strings.gender, isEqualTo: selectedGender)
+                        .where(Strings.handcuffsUsedYes, isEqualTo: handCuffsValue)
+                        .where(Strings.physicalInterventionYes, isEqualTo: physicalInterventionValue).where(Strings.uid, isEqualTo: selectedUser).where(Strings.date, isGreaterThanOrEqualTo: dateFrom).where(Strings.date, isLessThanOrEqualTo: dateTo)
+                        .where(Strings.jobRefNo, isEqualTo: jobRefNo).get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                } else {
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('transfer_reports').where(Strings.gender, isEqualTo: selectedGender)
+                        .where(Strings.handcuffsUsedYes, isEqualTo: handCuffsValue)
+                        .where(Strings.physicalInterventionYes, isEqualTo: physicalInterventionValue).where(Strings.date, isGreaterThanOrEqualTo: dateFrom).where(Strings.date, isLessThanOrEqualTo: dateTo)
+                        .where(Strings.jobRefNo, isEqualTo: jobRefNo)
+                        .get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                }
               }
 
             } else {
 
 
-              if(jobRef == null || jobRef.trim() == ''){
+              if(jobRefRef == 'Select One' && (jobRefNo == null)){
+
 
                 if(selectedUser != null){
                   try{
                     snapshot =
-                    await FirebaseFirestore.instance.collection('transfer_reports')
-                        .where(Strings.uid, isEqualTo: selectedUser)
-                        .where(Strings.gender, isEqualTo: selectedGender)
+                    await FirebaseFirestore.instance.collection('transfer_reports').where(Strings.gender, isEqualTo: selectedGender)
                         .where(Strings.handcuffsUsedYes, isEqualTo: handCuffsValue)
-                        .where(Strings.physicalInterventionYes, isEqualTo: physicalInterventionValue).orderBy('timestamp', descending: true)
+                        .where(Strings.physicalInterventionYes, isEqualTo: physicalInterventionValue).where(Strings.uid, isEqualTo: selectedUser)
                         .get()
                         .timeout(Duration(seconds: 90));
                   } catch(e){
@@ -3586,32 +3707,24 @@ class TransferReportModel extends ChangeNotifier {
                 } else {
                   try{
                     snapshot =
-                    await FirebaseFirestore.instance.collection('transfer_reports')
-                        .where(Strings.gender, isEqualTo: selectedGender)
+                    await FirebaseFirestore.instance.collection('transfer_reports').where(Strings.gender, isEqualTo: selectedGender)
                         .where(Strings.handcuffsUsedYes, isEqualTo: handCuffsValue)
-                        .where(Strings.physicalInterventionYes, isEqualTo: physicalInterventionValue).orderBy('timestamp', descending: true)
+                        .where(Strings.physicalInterventionYes, isEqualTo: physicalInterventionValue)
                         .get()
                         .timeout(Duration(seconds: 90));
                   } catch(e){
                     print(e);
                   }
                 }
-
-
-
-
-              } else {
+              } else if(jobRefRef != 'Select One' && jobRefNo != null) {
 
                 if(selectedUser != null){
                   try{
                     snapshot =
-                    await FirebaseFirestore.instance.collection('transfer_reports')
-                        .where(Strings.jobRefLowercase, isEqualTo: jobRef.toLowerCase())
-                        .where(Strings.uid, isEqualTo: selectedUser)
-                        .where(Strings.gender, isEqualTo: selectedGender)
+                    await FirebaseFirestore.instance.collection('transfer_reports').where(Strings.gender, isEqualTo: selectedGender)
                         .where(Strings.handcuffsUsedYes, isEqualTo: handCuffsValue)
-                        .where(Strings.physicalInterventionYes, isEqualTo: physicalInterventionValue).orderBy('timestamp', descending: true)
-                        .get()
+                        .where(Strings.physicalInterventionYes, isEqualTo: physicalInterventionValue).where(Strings.uid, isEqualTo: selectedUser)
+                        .where(Strings.jobRefRef, isEqualTo: jobRefRef).where(Strings.jobRefNo, isEqualTo: jobRefNo).get()
                         .timeout(Duration(seconds: 90));
                   } catch(e){
                     print(e);
@@ -3619,11 +3732,10 @@ class TransferReportModel extends ChangeNotifier {
                 } else {
                   try{
                     snapshot =
-                    await FirebaseFirestore.instance.collection('transfer_reports')
-                        .where(Strings.jobRefLowercase, isEqualTo: jobRef.toLowerCase())
-                        .where(Strings.gender, isEqualTo: selectedGender)
+                    await FirebaseFirestore.instance.collection('transfer_reports').where(Strings.gender, isEqualTo: selectedGender)
                         .where(Strings.handcuffsUsedYes, isEqualTo: handCuffsValue)
-                        .where(Strings.physicalInterventionYes, isEqualTo: physicalInterventionValue).orderBy('timestamp', descending: true)
+                        .where(Strings.physicalInterventionYes, isEqualTo: physicalInterventionValue)
+                        .where(Strings.jobRefRef, isEqualTo: jobRefRef).where(Strings.jobRefNo, isEqualTo: jobRefNo)
                         .get()
                         .timeout(Duration(seconds: 90));
                   } catch(e){
@@ -3631,7 +3743,59 @@ class TransferReportModel extends ChangeNotifier {
                   }
                 }
 
+              } else if(jobRefRef != 'Select One' && (jobRefNo == null)) {
 
+                if(selectedUser != null){
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('transfer_reports').where(Strings.gender, isEqualTo: selectedGender)
+                        .where(Strings.handcuffsUsedYes, isEqualTo: handCuffsValue)
+                        .where(Strings.physicalInterventionYes, isEqualTo: physicalInterventionValue).where(Strings.uid, isEqualTo: selectedUser)
+                        .where(Strings.jobRefRef, isEqualTo: jobRefRef).get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                } else {
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('transfer_reports').where(Strings.gender, isEqualTo: selectedGender)
+                        .where(Strings.handcuffsUsedYes, isEqualTo: handCuffsValue)
+                        .where(Strings.physicalInterventionYes, isEqualTo: physicalInterventionValue)
+                        .where(Strings.jobRefRef, isEqualTo: jobRefRef)
+                        .get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                }
+
+              } else if(jobRefRef == 'Select One' && jobRefNo != null) {
+
+                if(selectedUser != null){
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('transfer_reports').where(Strings.gender, isEqualTo: selectedGender)
+                        .where(Strings.handcuffsUsedYes, isEqualTo: handCuffsValue)
+                        .where(Strings.physicalInterventionYes, isEqualTo: physicalInterventionValue).where(Strings.uid, isEqualTo: selectedUser)
+                        .where(Strings.jobRefNo, isEqualTo: jobRefNo).get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                } else {
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('transfer_reports').where(Strings.gender, isEqualTo: selectedGender)
+                        .where(Strings.handcuffsUsedYes, isEqualTo: handCuffsValue)
+                        .where(Strings.physicalInterventionYes, isEqualTo: physicalInterventionValue)
+                        .where(Strings.jobRefNo, isEqualTo: jobRefNo)
+                        .get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                }
 
               }
 
@@ -3639,94 +3803,139 @@ class TransferReportModel extends ChangeNotifier {
 
           } else {
 
-
             if(dateFrom != null && dateTo != null){
 
 
-              if(jobRef == null || jobRef.trim() == ''){
-
-                  try{
-                    snapshot =
-                    await FirebaseFirestore.instance.collection('transfer_reports')
-                        .where(Strings.uid, isEqualTo: user.uid)
-                        .where(Strings.gender, isEqualTo: selectedGender)
-                        .where(Strings.handcuffsUsedYes, isEqualTo: handCuffsValue)
-                        .where(Strings.physicalInterventionYes, isEqualTo: physicalInterventionValue).orderBy('timestamp', descending: true)
-                        .startAt([dateTo]).endAt([dateFrom]).get()
-                        .timeout(Duration(seconds: 90));
-                  } catch(e){
-                    print(e);
-                  }
+              if(jobRefRef == 'Select One' && (jobRefNo == null)){
 
 
-              } else {
+                try{
+                  snapshot =
+                  await FirebaseFirestore.instance.collection('transfer_reports').where(Strings.gender, isEqualTo: selectedGender)
+                      .where(Strings.handcuffsUsedYes, isEqualTo: handCuffsValue)
+                      .where(Strings.physicalInterventionYes, isEqualTo: physicalInterventionValue).where(Strings.uid, isEqualTo: user.uid).where(Strings.date, isGreaterThanOrEqualTo: dateFrom).where(Strings.date, isLessThanOrEqualTo: dateTo)
+                      .get()
+                      .timeout(Duration(seconds: 90));
+                } catch(e){
+                  print(e);
+                }
+              } else if(jobRefRef != 'Select One' && jobRefNo != null) {
+
+                try{
+                  snapshot =
+                  await FirebaseFirestore.instance.collection('transfer_reports').where(Strings.gender, isEqualTo: selectedGender)
+                      .where(Strings.handcuffsUsedYes, isEqualTo: handCuffsValue)
+                      .where(Strings.physicalInterventionYes, isEqualTo: physicalInterventionValue).where(Strings.uid, isEqualTo: user.uid).where(Strings.date, isGreaterThanOrEqualTo: dateFrom).where(Strings.date, isLessThanOrEqualTo: dateTo)
+                      .where(Strings.jobRefRef, isEqualTo: jobRefRef).where(Strings.jobRefNo, isEqualTo: jobRefNo)
+                      .get()
+                      .timeout(Duration(seconds: 90));
+                } catch(e){
+                  print(e);
+                }
+              } else if(jobRefRef != 'Select One' && (jobRefNo == null)) {
 
 
-                  try{
-                    snapshot =
-                    await FirebaseFirestore.instance.collection('transfer_reports')
-                        .where(Strings.jobRefLowercase, isEqualTo: jobRef.toLowerCase())
-                        .where(Strings.uid, isEqualTo: user.uid)
-                        .where(Strings.gender, isEqualTo: selectedGender)
-                        .where(Strings.handcuffsUsedYes, isEqualTo: handCuffsValue)
-                        .where(Strings.physicalInterventionYes, isEqualTo: physicalInterventionValue).orderBy('timestamp', descending: true)
-                        .startAt([dateTo]).endAt([dateFrom]).get()
-                        .timeout(Duration(seconds: 90));
-                  } catch(e){
-                    print(e);
-                  }
+                try{
+                  snapshot =
+                  await FirebaseFirestore.instance.collection('transfer_reports').where(Strings.gender, isEqualTo: selectedGender)
+                      .where(Strings.handcuffsUsedYes, isEqualTo: handCuffsValue)
+                      .where(Strings.physicalInterventionYes, isEqualTo: physicalInterventionValue).where(Strings.uid, isEqualTo: user.uid).where(Strings.date, isGreaterThanOrEqualTo: dateFrom).where(Strings.date, isLessThanOrEqualTo: dateTo)
+                      .where(Strings.jobRefRef, isEqualTo: jobRefRef)
+                      .get()
+                      .timeout(Duration(seconds: 90));
+                } catch(e){
+                  print(e);
+                }
+
+              } else if(jobRefRef == 'Select One' && jobRefNo != null) {
+
+                try{
+                  snapshot =
+                  await FirebaseFirestore.instance.collection('transfer_reports').where(Strings.gender, isEqualTo: selectedGender)
+                      .where(Strings.handcuffsUsedYes, isEqualTo: handCuffsValue)
+                      .where(Strings.physicalInterventionYes, isEqualTo: physicalInterventionValue).where(Strings.uid, isEqualTo: user.uid).where(Strings.date, isGreaterThanOrEqualTo: dateFrom).where(Strings.date, isLessThanOrEqualTo: dateTo)
+                      .where(Strings.jobRefNo, isEqualTo: jobRefNo)
+                      .get()
+                      .timeout(Duration(seconds: 90));
+                } catch(e){
+                  print(e);
+                }
+
               }
-
 
             } else {
 
 
-              if(jobRef == null || jobRef.trim() == ''){
+              if(jobRefRef == 'Select One' && (jobRefNo == null)){
 
-                  try{
-                    snapshot =
-                    await FirebaseFirestore.instance.collection('transfer_reports')
-                        .where(Strings.uid, isEqualTo: user.uid)
-                        .where(Strings.gender, isEqualTo: selectedGender)
-                        .where(Strings.handcuffsUsedYes, isEqualTo: handCuffsValue)
-                        .where(Strings.physicalInterventionYes, isEqualTo: physicalInterventionValue).orderBy('timestamp', descending: true)
-                        .get()
-                        .timeout(Duration(seconds: 90));
-                  } catch(e){
-                    print(e);
-                  }
+                try{
+                  snapshot =
+                  await FirebaseFirestore.instance.collection('transfer_reports').where(Strings.gender, isEqualTo: selectedGender)
+                      .where(Strings.handcuffsUsedYes, isEqualTo: handCuffsValue)
+                      .where(Strings.physicalInterventionYes, isEqualTo: physicalInterventionValue).where(Strings.uid, isEqualTo: user.uid)
+                      .get()
+                      .timeout(Duration(seconds: 90));
+                } catch(e){
+                  print(e);
+                }
+              } else if(jobRefRef != 'Select One' && jobRefNo != null) {
 
 
-              } else {
+                try{
+                  snapshot =
+                  await FirebaseFirestore.instance.collection('transfer_reports').where(Strings.gender, isEqualTo: selectedGender)
+                      .where(Strings.handcuffsUsedYes, isEqualTo: handCuffsValue)
+                      .where(Strings.physicalInterventionYes, isEqualTo: physicalInterventionValue).where(Strings.uid, isEqualTo: user.uid)
+                      .where(Strings.jobRefRef, isEqualTo: jobRefRef).where(Strings.jobRefNo, isEqualTo: jobRefNo)
+                      .get()
+                      .timeout(Duration(seconds: 90));
+                } catch(e){
+                  print(e);
+                }
 
-                  try{
-                    snapshot =
-                    await FirebaseFirestore.instance.collection('transfer_reports')
-                        .where(Strings.jobRefLowercase, isEqualTo: jobRef.toLowerCase())
-                        .where(Strings.uid, isEqualTo: user.uid)
-                        .where(Strings.gender, isEqualTo: selectedGender)
-                        .where(Strings.handcuffsUsedYes, isEqualTo: handCuffsValue)
-                        .where(Strings.physicalInterventionYes, isEqualTo: physicalInterventionValue).orderBy('timestamp', descending: true)
-                        .get()
-                        .timeout(Duration(seconds: 90));
-                  } catch(e){
-                    print(e);
-                  }
+              } else if(jobRefRef != 'Select One' && (jobRefNo == null)) {
+
+                try{
+                  snapshot =
+                  await FirebaseFirestore.instance.collection('transfer_reports').where(Strings.gender, isEqualTo: selectedGender)
+                      .where(Strings.handcuffsUsedYes, isEqualTo: handCuffsValue)
+                      .where(Strings.physicalInterventionYes, isEqualTo: physicalInterventionValue).where(Strings.uid, isEqualTo: user.uid)
+                      .where(Strings.jobRefRef, isEqualTo: jobRefRef)
+                      .get()
+                      .timeout(Duration(seconds: 90));
+                } catch(e){
+                  print(e);
+                }
+
+              } else if(jobRefRef == 'Select One' && jobRefNo != null) {
+                try{
+                  snapshot =
+                  await FirebaseFirestore.instance.collection('transfer_reports').where(Strings.gender, isEqualTo: selectedGender)
+                      .where(Strings.handcuffsUsedYes, isEqualTo: handCuffsValue)
+                      .where(Strings.physicalInterventionYes, isEqualTo: physicalInterventionValue).where(Strings.uid, isEqualTo: user.uid)
+                      .where(Strings.jobRefNo, isEqualTo: jobRefNo)
+                      .get()
+                      .timeout(Duration(seconds: 90));
+                } catch(e){
+                  print(e);
+                }
+
               }
 
             }
-
-
-
-
           }
+
+
 
           Map<String, dynamic> snapshotData = {};
 
           if(snapshot.docs.length < 1){
             message = 'No Transfer Reports found';
           } else {
-            for (DocumentSnapshot snap in snapshot.docs) {
+            List<QueryDocumentSnapshot> snapDocs = snapshot.docs;
+            snapDocs.sort((a, b) => (b.get('job_ref_no')).compareTo(a.get('job_ref_no')));
+
+            for (DocumentSnapshot snap in snapDocs) {
 
               snapshotData = snap.data();
 
@@ -3855,195 +4064,6 @@ class TransferReportModel extends ChangeNotifier {
   }
 
 
-  Future<bool> searchMoreTransferReports(DateTime dateFrom, DateTime dateTo) async{
-
-    _isLoading = true;
-    notifyListeners();
-    bool success = false;
-    String message = '';
-    GlobalFunctions.showLoadingDialog('Searching Forms');
-    List<Map<String, dynamic>> _fetchedTransferReportList = [];
-
-    try {
-
-      bool hasDataConnection = await GlobalFunctions.hasDataConnection();
-
-      if(!hasDataConnection){
-
-        message = 'No Data Connection, unable to search Transfer Reports';
-
-      } else {
-
-
-        bool isTokenExpired = GlobalFunctions.isTokenExpired();
-        bool authenticated = true;
-
-        if(isTokenExpired) authenticated = await authenticationModel.reAuthenticate();
-
-        if(authenticated){
-
-
-          QuerySnapshot snapshot;
-          int currentLength = _transferReports.length;
-          DateTime latestDate = DateTime.parse(_transferReports[currentLength - 1]['timestamp']);
-
-          if(user.role == 'Super User'){
-              try{
-                snapshot =
-                await FirebaseFirestore.instance.collection('transfer_reports').orderBy('timestamp', descending: true)
-                    .startAfter([Timestamp.fromDate(latestDate)]).endAt([dateFrom]).limit(10).get()
-                    .timeout(Duration(seconds: 90));
-              } catch(e){
-                print(e);
-              }
-
-          } else {
-
-              try{
-                snapshot =
-                await FirebaseFirestore.instance.collection('transfer_reports').where('uid', isEqualTo: user.uid).orderBy('timestamp', descending: true)
-                    .startAfter([Timestamp.fromDate(latestDate)]).endAt([dateFrom]).limit(10).get()
-                    .timeout(Duration(seconds: 90));
-              } catch(e){
-                print(e);
-              }
-
-          }
-
-          Map<String, dynamic> snapshotData = {};
-
-          if(snapshot.docs.length < 1){
-            message = 'No Transfer Reports found';
-          } else {
-            for (DocumentSnapshot snap in snapshot.docs) {
-
-              snapshotData = snap.data();
-
-              Uint8List incidentSignature;
-              Uint8List collectionSignature;
-              Uint8List destinationSignature;
-              Uint8List bodyMapImage;
-              Uint8List patientReportSignature;
-              Uint8List transferInSignature1;
-              Uint8List transferInSignature2;
-              Uint8List transferInSignature3;
-
-              if (snapshotData[Strings.incidentSignature] != null) {
-                Reference storageRef =
-                FirebaseStorage.instance.ref().child('transferReportImages/' + snap.id + '/incidentSignature.jpg');
-
-                if(kIsWeb){
-                  storageRef = FirebaseStorage.instance.ref().child(firebaseStorageBucket + '/transferReportImages/' + snap.id + '/incidentSignature.jpg');
-                }
-
-                incidentSignature = await storageRef.getData(dataLimit);
-              }
-              if (snapshotData[Strings.collectionSignature] != null) {
-                Reference storageRef =
-                FirebaseStorage.instance.ref().child('transferReportImages/' + snap.id + '/collectionSignature.jpg');
-
-                if(kIsWeb){
-                  storageRef = FirebaseStorage.instance.ref().child(firebaseStorageBucket + '/transferReportImages/' + snap.id + '/collectionSignature.jpg');
-                }
-
-                collectionSignature = await storageRef.getData(dataLimit);
-              }
-              if (snapshotData[Strings.destinationSignature] != null) {
-                Reference storageRef =
-                FirebaseStorage.instance.ref().child('transferReportImages/' + snap.id + '/destinationSignature.jpg');
-
-                if(kIsWeb){
-                  storageRef = FirebaseStorage.instance.ref().child(firebaseStorageBucket + '/transferReportImages/' + snap.id + '/destinationSignature.jpg');
-                }
-
-                destinationSignature = await storageRef.getData(dataLimit);
-              }
-              if (snapshotData[Strings.bodyMapImage] != null) {
-                Reference storageRef =
-                FirebaseStorage.instance.ref().child('transferReportImages/' + snap.id + '/bodyMapImage.jpg');
-
-                if(kIsWeb){
-                  storageRef = FirebaseStorage.instance.ref().child(firebaseStorageBucket + '/transferReportImages/' + snap.id + '/bodyMapImage.jpg');
-                }
-
-                bodyMapImage = await storageRef.getData(dataLimit);
-              }
-              if (snapshotData[Strings.patientReportSignature] != null) {
-                Reference storageRef =
-                FirebaseStorage.instance.ref().child('transferReportImages/' + snap.id + '/patientReportSignature.jpg');
-
-                if(kIsWeb){
-                  storageRef = FirebaseStorage.instance.ref().child(firebaseStorageBucket + '/transferReportImages/' + snap.id + '/patientReportSignature.jpg');
-                }
-
-                patientReportSignature = await storageRef.getData(dataLimit);
-              }
-              if (snapshotData[Strings.transferInSignature1] != null) {
-                Reference storageRef =
-                FirebaseStorage.instance.ref().child('transferReportImages/' + snap.id + '/transferInSignature1.jpg');
-
-                if(kIsWeb){
-                  storageRef = FirebaseStorage.instance.ref().child(firebaseStorageBucket + '/transferReportImages/' + snap.id + '/transferInSignature1.jpg');
-                }
-
-                transferInSignature1 = await storageRef.getData(dataLimit);
-              }
-              if (snapshotData[Strings.transferInSignature2] != null) {
-                Reference storageRef =
-                FirebaseStorage.instance.ref().child('transferReportImages/' + snap.id + '/transferInSignature2.jpg');
-
-                if(kIsWeb){
-                  storageRef = FirebaseStorage.instance.ref().child(firebaseStorageBucket + '/transferReportImages/' + snap.id + '/transferInSignature2.jpg');
-                }
-
-                transferInSignature2 = await storageRef.getData(dataLimit);
-              }
-              if (snapshotData[Strings.transferInSignature3] != null) {
-                Reference storageRef =
-                FirebaseStorage.instance.ref().child('transferReportImages/' + snap.id + '/transferInSignature3.jpg');
-
-                if(kIsWeb){
-                  storageRef = FirebaseStorage.instance.ref().child(firebaseStorageBucket + '/transferReportImages/' + snap.id + '/transferInSignature3.jpg');
-                }
-
-                transferInSignature3 = await storageRef.getData(dataLimit);
-              }
-
-              final Map<String, dynamic> transferReport = onlineTransferReport(snapshotData, snap.id, incidentSignature, collectionSignature, destinationSignature, bodyMapImage, patientReportSignature, transferInSignature1, transferInSignature2, transferInSignature3);
-
-              _fetchedTransferReportList.add(transferReport);
-
-            }
-
-            _transferReports.addAll(_fetchedTransferReportList);
-            success = true;
-          }
-
-
-        }
-
-      }
-
-
-    } on TimeoutException catch (_) {
-      // A timeout occurred.
-      message = 'Network Timeout communicating with the server, unable to search Transfer Reports';
-    } catch(e){
-      print(e);
-      message = 'Something went wrong. Please try again';
-
-    }
-
-    _isLoading = false;
-    notifyListeners();
-    _selTransferReportId = null;
-    GlobalFunctions.dismissLoadingDialog();
-    if(message != '') GlobalFunctions.showToast(message);
-    return success;
-
-  }
-
-
   Map<String, dynamic> localTransferReport(Map<String, dynamic> localRecord){
     return {
       Strings.documentId: GlobalFunctions.databaseValueString(localRecord[Strings.documentId]),
@@ -4051,6 +4071,8 @@ class TransferReportModel extends ChangeNotifier {
       Strings.jobId: localRecord[Strings.jobId],
       Strings.formVersion: localRecord[Strings.formVersion],
       Strings.jobRef: localRecord[Strings.jobRef],
+      Strings.jobRefRef: localRecord[Strings.jobRefRef],
+      Strings.jobRefNo: localRecord[Strings.jobRefNo],
       Strings.date: localRecord[Strings.date],
       Strings.startTime: localRecord[Strings.startTime],
       Strings.finishTime: localRecord[Strings.finishTime],
@@ -4191,6 +4213,8 @@ class TransferReportModel extends ChangeNotifier {
       Strings.physicalObservations: localRecord[Strings.physicalObservations],
       Strings.relevantInformation: localRecord[Strings.relevantInformation],
       Strings.patientReport: localRecord[Strings.patientReport],
+      Strings.acceptPpeYes: localRecord[Strings.acceptPpeYes],
+      Strings.acceptPpeNo: localRecord[Strings.acceptPpeNo],
       Strings.patientReportPrintName: localRecord[Strings.patientReportPrintName],
       Strings.patientReportRole: localRecord[Strings.patientReportRole],
       Strings.patientReportDate: localRecord[Strings.patientReportDate],
@@ -4376,6 +4400,8 @@ class TransferReportModel extends ChangeNotifier {
       Strings.tyresInflatedNo: localRecord[Strings.tyresInflatedNo],
       Strings.warningSignsYes: localRecord[Strings.warningSignsYes],
       Strings.warningSignsNo: localRecord[Strings.warningSignsNo],
+      Strings.vehicleDamageYes: localRecord[Strings.vehicleDamageYes],
+      Strings.vehicleDamageNo: localRecord[Strings.vehicleDamageNo],
       Strings.vehicleCompletedBy2: localRecord[Strings.vehicleCompletedBy2],
       Strings.nearestTank2: localRecord[Strings.nearestTank2],
       Strings.vehicleFinishMileage: localRecord[Strings.vehicleFinishMileage],
@@ -4396,6 +4422,8 @@ class TransferReportModel extends ChangeNotifier {
       Strings.jobId: localRecord[Strings.jobId],
       Strings.formVersion: localRecord[Strings.formVersion],
       Strings.jobRef: localRecord[Strings.jobRef],
+      Strings.jobRefRef: localRecord[Strings.jobRefRef],
+      Strings.jobRefNo: localRecord[Strings.jobRefNo].toString(),
       Strings.date: localRecord[Strings.date] == null ? null : DateTime
           .fromMillisecondsSinceEpoch(
           localRecord[Strings.date].millisecondsSinceEpoch)
@@ -4539,6 +4567,8 @@ class TransferReportModel extends ChangeNotifier {
       Strings.physicalObservations: localRecord[Strings.physicalObservations],
       Strings.relevantInformation: localRecord[Strings.relevantInformation],
       Strings.patientReport: localRecord[Strings.patientReport],
+      Strings.acceptPpeYes: localRecord[Strings.acceptPpeYes],
+      Strings.acceptPpeNo: localRecord[Strings.acceptPpeNo],
       Strings.patientReportPrintName: localRecord[Strings.patientReportPrintName],
       Strings.patientReportRole: localRecord[Strings.patientReportRole],
       Strings.patientReportDate: localRecord[Strings.patientReportDate],
@@ -4727,6 +4757,8 @@ class TransferReportModel extends ChangeNotifier {
       Strings.tyresInflatedNo: localRecord[Strings.tyresInflatedNo],
       Strings.warningSignsYes: localRecord[Strings.warningSignsYes],
       Strings.warningSignsNo: localRecord[Strings.warningSignsNo],
+      Strings.vehicleDamageYes: localRecord[Strings.vehicleDamageYes],
+      Strings.vehicleDamageNo: localRecord[Strings.vehicleDamageNo],
       Strings.vehicleCompletedBy2: localRecord[Strings.vehicleCompletedBy2],
       Strings.nearestTank2: localRecord[Strings.nearestTank2],
       Strings.vehicleFinishMileage: localRecord[Strings.vehicleFinishMileage],
@@ -4750,6 +4782,8 @@ class TransferReportModel extends ChangeNotifier {
       Strings.jobId: localRecord[Strings.jobId],
       Strings.formVersion: localRecord[Strings.formVersion],
       Strings.jobRef: localRecord[Strings.jobRef],
+      Strings.jobRefRef: localRecord[Strings.jobRefRef],
+      Strings.jobRefNo: localRecord[Strings.jobRefNo],
       Strings.date: localRecord[Strings.date],
       Strings.startTime: localRecord[Strings.startTime],
       Strings.finishTime: localRecord[Strings.finishTime],
@@ -4890,6 +4924,8 @@ class TransferReportModel extends ChangeNotifier {
       Strings.physicalObservations: localRecord[Strings.physicalObservations],
       Strings.relevantInformation: localRecord[Strings.relevantInformation],
       Strings.patientReport: localRecord[Strings.patientReport],
+      Strings.acceptPpeYes: localRecord[Strings.acceptPpeYes],
+      Strings.acceptPpeNo: localRecord[Strings.acceptPpeNo],
       Strings.patientReportPrintName: localRecord[Strings.patientReportPrintName],
       Strings.patientReportRole: localRecord[Strings.patientReportRole],
       Strings.patientReportDate: localRecord[Strings.patientReportDate],
@@ -5075,6 +5111,8 @@ class TransferReportModel extends ChangeNotifier {
       Strings.tyresInflatedNo: localRecord[Strings.tyresInflatedNo],
       Strings.warningSignsYes: localRecord[Strings.warningSignsYes],
       Strings.warningSignsNo: localRecord[Strings.warningSignsNo],
+      Strings.vehicleDamageYes: localRecord[Strings.vehicleDamageYes],
+      Strings.vehicleDamageNo: localRecord[Strings.vehicleDamageNo],
       Strings.vehicleCompletedBy2: localRecord[Strings.vehicleCompletedBy2],
       Strings.nearestTank2: localRecord[Strings.nearestTank2],
       Strings.vehicleFinishMileage: localRecord[Strings.vehicleFinishMileage],
@@ -5106,14 +5144,6 @@ class TransferReportModel extends ChangeNotifier {
         transferReports.add(transferReportRecord.value);
       }
 
-      // List<Map<String, dynamic>> transferReports =
-      // await _databaseHelper.getAllWhereAndWhere(
-      //     Strings.transferReportTable,
-      //     Strings.serverUploaded,
-      //     0,
-      //     Strings.uid,
-      //     user.uid);
-
 
       bool isTokenExpired = GlobalFunctions.isTokenExpired();
       bool authenticated = true;
@@ -5138,8 +5168,10 @@ class TransferReportModel extends ChangeNotifier {
             Strings.uid: user.uid,
             Strings.jobId: '1',
             Strings.formVersion: '1',
-            Strings.jobRef: GlobalFunctions.databaseValueString(transferReport[Strings.jobRef]),
-            Strings.jobRefLowercase: GlobalFunctions.databaseValueString(transferReport[Strings.jobRef]).toLowerCase(),
+            Strings.jobRef: GlobalFunctions.databaseValueString(transferReport[Strings.jobRefRef]) + GlobalFunctions.databaseValueString(transferReport[Strings.jobRefNo]),
+            Strings.jobRefLowercase: GlobalFunctions.databaseValueString(transferReport[Strings.jobRefRef]).toLowerCase() + GlobalFunctions.databaseValueString(transferReport[Strings.jobRefNo]).toLowerCase(),
+            Strings.jobRefRef: GlobalFunctions.databaseValueString(transferReport[Strings.jobRefRef]),
+            Strings.jobRefNo: int.parse(transferReport[Strings.jobRefNo]),
             Strings.date: transferReport[Strings.date] == null ? null : DateTime.parse(transferReport[Strings.date]),
             Strings.startTime: transferReport[Strings.startTime],
             Strings.finishTime: transferReport[Strings.finishTime],
@@ -5279,6 +5311,8 @@ class TransferReportModel extends ChangeNotifier {
             Strings.physicalObservations: transferReport[Strings.physicalObservations],
             Strings.relevantInformation: transferReport[Strings.relevantInformation],
             Strings.patientReport: transferReport[Strings.patientReport],
+            Strings.acceptPpeYes: transferReport[Strings.acceptPpeYes],
+            Strings.acceptPpeNo: transferReport[Strings.acceptPpeNo],
             Strings.patientReportPrintName: transferReport[Strings.patientReportPrintName],
             Strings.patientReportRole: transferReport[Strings.patientReportRole],
             Strings.patientReportDate: transferReport[Strings.patientReportDate],
@@ -5463,6 +5497,8 @@ class TransferReportModel extends ChangeNotifier {
             Strings.tyresInflatedNo: transferReport[Strings.tyresInflatedNo],
             Strings.warningSignsYes: transferReport[Strings.warningSignsYes],
             Strings.warningSignsNo: transferReport[Strings.warningSignsNo],
+            Strings.vehicleDamageYes: transferReport[Strings.vehicleDamageYes],
+            Strings.vehicleDamageNo: transferReport[Strings.vehicleDamageNo],
             Strings.vehicleCompletedBy2: transferReport[Strings.vehicleCompletedBy2],
             Strings.nearestTank2: transferReport[Strings.nearestTank2],
             Strings.vehicleFinishMileage: transferReport[Strings.vehicleFinishMileage],
@@ -5474,6 +5510,27 @@ class TransferReportModel extends ChangeNotifier {
             Strings.timestamp: FieldValue.serverTimestamp(),
             Strings.serverUploaded: 1,
           });
+
+          QuerySnapshot transportBookingSnapshot = await FirebaseFirestore.instance.collection('booking_forms').where(Strings.jobRef, isEqualTo: GlobalFunctions.databaseValueString(transferReport[Strings.jobRefRef]) + GlobalFunctions.databaseValueString(transferReport[Strings.jobRefNo])).get();
+
+          if(transportBookingSnapshot.docs.length > 0) {
+            Map<String, dynamic> transportBooking = transportBookingSnapshot.docs[0].data() as Map<String, dynamic>;
+            if(transportBooking.containsKey(Strings.transferReportCreated)){
+              if (transportBooking[Strings.transferReportCreated] == false){
+                if(transportBooking.containsKey('assigned_users')){
+                  List<dynamic> assignedUsers = transportBooking['assigned_users'];
+
+                  for(dynamic assignedUser in assignedUsers){
+                    FirebaseFirestore.instance.collection('users').doc(assignedUser.toString()).update({'transport_bookings' : FieldValue.increment(-1)});
+
+                  }
+                }
+
+              }
+
+            }
+            FirebaseFirestore.instance.collection('booking_forms').doc(transportBookingSnapshot.docs[0].id).update({Strings.transferReportCreated : true});
+          }
 
           DocumentSnapshot snap = await ref.get();
 
@@ -5558,11 +5615,13 @@ class TransferReportModel extends ChangeNotifier {
 
             Uint8List decryptedImage = await GlobalFunctions.decryptSignature(transferReport[Strings.bodyMapImage]);
 
-            Uint8List compressedImage = await FlutterImageCompress.compressWithList(
-                decryptedImage,
-                quality: 50,
-                keepExif: true
-            );
+            Uint8List compressedImage = decryptedImage;
+
+            // Uint8List compressedImage = await FlutterImageCompress.compressWithList(
+            //     decryptedImage,
+            //     quality: 50,
+            //     keepExif: true
+            // );
 
 
             Uint8List encryptedImage = await GlobalFunctions.encryptSignature(compressedImage);
@@ -5814,52 +5873,14 @@ class TransferReportModel extends ChangeNotifier {
             width: width,
             padding: const EdgeInsets.all(5),
             decoration: BoxDecoration(
-              borderRadius: 5,
-              border: BoxBorder(
-                top: true,
-                left: true,
-                right: true,
-                bottom: true,
-                width: 1,
-                color: PdfColors.grey,
-              ),
+              borderRadius: BorderRadius.all(Radius.circular(5)),
+              border: Border.all(width: 1, color: PdfColors.grey),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(value, style: TextStyle(fontSize: 8)),
-              ],
-            ),
-          ));
-    }
-
-    Widget signatureField(FlutterImage.Image signature, PdfDocument doc) {
-
-      return ConstrainedBox(constraints: BoxConstraints(minHeight: 20),
-          child: Container(
-            width: 120,
-            padding: const EdgeInsets.all(2),
-            decoration: BoxDecoration(
-              borderRadius: 5,
-              border: BoxBorder(
-                top: true,
-                left: true,
-                right: true,
-                bottom: true,
-                width: 1,
-                color: PdfColors.grey,
-              ),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                signature == null ? Text('') : Container(height: 20, child: FittedBox(alignment: Alignment.centerLeft, child: Image(PdfImage(doc,
-                    image: signature.data.buffer
-                        .asUint8List(),
-                    width: signature.width,
-                    height: signature.height)))),
               ],
             ),
           ));
@@ -5877,15 +5898,8 @@ class TransferReportModel extends ChangeNotifier {
                       width: 100,
                       padding: const EdgeInsets.all(5),
                       decoration: BoxDecoration(
-                        borderRadius: 5,
-                        border: BoxBorder(
-                          top: true,
-                          left: true,
-                          right: true,
-                          bottom: true,
-                          width: 1,
-                          color: PdfColors.grey,
-                        ),
+                        borderRadius: BorderRadius.all(Radius.circular(5)),
+                        border: Border.all(width: 1, color: PdfColors.grey),
                       ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -5955,15 +5969,8 @@ class TransferReportModel extends ChangeNotifier {
                       width: 100,
                       padding: const EdgeInsets.all(5),
                       decoration: BoxDecoration(
-                        borderRadius: 5,
-                        border: BoxBorder(
-                          top: true,
-                          left: true,
-                          right: true,
-                          bottom: true,
-                          width: 1,
-                          color: PdfColors.grey,
-                        ),
+                        borderRadius: BorderRadius.all(Radius.circular(5)),
+                        border: Border.all(width: 1, color: PdfColors.grey),
                       ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -5976,15 +5983,8 @@ class TransferReportModel extends ChangeNotifier {
                     child: Container(
                       padding: const EdgeInsets.all(5),
                       decoration: BoxDecoration(
-                        borderRadius: 5,
-                        border: BoxBorder(
-                          top: true,
-                          left: true,
-                          right: true,
-                          bottom: true,
-                          width: 1,
-                          color: PdfColors.grey,
-                        ),
+                        borderRadius: BorderRadius.all(Radius.circular(5)),
+                        border: Border.all(width: 1, color: PdfColors.grey),
                       ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -6091,25 +6091,18 @@ class TransferReportModel extends ChangeNotifier {
                       child: Container(
                         padding: const EdgeInsets.all(3),
                         decoration: BoxDecoration(
-                          borderRadius: 5,
-                          border: BoxBorder(
-                            top: true,
-                            left: true,
-                            right: true,
-                            bottom: true,
-                            width: 1,
-                            color: PdfColors.grey,
-                          ),
+                          borderRadius: BorderRadius.all(Radius.circular(5)),
+                          border: Border.all(width: 1, color: PdfColors.grey),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            value1 == 'signature' && signature != null ? Container(height: 20, child: FittedBox(alignment: Alignment.centerLeft, child: Image(PdfImage(doc,
+                            value1 == 'signature' && signature != null ? Container(height: 20, child: FittedBox(alignment: Alignment.centerLeft, child: Image(ImageProxy(PdfImage(doc,
                                 image: signature.data.buffer
                                     .asUint8List(),
                                 width: signature.width,
-                                height: signature.height)))) : Text(value1 == null || value1 == 'signature' ? '' : value1, style: TextStyle(fontSize: 8))
+                                height: signature.height))))) : Text(value1 == null || value1 == 'signature' ? '' : value1, style: TextStyle(fontSize: 8))
                           ],
                         ),
                       ))),
@@ -6120,25 +6113,18 @@ class TransferReportModel extends ChangeNotifier {
                       child: Container(
                         padding: const EdgeInsets.all(3),
                         decoration: BoxDecoration(
-                          borderRadius: 5,
-                          border: BoxBorder(
-                            top: true,
-                            left: true,
-                            right: true,
-                            bottom: true,
-                            width: 1,
-                            color: PdfColors.grey,
-                          ),
+                          borderRadius: BorderRadius.all(Radius.circular(5)),
+                          border: Border.all(width: 1, color: PdfColors.grey),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            value2 == 'signature' && signature != null ? Container(height: 20, child: FittedBox(alignment: Alignment.centerLeft, child: Image(PdfImage(doc,
+                            value2 == 'signature' && signature != null ? Container(height: 20, child: FittedBox(alignment: Alignment.centerLeft, child: Image(ImageProxy(PdfImage(doc,
                                 image: signature.data.buffer
                                     .asUint8List(),
                                 width: signature.width,
-                                height: signature.height)))) : Text(value2 == null || value2 == 'signature' ? '' : value2, style: TextStyle(fontSize: 8)),
+                                height: signature.height))))) : Text(value2 == null || value2 == 'signature' ? '' : value2, style: TextStyle(fontSize: 8)),
                           ],
                         ),
                       ))),
@@ -6277,15 +6263,8 @@ class TransferReportModel extends ChangeNotifier {
                       child: Container(
                         padding: const EdgeInsets.all(3),
                         decoration: BoxDecoration(
-                          borderRadius: 5,
-                          border: BoxBorder(
-                            top: true,
-                            left: true,
-                            right: true,
-                            bottom: true,
-                            width: 1,
-                            color: PdfColors.grey,
-                          ),
+                          borderRadius: BorderRadius.all(Radius.circular(5)),
+                          border: Border.all(width: 1, color: PdfColors.grey),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -6302,25 +6281,18 @@ class TransferReportModel extends ChangeNotifier {
                       child: Container(
                         padding: const EdgeInsets.all(3),
                         decoration: BoxDecoration(
-                          borderRadius: 5,
-                          border: BoxBorder(
-                            top: true,
-                            left: true,
-                            right: true,
-                            bottom: true,
-                            width: 1,
-                            color: PdfColors.grey,
-                          ),
+                          borderRadius: BorderRadius.all(Radius.circular(5)),
+                          border: Border.all(width: 1, color: PdfColors.grey),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            signature == null ? Text(value2 == null ? '' : value2, style: TextStyle(fontSize: 8)) : signature == null ? Text('') : Container(height: 20, child: FittedBox(alignment: Alignment.centerLeft, child: Image(PdfImage(doc,
+                            signature == null ? Text(value2 == null ? '' : value2, style: TextStyle(fontSize: 8)) : signature == null ? Text('') : Container(height: 20, child: FittedBox(alignment: Alignment.centerLeft, child: Image(ImageProxy(PdfImage(doc,
                                 image: signature.data.buffer
                                     .asUint8List(),
                                 width: signature.width,
-                                height: signature.height)))),
+                                height: signature.height))))),
                           ],
                         ),
                       ))),
@@ -6331,25 +6303,18 @@ class TransferReportModel extends ChangeNotifier {
                       child: Container(
                         padding: const EdgeInsets.all(3),
                         decoration: BoxDecoration(
-                          borderRadius: 5,
-                          border: BoxBorder(
-                            top: true,
-                            left: true,
-                            right: true,
-                            bottom: true,
-                            width: 1,
-                            color: PdfColors.grey,
-                          ),
+                          borderRadius: BorderRadius.all(Radius.circular(5)),
+                          border: Border.all(width: 1, color: PdfColors.grey),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            signature == null ? Text(value3 == null ? '' : value3, style: TextStyle(fontSize: 8)) : signature == null ? Text('') : Container(height: 20, child: FittedBox(alignment: Alignment.centerLeft, child: Image(PdfImage(doc,
+                            signature == null ? Text(value3 == null ? '' : value3, style: TextStyle(fontSize: 8)) : signature == null ? Text('') : Container(height: 20, child: FittedBox(alignment: Alignment.centerLeft, child: Image(ImageProxy(PdfImage(doc,
                                 image: signature.data.buffer
                                     .asUint8List(),
                                 width: signature.width,
-                                height: signature.height)))),
+                                height: signature.height))))),
                           ],
                         ),
                       ))),
@@ -6359,8 +6324,6 @@ class TransferReportModel extends ChangeNotifier {
           ]
       );
     }
-
-
 
     Widget sectionTitle(String text){
       return Column(
@@ -6385,7 +6348,6 @@ class TransferReportModel extends ChangeNotifier {
       );
     }
 
-
     Widget drivingTimesRow(String value1, String value2, String value3, String value4){
       return Column(
         children: [
@@ -6395,15 +6357,8 @@ class TransferReportModel extends ChangeNotifier {
                     child: Container(
                       padding: const EdgeInsets.all(5),
                       decoration: BoxDecoration(
-                        borderRadius: 5,
-                        border: BoxBorder(
-                          top: true,
-                          left: true,
-                          right: true,
-                          bottom: true,
-                          width: 1,
-                          color: PdfColors.grey,
-                        ),
+                        borderRadius: BorderRadius.all(Radius.circular(5)),
+                        border: Border.all(width: 1, color: PdfColors.grey),
                       ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -6418,15 +6373,8 @@ class TransferReportModel extends ChangeNotifier {
                     child: Container(
                       padding: const EdgeInsets.all(5),
                       decoration: BoxDecoration(
-                        borderRadius: 5,
-                        border: BoxBorder(
-                          top: true,
-                          left: true,
-                          right: true,
-                          bottom: true,
-                          width: 1,
-                          color: PdfColors.grey,
-                        ),
+                        borderRadius: BorderRadius.all(Radius.circular(5)),
+                        border: Border.all(width: 1, color: PdfColors.grey),
                       ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -6441,15 +6389,8 @@ class TransferReportModel extends ChangeNotifier {
                     child: Container(
                       padding: const EdgeInsets.all(5),
                       decoration: BoxDecoration(
-                        borderRadius: 5,
-                        border: BoxBorder(
-                          top: true,
-                          left: true,
-                          right: true,
-                          bottom: true,
-                          width: 1,
-                          color: PdfColors.grey,
-                        ),
+                        borderRadius: BorderRadius.all(Radius.circular(5)),
+                        border: Border.all(width: 1, color: PdfColors.grey),
                       ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -6464,15 +6405,8 @@ class TransferReportModel extends ChangeNotifier {
                     child: Container(
                       padding: const EdgeInsets.all(5),
                       decoration: BoxDecoration(
-                        borderRadius: 5,
-                        border: BoxBorder(
-                          top: true,
-                          left: true,
-                          right: true,
-                          bottom: true,
-                          width: 1,
-                          color: PdfColors.grey,
-                        ),
+                        borderRadius: BorderRadius.all(Radius.circular(5)),
+                        border: Border.all(width: 1, color: PdfColors.grey),
                       ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -6497,16 +6431,8 @@ class TransferReportModel extends ChangeNotifier {
                   Expanded(child: Expanded(child: ConstrainedBox(constraints: BoxConstraints(minHeight: 20),
                       child: Container(
                         padding: const EdgeInsets.all(3),
-                        decoration: BoxDecoration(
-                          borderRadius: 5,
-                          border: BoxBorder(
-                            top: true,
-                            left: true,
-                            right: true,
-                            bottom: true,
-                            width: 1,
-                            color: PdfColors.grey,
-                          ),
+                        decoration: BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(5)),
+                          border: Border.all(width: 1, color: PdfColors.grey),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -6521,15 +6447,8 @@ class TransferReportModel extends ChangeNotifier {
                       child: Container(
                         padding: const EdgeInsets.all(3),
                         decoration: BoxDecoration(
-                          borderRadius: 5,
-                          border: BoxBorder(
-                            top: true,
-                            left: true,
-                            right: true,
-                            bottom: true,
-                            width: 1,
-                            color: PdfColors.grey,
-                          ),
+                          borderRadius: BorderRadius.all(Radius.circular(5)),
+                          border: Border.all(width: 1, color: PdfColors.grey),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -6544,15 +6463,8 @@ class TransferReportModel extends ChangeNotifier {
                       child: Container(
                         padding: const EdgeInsets.all(3),
                         decoration: BoxDecoration(
-                          borderRadius: 5,
-                          border: BoxBorder(
-                            top: true,
-                            left: true,
-                            right: true,
-                            bottom: true,
-                            width: 1,
-                            color: PdfColors.grey,
-                          ),
+                          borderRadius: BorderRadius.all(Radius.circular(5)),
+                          border: Border.all(width: 1, color: PdfColors.grey),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -6578,34 +6490,19 @@ class TransferReportModel extends ChangeNotifier {
               Text('Yes', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
               Container(width: 5),
               Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                    top: true,
-                    left: true,
-                    right: true,
-                    bottom: true,
-                    width: 1,
-                    color: PdfColors.grey,
-                  )),
+                  decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                   child: Center(child: Text(value1 == null || value1 == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
               Container(width: 10),
               Text('No', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
               Container(width: 5),
               Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                    top: true,
-                    left: true,
-                    right: true,
-                    bottom: true,
-                    width: 1,
-                    color: PdfColors.grey,
-                  )),
+                  decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                   child: Center(child: Text(value2 == null || value2 == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
             ]
         ),
         Container(height: 5)
       ]);
     }
-
 
     try {
 
@@ -6620,13 +6517,8 @@ class TransferReportModel extends ChangeNotifier {
       FlutterImage.Image transferInSignature2Image;
       FlutterImage.Image transferInSignature3Image;
       FlutterImage.Image bodyMapImage;
-      PdfImage pegasusLogo = await pdfImageFromImageProvider(pdf: pdfDoc, image: Material.AssetImage('assets/images/pegasusLogo.png'),);
-      PdfImage bodyMapEmpty = await pdfImageFromImageProvider(pdf: pdfDoc, image: Material.AssetImage('assets/images/bodyMap.png'),);
-
-      print(DateTime.parse(selectedTransferReport[Strings.startTime]));
-
-      print(timeFormat.format(DateTime.parse(selectedTransferReport[Strings.startTime])));
-
+      final pegasusLogo = MemoryImage((await rootBundle.load('assets/images/pegasusLogo.png')).buffer.asUint8List(),);
+      final bodyMapEmpty = MemoryImage((await rootBundle.load('assets/images/bodyMap.png')).buffer.asUint8List(),);
 
 
       if (selectedTransferReport[Strings.bodyMapImage] != null) {
@@ -6665,7 +6557,7 @@ class TransferReportModel extends ChangeNotifier {
 
 
       pdf.addPage(MultiPage(
-          theme: Theme.withFont(base: ttf, bold: ttfBold),
+          theme: ThemeData.withFont(base: ttf, bold: ttfBold),
           pageFormat: PdfPageFormat.a4,
           crossAxisAlignment: CrossAxisAlignment.start,
           margin: EdgeInsets.all(40),
@@ -6701,7 +6593,8 @@ class TransferReportModel extends ChangeNotifier {
                     ]
                   ),
 
-                  Container(height: 50, child: Image(pegasusLogo)),
+                  Container(height: 50, child: Image(pegasusLogo)
+),
 
                 ]
             ),
@@ -6757,27 +6650,13 @@ class TransferReportModel extends ChangeNotifier {
                   Text('Yes', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
                   Container(width: 5),
                   Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                        top: true,
-                        left: true,
-                        right: true,
-                        bottom: true,
-                        width: 1,
-                        color: PdfColors.grey,
-                      )),
+                      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                       child: Center(child: Text(selectedTransferReport[Strings.forensicHistoryYes] == null || selectedTransferReport[Strings.forensicHistoryYes] == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
                   Container(width: 10),
                   Text('No', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
                   Container(width: 5),
                   Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                        top: true,
-                        left: true,
-                        right: true,
-                        bottom: true,
-                        width: 1,
-                        color: PdfColors.grey,
-                      )),
+                      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                       child: Center(child: Text(selectedTransferReport[Strings.forensicHistoryNo] == null || selectedTransferReport[Strings.forensicHistoryNo] == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
                 ]
             ),
@@ -6792,27 +6671,13 @@ class TransferReportModel extends ChangeNotifier {
                   Text('Yes', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
                   Container(width: 5),
                   Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                        top: true,
-                        left: true,
-                        right: true,
-                        bottom: true,
-                        width: 1,
-                        color: PdfColors.grey,
-                      )),
+                      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                       child: Center(child: Text(selectedTransferReport[Strings.racialGenderConcernsYes] == null || selectedTransferReport[Strings.racialGenderConcernsYes] == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
                   Container(width: 10),
                   Text('No', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
                   Container(width: 5),
                   Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                        top: true,
-                        left: true,
-                        right: true,
-                        bottom: true,
-                        width: 1,
-                        color: PdfColors.grey,
-                      )),
+                      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                       child: Center(child: Text(selectedTransferReport[Strings.racialGenderConcernsNo] == null || selectedTransferReport[Strings.racialGenderConcernsNo] == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
                 ]
             ),
@@ -6827,27 +6692,13 @@ class TransferReportModel extends ChangeNotifier {
                   Text('Yes', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
                   Container(width: 5),
                   Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                        top: true,
-                        left: true,
-                        right: true,
-                        bottom: true,
-                        width: 1,
-                        color: PdfColors.grey,
-                      )),
+                      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                       child: Center(child: Text(selectedTransferReport[Strings.violenceAggressionYes] == null || selectedTransferReport[Strings.violenceAggressionYes] == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
                   Container(width: 10),
                   Text('No', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
                   Container(width: 5),
                   Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                        top: true,
-                        left: true,
-                        right: true,
-                        bottom: true,
-                        width: 1,
-                        color: PdfColors.grey,
-                      )),
+                      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                       child: Center(child: Text(selectedTransferReport[Strings.violenceAggressionNo] == null || selectedTransferReport[Strings.violenceAggressionNo] == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
                 ]
             ),
@@ -6863,27 +6714,13 @@ class TransferReportModel extends ChangeNotifier {
                   Text('Yes', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
                   Container(width: 5),
                   Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                        top: true,
-                        left: true,
-                        right: true,
-                        bottom: true,
-                        width: 1,
-                        color: PdfColors.grey,
-                      )),
+                      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                       child: Center(child: Text(selectedTransferReport[Strings.selfHarmYes] == null || selectedTransferReport[Strings.selfHarmYes] == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
                   Container(width: 10),
                   Text('No', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
                   Container(width: 5),
                   Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                        top: true,
-                        left: true,
-                        right: true,
-                        bottom: true,
-                        width: 1,
-                        color: PdfColors.grey,
-                      )),
+                      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                       child: Center(child: Text(selectedTransferReport[Strings.selfHarmNo] == null || selectedTransferReport[Strings.selfHarmNo] == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
                 ]
             ),
@@ -6898,27 +6735,13 @@ class TransferReportModel extends ChangeNotifier {
                   Text('Yes', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
                   Container(width: 5),
                   Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                        top: true,
-                        left: true,
-                        right: true,
-                        bottom: true,
-                        width: 1,
-                        color: PdfColors.grey,
-                      )),
+                      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                       child: Center(child: Text(selectedTransferReport[Strings.alcoholSubstanceYes] == null || selectedTransferReport[Strings.alcoholSubstanceYes] == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
                   Container(width: 10),
                   Text('No', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
                   Container(width: 5),
                   Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                        top: true,
-                        left: true,
-                        right: true,
-                        bottom: true,
-                        width: 1,
-                        color: PdfColors.grey,
-                      )),
+                      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                       child: Center(child: Text(selectedTransferReport[Strings.alcoholSubstanceNo] == null || selectedTransferReport[Strings.alcoholSubstanceNo] == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
                 ]
             ),
@@ -6933,27 +6756,13 @@ class TransferReportModel extends ChangeNotifier {
                   Text('Yes', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
                   Container(width: 5),
                   Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                        top: true,
-                        left: true,
-                        right: true,
-                        bottom: true,
-                        width: 1,
-                        color: PdfColors.grey,
-                      )),
+                      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                       child: Center(child: Text(selectedTransferReport[Strings.virusesYes] == null || selectedTransferReport[Strings.virusesYes] == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
                   Container(width: 10),
                   Text('No', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
                   Container(width: 5),
                   Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                        top: true,
-                        left: true,
-                        right: true,
-                        bottom: true,
-                        width: 1,
-                        color: PdfColors.grey,
-                      )),
+                      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                       child: Center(child: Text(selectedTransferReport[Strings.virusesNo] == null || selectedTransferReport[Strings.virusesNo] == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
                 ]
             ),
@@ -6968,27 +6777,13 @@ class TransferReportModel extends ChangeNotifier {
                   Text('Yes', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
                   Container(width: 5),
                   Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                        top: true,
-                        left: true,
-                        right: true,
-                        bottom: true,
-                        width: 1,
-                        color: PdfColors.grey,
-                      )),
+                      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                       child: Center(child: Text(selectedTransferReport[Strings.safeguardingYes] == null || selectedTransferReport[Strings.safeguardingYes] == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
                   Container(width: 10),
                   Text('No', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
                   Container(width: 5),
                   Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                        top: true,
-                        left: true,
-                        right: true,
-                        bottom: true,
-                        width: 1,
-                        color: PdfColors.grey,
-                      )),
+                      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                       child: Center(child: Text(selectedTransferReport[Strings.safeguardingNo] == null || selectedTransferReport[Strings.safeguardingNo] == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
                 ]
             ),
@@ -7003,27 +6798,13 @@ class TransferReportModel extends ChangeNotifier {
                   Text('Yes', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
                   Container(width: 5),
                   Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                        top: true,
-                        left: true,
-                        right: true,
-                        bottom: true,
-                        width: 1,
-                        color: PdfColors.grey,
-                      )),
+                      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                       child: Center(child: Text(selectedTransferReport[Strings.physicalHealthConditionsYes] == null || selectedTransferReport[Strings.physicalHealthConditionsYes] == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
                   Container(width: 10),
                   Text('No', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
                   Container(width: 5),
                   Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                        top: true,
-                        left: true,
-                        right: true,
-                        bottom: true,
-                        width: 1,
-                        color: PdfColors.grey,
-                      )),
+                      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                       child: Center(child: Text(selectedTransferReport[Strings.physicalHealthConditionsNo] == null || selectedTransferReport[Strings.physicalHealthConditionsNo] == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
                 ]
             ),
@@ -7038,27 +6819,13 @@ class TransferReportModel extends ChangeNotifier {
                   Text('Yes', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
                   Container(width: 5),
                   Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                        top: true,
-                        left: true,
-                        right: true,
-                        bottom: true,
-                        width: 1,
-                        color: PdfColors.grey,
-                      )),
+                      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                       child: Center(child: Text(selectedTransferReport[Strings.useOfWeaponYes] == null || selectedTransferReport[Strings.useOfWeaponYes] == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
                   Container(width: 10),
                   Text('No', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
                   Container(width: 5),
                   Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                        top: true,
-                        left: true,
-                        right: true,
-                        bottom: true,
-                        width: 1,
-                        color: PdfColors.grey,
-                      )),
+                      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                       child: Center(child: Text(selectedTransferReport[Strings.useOfWeaponNo] == null || selectedTransferReport[Strings.useOfWeaponNo] == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
                 ]
             ),
@@ -7073,27 +6840,13 @@ class TransferReportModel extends ChangeNotifier {
                   Text('Yes', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
                   Container(width: 5),
                   Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                        top: true,
-                        left: true,
-                        right: true,
-                        bottom: true,
-                        width: 1,
-                        color: PdfColors.grey,
-                      )),
+                      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                       child: Center(child: Text(selectedTransferReport[Strings.absconsionRiskYes] == null || selectedTransferReport[Strings.absconsionRiskYes] == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
                   Container(width: 10),
                   Text('No', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
                   Container(width: 5),
                   Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                        top: true,
-                        left: true,
-                        right: true,
-                        bottom: true,
-                        width: 1,
-                        color: PdfColors.grey,
-                      )),
+                      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                       child: Center(child: Text(selectedTransferReport[Strings.absconsionRiskNo] == null || selectedTransferReport[Strings.absconsionRiskNo] == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
                 ]
             ),
@@ -7110,27 +6863,13 @@ class TransferReportModel extends ChangeNotifier {
                   Text('Yes', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
                   Container(width: 5),
                   Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                        top: true,
-                        left: true,
-                        right: true,
-                        bottom: true,
-                        width: 1,
-                        color: PdfColors.grey,
-                      )),
+                      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                       child: Center(child: Text(selectedTransferReport[Strings.patientPropertyYes] == null || selectedTransferReport[Strings.patientPropertyYes] == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
                   Container(width: 10),
                   Text('No', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
                   Container(width: 5),
                   Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                        top: true,
-                        left: true,
-                        right: true,
-                        bottom: true,
-                        width: 1,
-                        color: PdfColors.grey,
-                      )),
+                      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                       child: Center(child: Text(selectedTransferReport[Strings.patientPropertyNo] == null || selectedTransferReport[Strings.patientPropertyNo] == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
                 ]
             ),
@@ -7148,27 +6887,13 @@ class TransferReportModel extends ChangeNotifier {
                       Text('Yes', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
                       Container(width: 5),
                       Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                          decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                            top: true,
-                            left: true,
-                            right: true,
-                            bottom: true,
-                            width: 1,
-                            color: PdfColors.grey,
-                          )),
+                          decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                           child: Center(child: Text(selectedTransferReport[Strings.patientPropertyReceivedYes] == null || selectedTransferReport[Strings.patientPropertyReceivedYes] == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
                       Container(width: 10),
                       Text('No', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
                       Container(width: 5),
                       Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                          decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                            top: true,
-                            left: true,
-                            right: true,
-                            bottom: true,
-                            width: 1,
-                            color: PdfColors.grey,
-                          )),
+                          decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                           child: Center(child: Text(selectedTransferReport[Strings.patientPropertyReceivedNo] == null || selectedTransferReport[Strings.patientPropertyReceivedNo] == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
                     ]
                 ),
@@ -7192,27 +6917,13 @@ class TransferReportModel extends ChangeNotifier {
                   Text('Yes', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
                   Container(width: 5),
                   Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                        top: true,
-                        left: true,
-                        right: true,
-                        bottom: true,
-                        width: 1,
-                        color: PdfColors.grey,
-                      )),
+                      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                       child: Center(child: Text(selectedTransferReport[Strings.patientNotesReceivedYes] == null || selectedTransferReport[Strings.patientNotesReceivedYes] == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
                   Container(width: 10),
                   Text('No', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
                   Container(width: 5),
                   Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                        top: true,
-                        left: true,
-                        right: true,
-                        bottom: true,
-                        width: 1,
-                        color: PdfColors.grey,
-                      )),
+                      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                       child: Center(child: Text(selectedTransferReport[Strings.patientNotesReceivedNo] == null || selectedTransferReport[Strings.patientNotesReceivedNo] == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
                 ]
             ),
@@ -7230,27 +6941,13 @@ class TransferReportModel extends ChangeNotifier {
                   Text('Yes', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
                   Container(width: 5),
                   Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                        top: true,
-                        left: true,
-                        right: true,
-                        bottom: true,
-                        width: 1,
-                        color: PdfColors.grey,
-                      )),
+                      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                       child: Center(child: Text(selectedTransferReport[Strings.patientSearchedYes] == null || selectedTransferReport[Strings.patientSearchedYes] == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
                   Container(width: 10),
                   Text('No', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
                   Container(width: 5),
                   Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                        top: true,
-                        left: true,
-                        right: true,
-                        bottom: true,
-                        width: 1,
-                        color: PdfColors.grey,
-                      )),
+                      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                       child: Center(child: Text(selectedTransferReport[Strings.patientSearchedNo] == null || selectedTransferReport[Strings.patientSearchedNo] == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
                 ]
             ),
@@ -7263,27 +6960,13 @@ class TransferReportModel extends ChangeNotifier {
                   Text('Yes', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
                   Container(width: 5),
                   Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                        top: true,
-                        left: true,
-                        right: true,
-                        bottom: true,
-                        width: 1,
-                        color: PdfColors.grey,
-                      )),
+                      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                       child: Center(child: Text(selectedTransferReport[Strings.itemsRemovedYes] == null || selectedTransferReport[Strings.itemsRemovedYes] == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
                   Container(width: 10),
                   Text('No', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
                   Container(width: 5),
                   Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                        top: true,
-                        left: true,
-                        right: true,
-                        bottom: true,
-                        width: 1,
-                        color: PdfColors.grey,
-                      )),
+                      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                       child: Center(child: Text(selectedTransferReport[Strings.itemsRemovedNo] == null || selectedTransferReport[Strings.itemsRemovedNo] == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
                 ]
             ),
@@ -7296,7 +6979,7 @@ class TransferReportModel extends ChangeNotifier {
       ));
 
       pdf.addPage(MultiPage(
-          theme: Theme.withFont(base: ttf, bold: ttfBold),
+          theme: ThemeData.withFont(base: ttf, bold: ttfBold),
           pageFormat: PdfPageFormat.a4,
           crossAxisAlignment: CrossAxisAlignment.start,
           margin: EdgeInsets.all(40),
@@ -7320,11 +7003,11 @@ class TransferReportModel extends ChangeNotifier {
             ),
             Center(child: Text('BODY MAP', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontWeight: FontWeight.bold))),
             Center(child: Text('To be used before leaving the unit with any patient', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8))),
-            selectedTransferReport[Strings.bodyMapImage] == null ? Center(child: Image(bodyMapEmpty)) : Center(child: Image(PdfImage(pdfDoc,
+            selectedTransferReport[Strings.bodyMapImage] == null ? Center(child: Image(bodyMapEmpty)) : Center(child: Image(ImageProxy(PdfImage(pdfDoc,
                 image: bodyMapImage.data.buffer
                     .asUint8List(),
                 width: bodyMapImage.width,
-                height: bodyMapImage.height))),
+                height: bodyMapImage.height)))),
 
             Container(height: 10),
             Row(
@@ -7335,27 +7018,13 @@ class TransferReportModel extends ChangeNotifier {
                   Text('Yes', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
                   Container(width: 5),
                   Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                        top: true,
-                        left: true,
-                        right: true,
-                        bottom: true,
-                        width: 1,
-                        color: PdfColors.grey,
-                      )),
+                      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                       child: Center(child: Text(selectedTransferReport[Strings.medicalAttentionYes] == null || selectedTransferReport[Strings.medicalAttentionYes] == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
                   Container(width: 10),
                   Text('No', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
                   Container(width: 5),
                   Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                        top: true,
-                        left: true,
-                        right: true,
-                        bottom: true,
-                        width: 1,
-                        color: PdfColors.grey,
-                      )),
+                      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                       child: Center(child: Text(selectedTransferReport[Strings.medicalAttentionNo] == null || selectedTransferReport[Strings.medicalAttentionNo] == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
                 ]
             ),
@@ -7373,27 +7042,13 @@ class TransferReportModel extends ChangeNotifier {
                   Text('Yes', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
                   Container(width: 5),
                   Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                        top: true,
-                        left: true,
-                        right: true,
-                        bottom: true,
-                        width: 1,
-                        color: PdfColors.grey,
-                      )),
+                      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                       child: Center(child: Text(selectedTransferReport[Strings.relevantInformationYes] == null || selectedTransferReport[Strings.relevantInformationYes] == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
                   Container(width: 10),
                   Text('No', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
                   Container(width: 5),
                   Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                        top: true,
-                        left: true,
-                        right: true,
-                        bottom: true,
-                        width: 1,
-                        color: PdfColors.grey,
-                      )),
+                      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                       child: Center(child: Text(selectedTransferReport[Strings.relevantInformationNo] == null || selectedTransferReport[Strings.relevantInformationNo] == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
                 ]
             ),
@@ -7403,7 +7058,7 @@ class TransferReportModel extends ChangeNotifier {
       ));
 
       pdf.addPage(MultiPage(
-          theme: Theme.withFont(base: ttf, bold: ttfBold),
+          theme: ThemeData.withFont(base: ttf, bold: ttfBold),
           pageFormat: PdfPageFormat.a4,
           crossAxisAlignment: CrossAxisAlignment.start,
           margin: EdgeInsets.all(40),
@@ -7439,7 +7094,8 @@ class TransferReportModel extends ChangeNotifier {
                       ]
                   ),
 
-                  Container(height: 50, child: Image(pegasusLogo)),
+                  Container(height: 50, child: Image(pegasusLogo)
+),
 
                 ]
             ),
@@ -7471,6 +7127,7 @@ class TransferReportModel extends ChangeNotifier {
             selectedTransferReport[Strings.name3] == null || selectedTransferReport[Strings.name3] == '' ? Container() : drivingTimesRow(selectedTransferReport[Strings.name3], selectedTransferReport[Strings.role3], selectedTransferReport[Strings.drivingTimes3_1], selectedTransferReport[Strings.drivingTimes3_2]),
             selectedTransferReport[Strings.name4] == null || selectedTransferReport[Strings.name4] == '' ? Container() : drivingTimesRow(selectedTransferReport[Strings.name4], selectedTransferReport[Strings.role4], selectedTransferReport[Strings.drivingTimes4_1], selectedTransferReport[Strings.drivingTimes4_2]),
             selectedTransferReport[Strings.name5] == null || selectedTransferReport[Strings.name5] == '' ? Container() : drivingTimesRow(selectedTransferReport[Strings.name5], selectedTransferReport[Strings.role5], selectedTransferReport[Strings.drivingTimes5_1], selectedTransferReport[Strings.drivingTimes5_2]),
+            selectedTransferReport[Strings.name6] == null || selectedTransferReport[Strings.name6] == '' ? Container() : drivingTimesRow(selectedTransferReport[Strings.name6], selectedTransferReport[Strings.role6], selectedTransferReport[Strings.drivingTimes6_1], selectedTransferReport[Strings.drivingTimes6_2]),
             // drivingTimesRow(selectedTransferReport[Strings.name6], selectedTransferReport[Strings.role6], selectedTransferReport[Strings.drivingTimes6_1], selectedTransferReport[Strings.drivingTimes6_2]),
             // drivingTimesRow(selectedTransferReport[Strings.name7], selectedTransferReport[Strings.role7], selectedTransferReport[Strings.drivingTimes7_1], selectedTransferReport[Strings.drivingTimes7_2]),
             // drivingTimesRow(selectedTransferReport[Strings.name8], selectedTransferReport[Strings.role8], selectedTransferReport[Strings.drivingTimes8_1], selectedTransferReport[Strings.drivingTimes8_2]),
@@ -7482,7 +7139,7 @@ class TransferReportModel extends ChangeNotifier {
       ));
 
       pdf.addPage(MultiPage(
-          theme: Theme.withFont(base: ttf, bold: ttfBold),
+          theme: ThemeData.withFont(base: ttf, bold: ttfBold),
           pageFormat: PdfPageFormat.a4,
           crossAxisAlignment: CrossAxisAlignment.start,
           margin: EdgeInsets.all(40),
@@ -7502,6 +7159,25 @@ class TransferReportModel extends ChangeNotifier {
             Container(height: 20),
             textField(TextOption.EncryptedText, selectedTransferReport[Strings.patientReport], 700, 550, 550),
             Container(height: 10),
+            Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(width: 90, child: Text('Did the patient accept PPE?', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8))),
+                  Text('Yes', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
+                  Container(width: 5),
+                  Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
+                      child: Center(child: Text(selectedTransferReport[Strings.acceptPpeYes] == null || selectedTransferReport[Strings.acceptPpeYes] == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
+                  Container(width: 10),
+                  Text('No', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
+                  Container(width: 5),
+                  Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
+                      child: Center(child: Text(selectedTransferReport[Strings.acceptPpeNo] == null || selectedTransferReport[Strings.acceptPpeNo] == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
+                ]
+            ),
+            Container(height: 10),
             doubleLineField('Print Name', selectedTransferReport[Strings.patientReportPrintName], 'Role', selectedTransferReport[Strings.patientReportRole]),
             doubleLineField('Signed', 'signature', 'Date', selectedTransferReport[Strings.patientReportDate], TextOption.PlainText, TextOption.Date, patientReportSignatureImage, pdfDoc),
             singleLineField('Time', selectedTransferReport[Strings.patientReportTime], TextOption.Time, true)
@@ -7512,7 +7188,7 @@ class TransferReportModel extends ChangeNotifier {
       ));
 
       pdf.addPage(MultiPage(
-          theme: Theme.withFont(base: ttf, bold: ttfBold),
+          theme: ThemeData.withFont(base: ttf, bold: ttfBold),
           pageFormat: PdfPageFormat.a4,
           crossAxisAlignment: CrossAxisAlignment.start,
           margin: EdgeInsets.all(40),
@@ -7540,7 +7216,7 @@ class TransferReportModel extends ChangeNotifier {
             Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('This is a legal and binding document and will be retained by the company for reference of any incidents that may occur in the event that we have been given any incorrect information. By signing this form, you are satisfied that all property, section papers and documents listed within this report have been handed over to Pegasus Medical (1808) Ltd.', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 9)),
+                  Text('This is a legal and binding document and will be retained by the company for reference of any incidents that may occur in the event that we have been given any incorrect information. By signing this form, you are satisfied that all property, section papers and documents listed within this report have been handed over from Pegasus Medical (1808) Ltd.', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 9)),
                   Container(height: 5)
                 ]
             ),
@@ -7552,7 +7228,7 @@ class TransferReportModel extends ChangeNotifier {
             Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('This is a legal and binding document and will be retained by the company for reference of any incidents that may occur in the event that we have been given any incorrect information. By signing this form, you are satisfied that all property, section papers and documents listed within this report have been handed over to Pegasus Medical (1808) Ltd.', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 9)),
+                  Text('This is a legal and binding document and will be retained by the company for reference of any incidents that may occur in the event that we have been given any incorrect information. By signing this form, you are satisfied that all property, section papers and documents listed within this report have been handed over from Pegasus Medical (1808) Ltd.', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 9)),
                   Container(height: 5)
                 ]
             ),
@@ -7573,7 +7249,7 @@ class TransferReportModel extends ChangeNotifier {
 
 
       pdf.addPage(MultiPage(
-          theme: Theme.withFont(base: ttf, bold: ttfBold),
+          theme: ThemeData.withFont(base: ttf, bold: ttfBold),
           pageFormat: PdfPageFormat.a4,
           crossAxisAlignment: CrossAxisAlignment.start,
           margin: EdgeInsets.all(40),
@@ -7609,7 +7285,8 @@ class TransferReportModel extends ChangeNotifier {
                       ]
                   ),
 
-                  Container(height: 50, child: Image(pegasusLogo)),
+                  Container(height: 50, child: Image(pegasusLogo)
+),
 
                 ]
             ),
@@ -7628,27 +7305,13 @@ class TransferReportModel extends ChangeNotifier {
                     Text('Yes', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
                     Container(width: 5),
                     Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                          top: true,
-                          left: true,
-                          right: true,
-                          bottom: true,
-                          width: 1,
-                          color: PdfColors.grey,
-                        )),
+                        decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                         child: Center(child: Text(selectedTransferReport[Strings.handcuffsUsedYes] == null || selectedTransferReport[Strings.handcuffsUsedYes] == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
                     Container(width: 10),
                     Text('No', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontSize: 8)),
                     Container(width: 5),
                     Container(width: 15, height: 15, padding: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(shape: BoxShape.circle, border: BoxBorder(
-                          top: true,
-                          left: true,
-                          right: true,
-                          bottom: true,
-                          width: 1,
-                          color: PdfColors.grey,
-                        )),
+                        decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(width: 1, color: PdfColors.grey)),
                         child: Center(child: Text(selectedTransferReport[Strings.handcuffsUsedNo] == null || selectedTransferReport[Strings.handcuffsUsedNo] == 0 ? '' : 'X', textAlign: TextAlign.center ,style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)))),
                   ]
               ),
@@ -7695,7 +7358,7 @@ class TransferReportModel extends ChangeNotifier {
       if(selectedTransferReport[Strings.handcuffsUsedYes] != null && selectedTransferReport[Strings.handcuffsUsedYes] == 1){
 
         pdf.addPage(MultiPage(
-            theme: Theme.withFont(base: ttf, bold: ttfBold),
+            theme: ThemeData.withFont(base: ttf, bold: ttfBold),
             pageFormat: PdfPageFormat.a4,
             crossAxisAlignment: CrossAxisAlignment.start,
             margin: EdgeInsets.all(40),
@@ -7725,7 +7388,8 @@ class TransferReportModel extends ChangeNotifier {
                         ]
                     ),
 
-                    Container(height: 50, child: Image(pegasusLogo)),
+                    Container(height: 50, child: Image(pegasusLogo)
+),
 
                   ]
               ),
@@ -7761,7 +7425,7 @@ class TransferReportModel extends ChangeNotifier {
 
       if(selectedTransferReport[Strings.hasSection2Checklist] != null && selectedTransferReport[Strings.hasSection2Checklist] == 1){
         pdf.addPage(MultiPage(
-            theme: Theme.withFont(base: ttf, bold: ttfBold),
+            theme: ThemeData.withFont(base: ttf, bold: ttfBold),
             pageFormat: PdfPageFormat.a4,
             crossAxisAlignment: CrossAxisAlignment.start,
             margin: EdgeInsets.all(40),
@@ -7820,7 +7484,7 @@ class TransferReportModel extends ChangeNotifier {
       if(selectedTransferReport[Strings.hasSection3Checklist] != null && selectedTransferReport[Strings.hasSection3Checklist] == 1){
 
         pdf.addPage(MultiPage(
-            theme: Theme.withFont(base: ttf, bold: ttfBold),
+            theme: ThemeData.withFont(base: ttf, bold: ttfBold),
             pageFormat: PdfPageFormat.a4,
             crossAxisAlignment: CrossAxisAlignment.start,
             margin: EdgeInsets.all(40),
@@ -7878,7 +7542,7 @@ class TransferReportModel extends ChangeNotifier {
       if(selectedTransferReport[Strings.hasSection3TransferChecklist] != null && selectedTransferReport[Strings.hasSection3TransferChecklist] == 1){
 
         pdf.addPage(MultiPage(
-            theme: Theme.withFont(base: ttf, bold: ttfBold),
+            theme: ThemeData.withFont(base: ttf, bold: ttfBold),
             pageFormat: PdfPageFormat.a4,
             crossAxisAlignment: CrossAxisAlignment.start,
             margin: EdgeInsets.all(40),
@@ -7945,7 +7609,7 @@ class TransferReportModel extends ChangeNotifier {
       }
 
       pdf.addPage(MultiPage(
-          theme: Theme.withFont(base: ttf, bold: ttfBold),
+          theme: ThemeData.withFont(base: ttf, bold: ttfBold),
           pageFormat: PdfPageFormat.a4,
           crossAxisAlignment: CrossAxisAlignment.start,
           margin: EdgeInsets.all(40),
@@ -7983,7 +7647,7 @@ class TransferReportModel extends ChangeNotifier {
       ));
 
       pdf.addPage(MultiPage(
-          theme: Theme.withFont(base: ttf, bold: ttfBold),
+          theme: ThemeData.withFont(base: ttf, bold: ttfBold),
           pageFormat: PdfPageFormat.a4,
           crossAxisAlignment: CrossAxisAlignment.start,
           margin: EdgeInsets.all(40),
@@ -8016,6 +7680,7 @@ class TransferReportModel extends ChangeNotifier {
             yesNoCheckboxes('• Ambulance lights working?', selectedTransferReport[Strings.lightsWorkingYes], selectedTransferReport[Strings.lightsWorkingNo]),
             yesNoCheckboxes('• Tyres appear inflated fully?', selectedTransferReport[Strings.tyresInflatedYes], selectedTransferReport[Strings.tyresInflatedNo]),
             yesNoCheckboxes('• Vehicle warning signs showing?', selectedTransferReport[Strings.warningSignsYes], selectedTransferReport[Strings.warningSignsNo]),
+            yesNoCheckboxes('• Any damage to vehicle / bodywork?', selectedTransferReport[Strings.vehicleDamageYes], selectedTransferReport[Strings.vehicleDamageNo]),
             Container(height: 10),
             Center(child: Text('POST-TRANSFER VEHICLE CHECKLIST', style: TextStyle(color: PdfColor.fromInt(bluePurpleInt), fontWeight: FontWeight.bold))),
             Container(height: 10),
@@ -8041,8 +7706,9 @@ class TransferReportModel extends ChangeNotifier {
       if(kIsWeb){
 
         if(option == ShareOption.Download){
-          List<int> pdfList = pdf.save();
-          Uint8List pdfInBytes = Uint8List.fromList(pdfList);
+          //List<int> pdfList = pdf.save();
+          Uint8List pdfInBytes = await pdf.save();
+          //Uint8List pdfInBytes = Uint8List.fromList(pdfList);
 
 //Create blob and link from bytes
           final blob = html.Blob([pdfInBytes], 'application/pdf');
@@ -8071,14 +7737,14 @@ class TransferReportModel extends ChangeNotifier {
         final File file = File('$pdfPath/transfer_report_${formDate}_$id.pdf');
 
         if(option == ShareOption.Email){
-          file.writeAsBytesSync(pdf.save());
+          await file.writeAsBytes(await pdf.save());
         }
 
         ConnectivityResult connectivityResult = await Connectivity().checkConnectivity();
 
         if(connectivityResult != ConnectivityResult.none) {
 
-          if(option == ShareOption.Share) Printing.sharePdf(bytes: pdf.save(),filename: 'transfer_report_${formDate}_$id.pdf');
+          if(option == ShareOption.Share) Printing.sharePdf(bytes: await pdf.save(),filename: 'transfer_report_${formDate}_$id.pdf');
           if(option == ShareOption.Print) await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save());
 
           if(option == ShareOption.Email) {

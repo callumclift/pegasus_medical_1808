@@ -81,6 +81,8 @@ class _TransferReportSection2State extends State<TransferReportSection2> {
   bool medicalAttentionNo = false;
   bool relevantInformationYes = false;
   bool relevantInformationNo = false;
+  bool acceptPpeYes = false;
+  bool acceptPpeNo = false;
   bool itemsRemovedYes = false;
   bool itemsRemovedNo = false;
   bool handcuffsUsedYes = false;
@@ -814,6 +816,22 @@ class _TransferReportSection2State extends State<TransferReportSection2> {
           }
         }
         GlobalFunctions.getTemporaryValue(transferReport, patientPropertyReceived, Strings.patientPropertyReceived);
+
+        if (transferReport[Strings.patientNotesReceivedYes] != null) {
+          if (mounted) {
+            setState(() {
+              patientNotesReceivedYes = GlobalFunctions.tinyIntToBool(transferReport[Strings.patientNotesReceivedYes]);
+            });
+          }
+        }
+        if (transferReport[Strings.patientNotesReceivedNo] != null) {
+          if (mounted) {
+            setState(() {
+              patientNotesReceivedNo = GlobalFunctions.tinyIntToBool(transferReport[Strings.patientNotesReceivedNo]);
+            });
+          }
+        }
+
         GlobalFunctions.getTemporaryValue(transferReport, patientNotesReceived, Strings.patientNotesReceived);
         if (transferReport[Strings.patientSearchedYes] != null) {
           if (mounted) {
@@ -878,6 +896,20 @@ class _TransferReportSection2State extends State<TransferReportSection2> {
           }
         }
         GlobalFunctions.getTemporaryValue(transferReport, relevantInformation, Strings.relevantInformation);
+        if (transferReport[Strings.acceptPpeYes] != null) {
+          if (mounted) {
+            setState(() {
+              acceptPpeYes = GlobalFunctions.tinyIntToBool(transferReport[Strings.acceptPpeYes]);
+            });
+          }
+        }
+        if (transferReport[Strings.acceptPpeNo] != null) {
+          if (mounted) {
+            setState(() {
+              acceptPpeNo = GlobalFunctions.tinyIntToBool(transferReport[Strings.acceptPpeNo]);
+            });
+          }
+        }
         GlobalFunctions.getTemporaryValue(transferReport, patientReport, Strings.patientReport);
         if(transferReport[Strings.patientReportPrintName] == null){
           patientReportPrintName.text = user.name;
@@ -1631,7 +1663,8 @@ class _TransferReportSection2State extends State<TransferReportSection2> {
           height: 10.0,
         ),
         Container(
-          child: Center(
+          color: incidentImageBytes == null ? Color(0xFF0000).withOpacity(0.3) : null,
+child: Center(
             child: GestureDetector(
               onTap: () {
                 FocusScope.of(context).unfocus();
@@ -1838,7 +1871,8 @@ class _TransferReportSection2State extends State<TransferReportSection2> {
           height: 10.0,
         ),
         Container(
-          child: Center(
+          color: patientReportImageBytes == null ? Color(0xFF0000).withOpacity(0.3) : null,
+child: Center(
             child: GestureDetector(
               onTap: () {
                 FocusScope.of(context).unfocus();
@@ -1990,7 +2024,7 @@ class _TransferReportSection2State extends State<TransferReportSection2> {
       ],
     );
   }
-  Widget _textFormField(String label, TextEditingController controller, [int lines = 1, bool required = false, TextInputType textInputType = TextInputType.text]) {
+  Widget _textFormField(String label, TextEditingController controller, [int lines = 1, bool required = false, TextInputType textInputType = TextInputType.text, bool patientReport = false]) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2002,7 +2036,7 @@ class _TransferReportSection2State extends State<TransferReportSection2> {
               children:
               [
                 TextSpan(
-                  text: required ? ' *' : '',
+                  text: required && patientReport == false ? ' *' : '',
                   style: TextStyle(
                       color: Colors.red,
                       fontSize: 16.0),
@@ -2022,6 +2056,7 @@ class _TransferReportSection2State extends State<TransferReportSection2> {
           },
           maxLines: lines,
           decoration: InputDecoration(
+              filled: required && controller.text.isEmpty ? true : false, fillColor: Color(0xFF0000).withOpacity(0.3),
               suffixIcon: controller.text == ''
                   ? null
                   : IconButton(
@@ -2064,6 +2099,7 @@ class _TransferReportSection2State extends State<TransferReportSection2> {
             Flexible(
               child: IgnorePointer(
                 child: TextFormField(
+                  decoration: InputDecoration(filled: required && controller.text.isEmpty ? true : false, fillColor: Color(0xFF0000).withOpacity(0.3)),
                   enabled: true,
                   initialValue: null,
                   controller: controller,
@@ -2154,6 +2190,7 @@ class _TransferReportSection2State extends State<TransferReportSection2> {
             Flexible(
               child: IgnorePointer(
                 child: TextFormField(
+                  decoration: InputDecoration(filled: required && controller.text.isEmpty ? true : false, fillColor: Color(0xFF0000).withOpacity(0.3)),
                   enabled: true,
                   initialValue: null,
                   controller: controller,
@@ -2292,37 +2329,40 @@ class _TransferReportSection2State extends State<TransferReportSection2> {
                 ),                                           ]
           ),
         ),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: patientSearchedYes,
-                onChanged: (bool value) => setState(() {
-                  patientSearchedYes = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.patientSearchedYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (patientSearchedNo == true){
-                    patientSearchedNo = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.patientSearchedNo, null, widget.jobId, widget.saved, widget.savedId);
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: patientSearchedNo,
-                onChanged: (bool value) => setState(() {
-                  patientSearchedNo = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.patientSearchedNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (patientSearchedYes == true){
-                    patientSearchedYes = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.patientSearchedYes, null, widget.jobId, widget.saved, widget.savedId);
-                  }
-                }))
-          ],
+        Container(
+          color: patientSearchedYes == false && patientSearchedNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: patientSearchedYes,
+                  onChanged: (bool value) => setState(() {
+                    patientSearchedYes = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.patientSearchedYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (patientSearchedNo == true){
+                      patientSearchedNo = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.patientSearchedNo, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: patientSearchedNo,
+                  onChanged: (bool value) => setState(() {
+                    patientSearchedNo = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.patientSearchedNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (patientSearchedYes == true){
+                      patientSearchedYes = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.patientSearchedYes, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -2348,37 +2388,40 @@ class _TransferReportSection2State extends State<TransferReportSection2> {
                 ),                                           ]
           ),
         ),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: itemsRemovedYes,
-                onChanged: (bool value) => setState(() {
-                  itemsRemovedYes = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.itemsRemovedYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (itemsRemovedNo == true){
-                    itemsRemovedNo = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.itemsRemovedNo, null, widget.jobId, widget.saved, widget.savedId);
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: itemsRemovedNo,
-                onChanged: (bool value) => setState(() {
-                  itemsRemovedNo = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.itemsRemovedNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (itemsRemovedYes == true){
-                    itemsRemovedYes = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.itemsRemovedYes, null, widget.jobId, widget.saved, widget.savedId);
-                  }
-                }))
-          ],
+        Container(
+          color: itemsRemovedYes == false && itemsRemovedNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: itemsRemovedYes,
+                  onChanged: (bool value) => setState(() {
+                    itemsRemovedYes = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.itemsRemovedYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (itemsRemovedNo == true){
+                      itemsRemovedNo = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.itemsRemovedNo, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: itemsRemovedNo,
+                  onChanged: (bool value) => setState(() {
+                    itemsRemovedNo = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.itemsRemovedNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (itemsRemovedYes == true){
+                      itemsRemovedYes = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.itemsRemovedYes, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -2404,37 +2447,40 @@ class _TransferReportSection2State extends State<TransferReportSection2> {
                 ),                                           ]
           ),
         ),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: forensicHistoryYes,
-                onChanged: (bool value) => setState(() {
-                  forensicHistoryYes = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.forensicHistoryYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (forensicHistoryNo == true){
-                    forensicHistoryNo = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.forensicHistoryNo, null, widget.jobId, widget.saved, widget.savedId);
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: forensicHistoryNo,
-                onChanged: (bool value) => setState(() {
-                  forensicHistoryNo = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.forensicHistoryNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (forensicHistoryYes == true){
-                    forensicHistoryYes = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.forensicHistoryYes, null, widget.jobId, widget.saved, widget.savedId);
-                  }
-                }))
-          ],
+        Container(
+          color: forensicHistoryYes == false && forensicHistoryNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: forensicHistoryYes,
+                  onChanged: (bool value) => setState(() {
+                    forensicHistoryYes = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.forensicHistoryYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (forensicHistoryNo == true){
+                      forensicHistoryNo = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.forensicHistoryNo, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: forensicHistoryNo,
+                  onChanged: (bool value) => setState(() {
+                    forensicHistoryNo = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.forensicHistoryNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (forensicHistoryYes == true){
+                      forensicHistoryYes = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.forensicHistoryYes, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -2460,37 +2506,40 @@ class _TransferReportSection2State extends State<TransferReportSection2> {
                 ),                                           ]
           ),
         ),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: racialGenderConcernsYes,
-                onChanged: (bool value) => setState(() {
-                  racialGenderConcernsYes = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.racialGenderConcernsYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (racialGenderConcernsNo == true){
-                    racialGenderConcernsNo = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.racialGenderConcernsNo, null, widget.jobId, widget.saved, widget.savedId);
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: racialGenderConcernsNo,
-                onChanged: (bool value) => setState(() {
-                  racialGenderConcernsNo = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.racialGenderConcernsNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (racialGenderConcernsYes == true){
-                    racialGenderConcernsYes = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.racialGenderConcernsYes, null, widget.jobId, widget.saved, widget.savedId);
-                  }
-                }))
-          ],
+        Container(
+          color: racialGenderConcernsYes == false && racialGenderConcernsNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: racialGenderConcernsYes,
+                  onChanged: (bool value) => setState(() {
+                    racialGenderConcernsYes = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.racialGenderConcernsYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (racialGenderConcernsNo == true){
+                      racialGenderConcernsNo = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.racialGenderConcernsNo, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: racialGenderConcernsNo,
+                  onChanged: (bool value) => setState(() {
+                    racialGenderConcernsNo = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.racialGenderConcernsNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (racialGenderConcernsYes == true){
+                      racialGenderConcernsYes = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.racialGenderConcernsYes, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -2516,37 +2565,40 @@ class _TransferReportSection2State extends State<TransferReportSection2> {
                 ),                                           ]
           ),
         ),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: violenceAggressionYes,
-                onChanged: (bool value) => setState(() {
-                  violenceAggressionYes = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.violenceAggressionYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (violenceAggressionNo == true){
-                    violenceAggressionNo = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.violenceAggressionNo, null, widget.jobId, widget.saved, widget.savedId);
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: violenceAggressionNo,
-                onChanged: (bool value) => setState(() {
-                  violenceAggressionNo = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.violenceAggressionNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (violenceAggressionYes == true){
-                    violenceAggressionYes = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.violenceAggressionYes, null, widget.jobId, widget.saved, widget.savedId);
-                  }
-                }))
-          ],
+        Container(
+          color: violenceAggressionYes == false && violenceAggressionNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: violenceAggressionYes,
+                  onChanged: (bool value) => setState(() {
+                    violenceAggressionYes = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.violenceAggressionYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (violenceAggressionNo == true){
+                      violenceAggressionNo = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.violenceAggressionNo, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: violenceAggressionNo,
+                  onChanged: (bool value) => setState(() {
+                    violenceAggressionNo = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.violenceAggressionNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (violenceAggressionYes == true){
+                      violenceAggressionYes = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.violenceAggressionYes, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -2572,37 +2624,40 @@ class _TransferReportSection2State extends State<TransferReportSection2> {
                 ),                                           ]
           ),
         ),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: selfHarmYes,
-                onChanged: (bool value) => setState(() {
-                  selfHarmYes = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.selfHarmYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (selfHarmNo == true){
-                    selfHarmNo = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.selfHarmNo, null, widget.jobId, widget.saved, widget.savedId);
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: selfHarmNo,
-                onChanged: (bool value) => setState(() {
-                  selfHarmNo = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.selfHarmNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (selfHarmYes == true){
-                    selfHarmYes = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.selfHarmYes, null, widget.jobId, widget.saved, widget.savedId);
-                  }
-                }))
-          ],
+        Container(
+          color: selfHarmYes == false && selfHarmNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: selfHarmYes,
+                  onChanged: (bool value) => setState(() {
+                    selfHarmYes = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.selfHarmYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (selfHarmNo == true){
+                      selfHarmNo = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.selfHarmNo, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: selfHarmNo,
+                  onChanged: (bool value) => setState(() {
+                    selfHarmNo = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.selfHarmNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (selfHarmYes == true){
+                      selfHarmYes = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.selfHarmYes, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -2628,37 +2683,40 @@ class _TransferReportSection2State extends State<TransferReportSection2> {
                 ),                                           ]
           ),
         ),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: alcoholSubstanceYes,
-                onChanged: (bool value) => setState(() {
-                  alcoholSubstanceYes = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.alcoholSubstanceYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (alcoholSubstanceNo == true){
-                    alcoholSubstanceNo = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.alcoholSubstanceNo, null, widget.jobId, widget.saved, widget.savedId);
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: alcoholSubstanceNo,
-                onChanged: (bool value) => setState(() {
-                  alcoholSubstanceNo = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.alcoholSubstanceNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (alcoholSubstanceYes == true){
-                    alcoholSubstanceYes = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.alcoholSubstanceYes, null, widget.jobId, widget.saved, widget.savedId);
-                  }
-                }))
-          ],
+        Container(
+          color: alcoholSubstanceYes == false && alcoholSubstanceNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: alcoholSubstanceYes,
+                  onChanged: (bool value) => setState(() {
+                    alcoholSubstanceYes = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.alcoholSubstanceYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (alcoholSubstanceNo == true){
+                      alcoholSubstanceNo = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.alcoholSubstanceNo, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: alcoholSubstanceNo,
+                  onChanged: (bool value) => setState(() {
+                    alcoholSubstanceNo = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.alcoholSubstanceNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (alcoholSubstanceYes == true){
+                      alcoholSubstanceYes = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.alcoholSubstanceYes, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -2684,37 +2742,40 @@ class _TransferReportSection2State extends State<TransferReportSection2> {
                 ),                                           ]
           ),
         ),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: virusesYes,
-                onChanged: (bool value) => setState(() {
-                  virusesYes = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.virusesYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (virusesNo == true){
-                    virusesNo = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.virusesNo, null, widget.jobId, widget.saved, widget.savedId);
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: virusesNo,
-                onChanged: (bool value) => setState(() {
-                  virusesNo = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.virusesNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (virusesYes == true){
-                    virusesYes = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.virusesYes, null, widget.jobId, widget.saved, widget.savedId);
-                  }
-                }))
-          ],
+        Container(
+          color: virusesYes == false && virusesNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: virusesYes,
+                  onChanged: (bool value) => setState(() {
+                    virusesYes = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.virusesYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (virusesNo == true){
+                      virusesNo = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.virusesNo, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: virusesNo,
+                  onChanged: (bool value) => setState(() {
+                    virusesNo = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.virusesNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (virusesYes == true){
+                      virusesYes = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.virusesYes, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -2740,37 +2801,40 @@ class _TransferReportSection2State extends State<TransferReportSection2> {
                 ),                                           ]
           ),
         ),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: safeguardingYes,
-                onChanged: (bool value) => setState(() {
-                  safeguardingYes = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.safeguardingYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (safeguardingNo == true){
-                    safeguardingNo = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.safeguardingNo, null, widget.jobId, widget.saved, widget.savedId);
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: safeguardingNo,
-                onChanged: (bool value) => setState(() {
-                  safeguardingNo = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.safeguardingNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (safeguardingYes == true){
-                    safeguardingYes = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.safeguardingYes, null, widget.jobId, widget.saved, widget.savedId);
-                  }
-                }))
-          ],
+        Container(
+          color: safeguardingYes == false && safeguardingNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: safeguardingYes,
+                  onChanged: (bool value) => setState(() {
+                    safeguardingYes = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.safeguardingYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (safeguardingNo == true){
+                      safeguardingNo = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.safeguardingNo, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: safeguardingNo,
+                  onChanged: (bool value) => setState(() {
+                    safeguardingNo = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.safeguardingNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (safeguardingYes == true){
+                      safeguardingYes = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.safeguardingYes, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -2796,37 +2860,40 @@ class _TransferReportSection2State extends State<TransferReportSection2> {
                 ),                                           ]
           ),
         ),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: physicalHealthConditionsYes,
-                onChanged: (bool value) => setState(() {
-                  physicalHealthConditionsYes = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.physicalHealthConditionsYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (physicalHealthConditionsNo == true){
-                    physicalHealthConditionsNo = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.physicalHealthConditionsNo, null, widget.jobId, widget.saved, widget.savedId);
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: physicalHealthConditionsNo,
-                onChanged: (bool value) => setState(() {
-                  physicalHealthConditionsNo = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.physicalHealthConditionsNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (physicalHealthConditionsYes == true){
-                    physicalHealthConditionsYes = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.physicalHealthConditionsYes, null, widget.jobId, widget.saved, widget.savedId);
-                  }
-                }))
-          ],
+        Container(
+          color: physicalHealthConditionsYes == false && physicalHealthConditionsNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: physicalHealthConditionsYes,
+                  onChanged: (bool value) => setState(() {
+                    physicalHealthConditionsYes = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.physicalHealthConditionsYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (physicalHealthConditionsNo == true){
+                      physicalHealthConditionsNo = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.physicalHealthConditionsNo, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: physicalHealthConditionsNo,
+                  onChanged: (bool value) => setState(() {
+                    physicalHealthConditionsNo = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.physicalHealthConditionsNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (physicalHealthConditionsYes == true){
+                      physicalHealthConditionsYes = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.physicalHealthConditionsYes, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -2852,37 +2919,40 @@ class _TransferReportSection2State extends State<TransferReportSection2> {
                 ),                                           ]
           ),
         ),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: useOfWeaponYes,
-                onChanged: (bool value) => setState(() {
-                  useOfWeaponYes = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.useOfWeaponYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (useOfWeaponNo == true){
-                    useOfWeaponNo = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.useOfWeaponNo, null, widget.jobId, widget.saved, widget.savedId);
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: useOfWeaponNo,
-                onChanged: (bool value) => setState(() {
-                  useOfWeaponNo = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.useOfWeaponNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (useOfWeaponYes == true){
-                    useOfWeaponYes = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.useOfWeaponYes, null, widget.jobId, widget.saved, widget.savedId);
-                  }
-                }))
-          ],
+        Container(
+          color: useOfWeaponYes == false && useOfWeaponNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: useOfWeaponYes,
+                  onChanged: (bool value) => setState(() {
+                    useOfWeaponYes = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.useOfWeaponYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (useOfWeaponNo == true){
+                      useOfWeaponNo = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.useOfWeaponNo, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: useOfWeaponNo,
+                  onChanged: (bool value) => setState(() {
+                    useOfWeaponNo = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.useOfWeaponNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (useOfWeaponYes == true){
+                      useOfWeaponYes = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.useOfWeaponYes, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -2908,37 +2978,40 @@ class _TransferReportSection2State extends State<TransferReportSection2> {
                 ),                                           ]
           ),
         ),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: absconsionRiskYes,
-                onChanged: (bool value) => setState(() {
-                  absconsionRiskYes = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.absconsionRiskYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (absconsionRiskNo == true){
-                    absconsionRiskNo = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.absconsionRiskNo, null, widget.jobId, widget.saved, widget.savedId);
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: absconsionRiskNo,
-                onChanged: (bool value) => setState(() {
-                  absconsionRiskNo = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.absconsionRiskNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (absconsionRiskYes == true){
-                    absconsionRiskYes = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.absconsionRiskYes, null, widget.jobId, widget.saved, widget.savedId);
-                  }
-                }))
-          ],
+        Container(
+          color: absconsionRiskYes == false && absconsionRiskNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: absconsionRiskYes,
+                  onChanged: (bool value) => setState(() {
+                    absconsionRiskYes = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.absconsionRiskYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (absconsionRiskNo == true){
+                      absconsionRiskNo = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.absconsionRiskNo, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: absconsionRiskNo,
+                  onChanged: (bool value) => setState(() {
+                    absconsionRiskNo = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.absconsionRiskNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (absconsionRiskYes == true){
+                      absconsionRiskYes = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.absconsionRiskYes, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -2964,37 +3037,40 @@ class _TransferReportSection2State extends State<TransferReportSection2> {
                 ),                                           ]
           ),
         ),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: medicalAttentionYes,
-                onChanged: (bool value) => setState(() {
-                  medicalAttentionYes = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.medicalAttentionYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (medicalAttentionNo == true){
-                    medicalAttentionNo = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.medicalAttentionNo, null, widget.jobId, widget.saved, widget.savedId);
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: medicalAttentionNo,
-                onChanged: (bool value) => setState(() {
-                  medicalAttentionNo = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.medicalAttentionNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (medicalAttentionYes == true){
-                    medicalAttentionYes = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.medicalAttentionYes, null, widget.jobId, widget.saved, widget.savedId);
-                  }
-                }))
-          ],
+        Container(
+          color: medicalAttentionYes == false && medicalAttentionNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: medicalAttentionYes,
+                  onChanged: (bool value) => setState(() {
+                    medicalAttentionYes = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.medicalAttentionYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (medicalAttentionNo == true){
+                      medicalAttentionNo = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.medicalAttentionNo, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: medicalAttentionNo,
+                  onChanged: (bool value) => setState(() {
+                    medicalAttentionNo = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.medicalAttentionNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (medicalAttentionYes == true){
+                      medicalAttentionYes = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.medicalAttentionYes, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -3020,37 +3096,99 @@ class _TransferReportSection2State extends State<TransferReportSection2> {
                 ),                                           ]
           ),
         ),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: relevantInformationYes,
-                onChanged: (bool value) => setState(() {
-                  relevantInformationYes = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.relevantInformationYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (relevantInformationNo == true){
-                    relevantInformationNo = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.relevantInformationNo, null, widget.jobId, widget.saved, widget.savedId);
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: relevantInformationNo,
-                onChanged: (bool value) => setState(() {
-                  relevantInformationNo = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.relevantInformationNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (relevantInformationYes == true){
-                    relevantInformationYes = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.relevantInformationYes, null, widget.jobId, widget.saved, widget.savedId);
-                  }
-                }))
-          ],
+        Container(
+          color: relevantInformationYes == false && relevantInformationNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: relevantInformationYes,
+                  onChanged: (bool value) => setState(() {
+                    relevantInformationYes = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.relevantInformationYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (relevantInformationNo == true){
+                      relevantInformationNo = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.relevantInformationNo, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: relevantInformationNo,
+                  onChanged: (bool value) => setState(() {
+                    relevantInformationNo = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.relevantInformationNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (relevantInformationYes == true){
+                      relevantInformationYes = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.relevantInformationYes, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  }))
+            ],
+          ),
+        )
+      ],
+    );
+
+  }
+
+  Widget _buildAcceptPpeCheckboxes() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        RichText(
+          text: TextSpan(
+              text: 'Did patient accept PPE?',
+              style: TextStyle(
+                  fontSize: 16.0, fontFamily: 'Open Sans', color: bluePurple),
+              children:
+              [
+                TextSpan(
+                  text: ' *',
+                  style: TextStyle(
+                      color: Colors.red,
+                      fontSize: 16.0),
+                ),                                           ]
+          ),
+        ),
+        Container(
+          color: acceptPpeYes == false && acceptPpeNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: acceptPpeYes,
+                  onChanged: (bool value) => setState(() {
+                    acceptPpeYes = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.acceptPpeYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (acceptPpeNo == true){
+                      acceptPpeNo = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.acceptPpeNo, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: acceptPpeNo,
+                  onChanged: (bool value) => setState(() {
+                    acceptPpeNo = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.acceptPpeNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (acceptPpeYes == true){
+                      acceptPpeYes = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.acceptPpeYes, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -3147,45 +3285,48 @@ class _TransferReportSection2State extends State<TransferReportSection2> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: patientPropertyYes,
-                onChanged: (bool value) => setState(() {
-                  patientPropertyYes = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.patientPropertyYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (patientPropertyNo == true){
-                    patientPropertyNo = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.patientPropertyNo, null, widget.jobId, widget.saved, widget.savedId);
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: patientPropertyNo,
-                onChanged: (bool value) => setState(() {
-                  patientPropertyNo = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.patientPropertyNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (patientPropertyYes == true){
-                    patientPropertyYes = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.patientPropertyYes, null, widget.jobId, widget.saved, widget.savedId);
-                  }
-                })),
-            RichText(
-              text: TextSpan(
-                text: '*',
-                style: TextStyle(
-                    color: Colors.red,
-                    fontSize: 16.0),
+        Container(
+          color: patientPropertyYes == false && patientPropertyNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
               ),
-            ),
-          ],
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: patientPropertyYes,
+                  onChanged: (bool value) => setState(() {
+                    patientPropertyYes = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.patientPropertyYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (patientPropertyNo == true){
+                      patientPropertyNo = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.patientPropertyNo, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: patientPropertyNo,
+                  onChanged: (bool value) => setState(() {
+                    patientPropertyNo = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.patientPropertyNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (patientPropertyYes == true){
+                      patientPropertyYes = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.patientPropertyYes, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  })),
+              RichText(
+                text: TextSpan(
+                  text: '*',
+                  style: TextStyle(
+                      color: Colors.red,
+                      fontSize: 16.0),
+                ),
+              ),
+            ],
+          ),
         )
       ],
     );
@@ -3213,37 +3354,40 @@ class _TransferReportSection2State extends State<TransferReportSection2> {
                 ),                                           ]
           ),
         ),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: patientPropertyReceivedYes,
-                onChanged: (bool value) => setState(() {
-                  patientPropertyReceivedYes = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.patientPropertyReceivedYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (patientPropertyReceivedNo == true){
-                    patientPropertyReceivedNo = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.patientPropertyReceivedNo, null, widget.jobId, widget.saved, widget.savedId);
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: patientPropertyReceivedNo,
-                onChanged: (bool value) => setState(() {
-                  patientPropertyReceivedNo = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.patientPropertyReceivedNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (patientPropertyReceivedYes == true){
-                    patientPropertyReceivedYes = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.patientPropertyReceivedYes, null, widget.jobId, widget.saved, widget.savedId);
-                  }
-                }))
-          ],
+        Container(
+          color: patientPropertyReceivedYes == false && patientPropertyReceivedNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: patientPropertyReceivedYes,
+                  onChanged: (bool value) => setState(() {
+                    patientPropertyReceivedYes = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.patientPropertyReceivedYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (patientPropertyReceivedNo == true){
+                      patientPropertyReceivedNo = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.patientPropertyReceivedNo, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: patientPropertyReceivedNo,
+                  onChanged: (bool value) => setState(() {
+                    patientPropertyReceivedNo = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.patientPropertyReceivedNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (patientPropertyReceivedYes == true){
+                      patientPropertyReceivedYes = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.patientPropertyReceivedYes, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -3269,37 +3413,40 @@ class _TransferReportSection2State extends State<TransferReportSection2> {
                 ),                                           ]
           ),
         ),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: patientNotesReceivedYes,
-                onChanged: (bool value) => setState(() {
-                  patientNotesReceivedYes = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.patientNotesReceivedYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (patientNotesReceivedNo == true){
-                    patientNotesReceivedNo = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.patientNotesReceivedNo, null, widget.jobId, widget.saved, widget.savedId);
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: patientNotesReceivedNo,
-                onChanged: (bool value) => setState(() {
-                  patientNotesReceivedNo = value;
-                  transferReportModel.updateTemporaryRecord(widget.edit, Strings.patientNotesReceivedNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (patientNotesReceivedYes == true){
-                    patientNotesReceivedYes = false;
-                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.patientNotesReceivedYes, null, widget.jobId, widget.saved, widget.savedId);
-                  }
-                }))
-          ],
+        Container(
+          color: patientNotesReceivedYes == false && patientNotesReceivedNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: patientNotesReceivedYes,
+                  onChanged: (bool value) => setState(() {
+                    patientNotesReceivedYes = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.patientNotesReceivedYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (patientNotesReceivedNo == true){
+                      patientNotesReceivedNo = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.patientNotesReceivedNo, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: patientNotesReceivedNo,
+                  onChanged: (bool value) => setState(() {
+                    patientNotesReceivedNo = value;
+                    transferReportModel.updateTemporaryRecord(widget.edit, Strings.patientNotesReceivedNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (patientNotesReceivedYes == true){
+                      patientNotesReceivedYes = false;
+                      transferReportModel.updateTemporaryRecord(widget.edit, Strings.patientNotesReceivedYes, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -3518,7 +3665,9 @@ class _TransferReportSection2State extends State<TransferReportSection2> {
           ),
               //Text('Patient Report - please include: mental state, risk, physical health concerns, delays', style: TextStyle(color: bluePurple, fontWeight: FontWeight.bold, fontSize: 16),),
                 SizedBox(height: 10,),
-                _textFormField('', patientReport, 8, false, TextInputType.multiline),
+                _textFormField('', patientReport, 8, true, TextInputType.multiline, true),
+                _buildAcceptPpeCheckboxes(),
+                SizedBox(height: 10,),
                 _textFormField('Print Name', patientReportPrintName, 1, true),
                 _textFormField('Role', patientReportRole, 1, true),
                 _buildPatientReportSignatureRow(),

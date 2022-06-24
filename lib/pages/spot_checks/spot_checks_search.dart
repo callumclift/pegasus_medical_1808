@@ -1,14 +1,16 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:pegasus_medical_1808/models/job_refs_model.dart';
 import 'package:pegasus_medical_1808/models/spot_checks_model.dart';
 import '../../shared/global_config.dart';
-import '../../shared/global_functions.dart';
 import 'package:pegasus_medical_1808/widgets/app_bar_gradient.dart';
 import '../../widgets/side_drawer.dart';
 import 'package:pegasus_medical_1808/widgets/gradient_button.dart';
+import 'package:pegasus_medical_1808/widgets/dropdown_form_field.dart';
 import 'package:provider/provider.dart';
 
 import 'spot_checks_search_results.dart';
@@ -36,50 +38,60 @@ class _SpotChecksSearchState
   final TextEditingController dateFromController = TextEditingController();
   final TextEditingController dateToController = TextEditingController();
   final TextEditingController jobRef = TextEditingController();
+  int jobRefNo;
   String selectedUser;
-  List<DropdownMenuItem> genderItems = [
-    DropdownMenuItem(
-      child: Text(
-        'Any',
-      ),
-      value: "Any",
-    ),
-    DropdownMenuItem(
-      child: Text(
-        'Female',
-      ),
-      value: "Female",
-    ),
-    DropdownMenuItem(
-      child: Text(
-        'Male',
-      ),
-      value: "Male",
-    ),
-    DropdownMenuItem(
-      child: Text(
-        'Other',
-      ),
-      value: "Other",
-    )
+  JobRefsModel jobRefsModel;
+  String jobRefRef = 'Select One';
+  List<String> jobRefDrop = [
+    'Select One',
   ];
 
+  bool _loadingJobRefs = false;
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   String infoText = 'Use the below filters to search for completed Spot Checks. Dates are based upon the day a report was originally submitted';
 
   @override
   initState() {
+    _loadingJobRefs = true;
+    jobRefsModel = context.read<JobRefsModel>();
+    _getJobRefs();
     super.initState();
   }
 
   @override
   void dispose() {
-    print('dispose');
     jobRef.dispose();
     dateFromController.dispose();
     dateToController.dispose();
     super.dispose();
+  }
+
+  _getJobRefs() async {
+    await jobRefsModel.getJobRefs();
+
+    if(jobRefsModel.allJobRefs.isNotEmpty){
+      for(Map<String, dynamic> jobRefMap in jobRefsModel.allJobRefs){
+        jobRefDrop.add(jobRefMap['job_ref']);
+      }
+    }
+    setState(() {
+      _loadingJobRefs = false;
+    });
+  }
+
+  Widget _buildJobRefDrop() {
+    return DropdownFormField(
+      hint: 'Ref',
+      expanded: false,
+      value: jobRefRef,
+      items: jobRefDrop.toList(),
+      onChanged: (val) => setState(() {
+        jobRefRef = val;
+        FocusScope.of(context).unfocus();
+      }),
+      initialValue: jobRefRef,
+    );
   }
 
 
@@ -213,8 +225,12 @@ class _SpotChecksSearchState
 
   Widget _textFormField() {
     return TextFormField(
+      keyboardType: TextInputType.number,
+      inputFormatters: <TextInputFormatter>[
+        FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
+      ],
       decoration: InputDecoration(
-          labelText: 'Job Ref',
+          labelText: 'Number',
           suffixIcon: jobRef.text == ''
               ? null
               : IconButton(
@@ -271,6 +287,8 @@ class _SpotChecksSearchState
                         dateFromController.text = '';
                         dateToController.text = '';
                         jobRef.clear();
+                        jobRefRef = 'Select One';
+                        jobRefNo = null;
                         selectedUser = null;
                       });
                       FocusScope.of(context).requestFocus(new FocusNode());
@@ -297,7 +315,7 @@ class _SpotChecksSearchState
 
   void _submitForm() async{
 
-    if((selectedUser == null && jobRef.text.isEmpty && dateFromController.text.isEmpty && dateToController.text.isEmpty) || (dateFromController.text.isEmpty && dateToController.text.isNotEmpty) || (dateToController.text.isEmpty && dateFromController.text.isNotEmpty) || (dateFrom != null &&  dateTo != null && dateFrom.isAfter(dateTo))){
+    if((selectedUser == null && jobRefRef == 'Select One' && jobRef.text.isEmpty && dateFromController.text.isEmpty && dateToController.text.isEmpty) || (dateFromController.text.isEmpty && dateToController.text.isNotEmpty) || (dateToController.text.isEmpty && dateFromController.text.isNotEmpty) || (dateFrom != null &&  dateTo != null && dateFrom.isAfter(dateTo))){
       showDialog(
           context: context,
           builder: (BuildContext context) {
@@ -319,7 +337,7 @@ class _SpotChecksSearchState
               content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
                 Text('Please ensure you have completed the following fields:', textAlign: TextAlign.left, style: TextStyle(fontWeight: FontWeight.bold),),
                 SizedBox(height: 10.0,),
-                selectedUser == null && jobRef.text.isEmpty && dateFromController.text.isEmpty && dateToController.text.isEmpty ? Text("- Please enter some data", textAlign: TextAlign.left,) : Container(),
+                selectedUser == null && jobRefRef == 'Select One' && jobRef.text.isEmpty && dateFromController.text.isEmpty && dateToController.text.isEmpty ? Text("- Please enter some data", textAlign: TextAlign.left,) : Container(),
                 dateFromController.text.isEmpty && dateToController.text.isNotEmpty ? Text("- Date From", textAlign: TextAlign.left,) : Container(),
                 dateToController.text.isEmpty && dateFromController.text.isNotEmpty ? Text("- Date To", textAlign: TextAlign.left,) : Container(),
                 dateFrom != null &&  dateTo != null && dateFrom.isAfter(dateTo) ? Text("- Date From cannot be after Date To", textAlign: TextAlign.left,) : Container(),
@@ -335,7 +353,7 @@ class _SpotChecksSearchState
           });
     } else {
 
-      bool success = await context.read<SpotChecksModel>().searchSpotChecks(dateFrom, dateTo, jobRef.text, selectedUser);
+      bool success = await context.read<SpotChecksModel>().searchSpotChecks(dateFrom, dateTo, jobRefRef, jobRef.text.isNotEmpty ? int.parse(jobRef.text) : null, selectedUser);
 
       if(success) Navigator.of(context)
           .push(MaterialPageRoute(builder: (BuildContext context) {
@@ -350,8 +368,6 @@ class _SpotChecksSearchState
     final double deviceWidth = MediaQuery.of(context).size.width;
     final double targetWidth = deviceWidth > 768.0 ? 600.0 : deviceWidth * 0.95;
     final double targetPadding = deviceWidth - targetWidth;
-
-    print('building page content');
 
     return GestureDetector(
       onTap: () {
@@ -384,9 +400,14 @@ class _SpotChecksSearchState
                           ],
                         ),
                       )),
-                  _textFormField(),
+                  Row(children: [
+                    Flexible(child: _buildJobRefDrop()),
+                    Container(width: 10,),
+                    Flexible(child: _textFormField()),
+                  ],),
+
                   user != null && user.role == 'Super User' ? StreamBuilder<QuerySnapshot>(
-                      stream: FirebaseFirestore.instance.collection("users").orderBy('name_lowercase', descending: false).snapshots(),
+                      stream: FirebaseFirestore.instance.collection("users").where('deleted', isEqualTo: false).orderBy('name_lowercase', descending: false).snapshots(),
                       builder: (context, snapshot) {
                         if (!snapshot.hasData)
                           return Container();
@@ -404,7 +425,7 @@ class _SpotChecksSearchState
                             userItems.add(
                               DropdownMenuItem(
                                 child: Text(
-                                  snap.data()['name'],
+                                  snap.get('name'),
                                 ),
                                 value: "${snap.id}",
                               ),
@@ -450,9 +471,6 @@ class _SpotChecksSearchState
 
   @override
   Widget build(BuildContext context) {
-
-    print('[Search Forms] - build page');
-
     // TODO: implement build
     return Scaffold(drawer: SideDrawer(),
       appBar: AppBar(
@@ -461,7 +479,12 @@ class _SpotChecksSearchState
             child: Text('Spot Checks Search', style: TextStyle(fontWeight: FontWeight.bold),)),
         actions: <Widget>[IconButton(icon: Icon(Icons.refresh), onPressed: _resetFormSearch)],
       ),
-      body: _buildPageContent(context),
+      body: _loadingJobRefs
+          ? Center(
+        child: CircularProgressIndicator(
+          valueColor: new AlwaysStoppedAnimation<Color>(bluePurple),
+        ),
+      ) : _buildPageContent(context),
     );
   }
 }

@@ -24,6 +24,10 @@
 	<true/>
 	<key>NSAppleMusicUsageDescription</key>
 	<string>Play while you are using the app</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Allow Pegasus Medical to utilise bluetooth when using this app?</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>Allow Pegasus Medical to utilise bluetooth?</string>
 	<key>NSCalendarsUsageDescription</key>
 	<string>Allow Pegasus Medical to access your calendar?</string>
 	<key>NSCameraUsageDescription</key>

@@ -240,7 +240,7 @@ class PatientObservationModel extends ChangeNotifier {
 
     if(edit){
       final Db.Finder finder = Db.Finder(filter: Db.Filter.and(
-          [Db.Filter.equals(Strings.uid, user.uid), Db.Filter.equals(Strings.jobId, selectedJobId)]
+          [Db.Filter.equals(Strings.documentId, selectedPatientObservation[Strings.documentId]), Db.Filter.equals(Strings.jobId, selectedJobId)]
       ));
       await _editedPatientObservationsStore.update(await _db, {field: value},
           finder: finder);
@@ -302,6 +302,8 @@ class PatientObservationModel extends ChangeNotifier {
       Strings.jobId: '1',
       Strings.formVersion: '1',
       Strings.jobRef: patientObservation[Strings.jobRef],
+      Strings.jobRefRef: patientObservation[Strings.jobRefRef],
+      Strings.jobRefNo: patientObservation[Strings.jobRefNo],
       Strings.patientObservationDate: patientObservation[Strings.patientObservationDate],
       Strings.patientObservationHospital: patientObservation[Strings.patientObservationHospital],
       Strings.patientObservationWard: patientObservation[Strings.patientObservationWard],
@@ -335,6 +337,7 @@ class PatientObservationModel extends ChangeNotifier {
   Future<void> getSavedRecordsList() async{
 
     _isLoading = true;
+    _patientObservations = [];
     notifyListeners();
     String message = '';
 
@@ -351,7 +354,7 @@ class PatientObservationModel extends ChangeNotifier {
 
         _patientObservations = List.from(_fetchedRecordList.reversed);
       } else {
-        message = 'No saved records available';
+        //message = 'No saved records available';
       }
 
     } catch(e){
@@ -381,6 +384,8 @@ class PatientObservationModel extends ChangeNotifier {
     await _temporaryPatientObservationsStore.update(await _db, {
       Strings.formVersion: 1,
       Strings.jobRef: null,
+      Strings.jobRefRef: null,
+      Strings.jobRefNo: null,
       Strings.patientObservationDate: null,
       Strings.patientObservationHospital: null,
       Strings.patientObservationWard: null,
@@ -417,7 +422,9 @@ class PatientObservationModel extends ChangeNotifier {
       Strings.uid: user.uid,
       Strings.jobId: '1',
       Strings.formVersion: '1',
-      Strings.jobRef: patientObservation[Strings.jobRef],
+      Strings.jobRef: patientObservation[Strings.jobRefRef] + patientObservation[Strings.jobRefNo],
+      Strings.jobRefRef: patientObservation[Strings.jobRefRef],
+      Strings.jobRefNo: patientObservation[Strings.jobRefNo],
       Strings.patientObservationDate: patientObservation[Strings.patientObservationDate],
       Strings.patientObservationHospital: patientObservation[Strings.patientObservationHospital],
       Strings.patientObservationWard: patientObservation[Strings.patientObservationWard],
@@ -458,8 +465,10 @@ class PatientObservationModel extends ChangeNotifier {
             Strings.uid: user.uid,
             Strings.jobId: '1',
             Strings.formVersion: '1',
-            Strings.jobRef: GlobalFunctions.databaseValueString(patientObservation[Strings.jobRef]),
-            Strings.jobRefLowercase: GlobalFunctions.databaseValueString(patientObservation[Strings.jobRef]).toLowerCase(),
+            Strings.jobRef: GlobalFunctions.databaseValueString(patientObservation[Strings.jobRefRef]) + GlobalFunctions.databaseValueString(patientObservation[Strings.jobRefNo]),
+            Strings.jobRefLowercase: GlobalFunctions.databaseValueString(patientObservation[Strings.jobRefRef]).toLowerCase() + GlobalFunctions.databaseValueString(patientObservation[Strings.jobRefNo]).toLowerCase(),
+            Strings.jobRefRef: GlobalFunctions.databaseValueString(patientObservation[Strings.jobRefRef]),
+            Strings.jobRefNo:  int.parse(patientObservation[Strings.jobRefNo]),
             Strings.patientObservationDate: patientObservation[Strings.patientObservationDate] == null ? null : DateTime.parse(patientObservation[Strings.patientObservationDate]),
             Strings.patientObservationHospital: patientObservation[Strings.patientObservationHospital],
             Strings.patientObservationWard: patientObservation[Strings.patientObservationWard],
@@ -579,8 +588,10 @@ class PatientObservationModel extends ChangeNotifier {
           await FirebaseFirestore.instance.collection('patient_observation_timesheets').doc(patientObservation[Strings.documentId]).update({
             Strings.jobId: '1',
             Strings.formVersion: '1',
-            Strings.jobRef: GlobalFunctions.databaseValueString(patientObservation[Strings.jobRef]),
-            Strings.jobRefLowercase: GlobalFunctions.databaseValueString(patientObservation[Strings.jobRef]).toLowerCase(),
+            Strings.jobRef: GlobalFunctions.databaseValueString(patientObservation[Strings.jobRefRef]) + GlobalFunctions.databaseValueString(patientObservation[Strings.jobRefNo]),
+            Strings.jobRefLowercase: GlobalFunctions.databaseValueString(patientObservation[Strings.jobRefRef]).toLowerCase() + GlobalFunctions.databaseValueString(patientObservation[Strings.jobRefNo]).toLowerCase(),
+            Strings.jobRefRef: GlobalFunctions.databaseValueString(patientObservation[Strings.jobRefRef]),
+            Strings.jobRefNo:  int.parse(patientObservation[Strings.jobRefNo]),
             Strings.patientObservationDate: patientObservation[Strings.patientObservationDate] == null ? null : DateTime.parse(patientObservation[Strings.patientObservationDate]),
             Strings.patientObservationHospital: patientObservation[Strings.patientObservationHospital],
             Strings.patientObservationWard: patientObservation[Strings.patientObservationWard],
@@ -666,14 +677,14 @@ class PatientObservationModel extends ChangeNotifier {
 
           if(user.role == 'Super User'){
             try{
-              snapshot = await FirebaseFirestore.instance.collection('patient_observation_timesheets').orderBy('timestamp', descending: true).limit(10).get().timeout(Duration(seconds: 90));
+              snapshot = await FirebaseFirestore.instance.collection('patient_observation_timesheets').orderBy('job_ref_no', descending: true).limit(10).get().timeout(Duration(seconds: 90));
             } catch(e){
               print(e);
             }
           } else {
             try{
               snapshot = await FirebaseFirestore.instance.collection('patient_observation_timesheets').where(
-                  'uid', isEqualTo: user.uid).orderBy('timestamp', descending: true).limit(10).get().timeout(Duration(seconds: 90));
+                  'uid', isEqualTo: user.uid).orderBy('job_ref_no', descending: true).limit(10).get().timeout(Duration(seconds: 90));
             } catch(e){
               print(e);
             }
@@ -762,13 +773,13 @@ class PatientObservationModel extends ChangeNotifier {
 
           QuerySnapshot snapshot;
           int currentLength = _patientObservations.length;
-          DateTime latestDate = DateTime.parse(_patientObservations[currentLength - 1][Strings.timestamp]);
+          int latestNo = int.parse(_patientObservations[currentLength - 1][Strings.jobRefNo]);
+
 
           if(user.role == 'Super User'){
             try {
-              snapshot = await FirebaseFirestore.instance.collection('patient_observation_timesheets').orderBy(
-                  'timestamp', descending: true).startAfter(
-                  [Timestamp.fromDate(latestDate)]).limit(10)
+              snapshot = await FirebaseFirestore.instance.collection('patient_observation_timesheets').where(Strings.jobRefNo, isLessThan: latestNo).orderBy(
+                  'job_ref_no', descending: true).limit(10)
                   .get()
                   .timeout(Duration(seconds: 90));
             } catch(e) {
@@ -778,9 +789,8 @@ class PatientObservationModel extends ChangeNotifier {
           } else {
             try {
               snapshot = await FirebaseFirestore.instance.collection('patient_observation_timesheets').where(
-                  'uid', isEqualTo: user.uid).orderBy(
-                  'timestamp', descending: true).startAfter(
-                  [Timestamp.fromDate(latestDate)]).limit(10)
+                  'uid', isEqualTo: user.uid).where(Strings.jobRefNo, isLessThan: latestNo).orderBy(
+                  'job_ref_no', descending: true).limit(10)
                   .get()
                   .timeout(Duration(seconds: 90));
             } catch(e) {
@@ -841,14 +851,14 @@ class PatientObservationModel extends ChangeNotifier {
 
   }
 
-  Future<bool> searchPatientObservations(DateTime dateFrom, DateTime dateTo, String jobRef, String selectedUser) async{
+  Future<bool> searchPatientObservations(DateTime dateFrom, DateTime dateTo, String jobRefRef, int jobRefNo, String selectedUser) async{
 
     _isLoading = true;
     notifyListeners();
     bool success = false;
     String message = '';
     GlobalFunctions.showLoadingDialog('Searching Forms');
-    List<Map<String, dynamic>> _fetchedPatientObservationList = [];
+    List<Map<String, dynamic>> _fetchedPatientObservationsList = [];
 
     try {
 
@@ -878,15 +888,14 @@ class PatientObservationModel extends ChangeNotifier {
             if(dateFrom != null && dateTo != null){
 
 
-              if(jobRef == null || jobRef.trim() == ''){
+              if(jobRefRef == 'Select One' && (jobRefNo == null)){
 
 
                 if(selectedUser != null){
                   try{
                     snapshot =
-                    await FirebaseFirestore.instance.collection('patient_observation_timesheets')
-                        .where(Strings.uid, isEqualTo: selectedUser).orderBy('timestamp', descending: true)
-                        .startAt([dateTo]).endAt([dateFrom]).get()
+                    await FirebaseFirestore.instance.collection('patient_observation_timesheets').where(Strings.uid, isEqualTo: selectedUser).where(Strings.patientObservationDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.patientObservationDate, isLessThanOrEqualTo: dateTo)
+                        .get()
                         .timeout(Duration(seconds: 90));
                   } catch(e){
                     print(e);
@@ -894,8 +903,8 @@ class PatientObservationModel extends ChangeNotifier {
                 } else {
                   try{
                     snapshot =
-                    await FirebaseFirestore.instance.collection('patient_observation_timesheets').orderBy('timestamp', descending: true)
-                        .startAt([dateTo]).endAt([dateFrom]).get()
+                    await FirebaseFirestore.instance.collection('patient_observation_timesheets').where(Strings.patientObservationDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.patientObservationDate, isLessThanOrEqualTo: dateTo)
+                        .get()
                         .timeout(Duration(seconds: 90));
                   } catch(e){
                     print(e);
@@ -903,14 +912,13 @@ class PatientObservationModel extends ChangeNotifier {
                 }
 
 
-              } else {
+              } else if(jobRefRef != 'Select One' && jobRefNo != null) {
 
                 if(selectedUser != null){
                   try{
                     snapshot =
-                    await FirebaseFirestore.instance.collection('patient_observation_timesheets').where(Strings.uid, isEqualTo: selectedUser).
-                    where(Strings.jobRefLowercase, isEqualTo: jobRef.toLowerCase()).orderBy('timestamp', descending: true)
-                        .startAt([dateTo]).endAt([dateFrom]).get()
+                    await FirebaseFirestore.instance.collection('patient_observation_timesheets').where(Strings.uid, isEqualTo: selectedUser).where(Strings.patientObservationDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.patientObservationDate, isLessThanOrEqualTo: dateTo)
+                        .where(Strings.jobRefRef, isEqualTo: jobRefRef).where(Strings.jobRefNo, isEqualTo: jobRefNo).get()
                         .timeout(Duration(seconds: 90));
                   } catch(e){
                     print(e);
@@ -918,9 +926,61 @@ class PatientObservationModel extends ChangeNotifier {
                 } else {
                   try{
                     snapshot =
-                    await FirebaseFirestore.instance.collection('patient_observation_timesheets')
-                        .where(Strings.jobRefLowercase, isEqualTo: jobRef.toLowerCase()).orderBy('timestamp', descending: true)
-                        .startAt([dateTo]).endAt([dateFrom]).get()
+                    await FirebaseFirestore.instance.collection('patient_observation_timesheets').where(Strings.patientObservationDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.patientObservationDate, isLessThanOrEqualTo: dateTo)
+                        .where(Strings.jobRefRef, isEqualTo: jobRefRef).where(Strings.jobRefNo, isEqualTo: jobRefNo)
+                        .get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                }
+
+
+
+
+              } else if(jobRefRef != 'Select One' && (jobRefNo == null)) {
+
+                if(selectedUser != null){
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('patient_observation_timesheets').where(Strings.uid, isEqualTo: selectedUser).where(Strings.patientObservationDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.patientObservationDate, isLessThanOrEqualTo: dateTo)
+                        .where(Strings.jobRefRef, isEqualTo: jobRefRef).get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                } else {
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('patient_observation_timesheets').where(Strings.patientObservationDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.patientObservationDate, isLessThanOrEqualTo: dateTo)
+                        .where(Strings.jobRefRef, isEqualTo: jobRefRef)
+                        .get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                }
+
+
+
+
+              } else if(jobRefRef == 'Select One' && jobRefNo != null) {
+
+                if(selectedUser != null){
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('patient_observation_timesheets').where(Strings.uid, isEqualTo: selectedUser).where(Strings.patientObservationDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.patientObservationDate, isLessThanOrEqualTo: dateTo)
+                        .where(Strings.jobRefNo, isEqualTo: jobRefNo).get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                } else {
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('patient_observation_timesheets').where(Strings.patientObservationDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.patientObservationDate, isLessThanOrEqualTo: dateTo)
+                        .where(Strings.jobRefNo, isEqualTo: jobRefNo)
+                        .get()
                         .timeout(Duration(seconds: 90));
                   } catch(e){
                     print(e);
@@ -935,13 +995,13 @@ class PatientObservationModel extends ChangeNotifier {
             } else {
 
 
-              if(jobRef == null || jobRef.trim() == ''){
+              if(jobRefRef == 'Select One' && (jobRefNo == null)){
+
 
                 if(selectedUser != null){
                   try{
                     snapshot =
-                    await FirebaseFirestore.instance.collection('patient_observation_timesheets')
-                        .where(Strings.uid, isEqualTo: selectedUser).orderBy('timestamp', descending: true)
+                    await FirebaseFirestore.instance.collection('patient_observation_timesheets').where(Strings.uid, isEqualTo: selectedUser)
                         .get()
                         .timeout(Duration(seconds: 90));
                   } catch(e){
@@ -950,7 +1010,31 @@ class PatientObservationModel extends ChangeNotifier {
                 } else {
                   try{
                     snapshot =
-                    await FirebaseFirestore.instance.collection('patient_observation_timesheets').orderBy('timestamp', descending: true)
+                    await FirebaseFirestore.instance.collection('patient_observation_timesheets')
+                        .get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                }
+
+
+              } else if(jobRefRef != 'Select One' && jobRefNo != null) {
+
+                if(selectedUser != null){
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('patient_observation_timesheets').where(Strings.uid, isEqualTo: selectedUser)
+                        .where(Strings.jobRefRef, isEqualTo: jobRefRef).where(Strings.jobRefNo, isEqualTo: jobRefNo).get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                } else {
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('patient_observation_timesheets')
+                        .where(Strings.jobRefRef, isEqualTo: jobRefRef).where(Strings.jobRefNo, isEqualTo: jobRefNo)
                         .get()
                         .timeout(Duration(seconds: 90));
                   } catch(e){
@@ -961,15 +1045,13 @@ class PatientObservationModel extends ChangeNotifier {
 
 
 
-              } else {
+              } else if(jobRefRef != 'Select One' && (jobRefNo == null)) {
 
                 if(selectedUser != null){
                   try{
                     snapshot =
-                    await FirebaseFirestore.instance.collection('patient_observation_timesheets')
-                        .where(Strings.jobRefLowercase, isEqualTo: jobRef.toLowerCase())
-                        .where(Strings.uid, isEqualTo: selectedUser).orderBy('timestamp', descending: true)
-                        .get()
+                    await FirebaseFirestore.instance.collection('patient_observation_timesheets').where(Strings.uid, isEqualTo: selectedUser)
+                        .where(Strings.jobRefRef, isEqualTo: jobRefRef).get()
                         .timeout(Duration(seconds: 90));
                   } catch(e){
                     print(e);
@@ -978,14 +1060,40 @@ class PatientObservationModel extends ChangeNotifier {
                   try{
                     snapshot =
                     await FirebaseFirestore.instance.collection('patient_observation_timesheets')
-                        .where(Strings.jobRefLowercase, isEqualTo: jobRef.toLowerCase())
-                        .orderBy('timestamp', descending: true)
+                        .where(Strings.jobRefRef, isEqualTo: jobRefRef)
                         .get()
                         .timeout(Duration(seconds: 90));
                   } catch(e){
                     print(e);
                   }
                 }
+
+
+
+
+              } else if(jobRefRef == 'Select One' && jobRefNo != null) {
+
+                if(selectedUser != null){
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('patient_observation_timesheets').where(Strings.uid, isEqualTo: selectedUser)
+                        .where(Strings.jobRefNo, isEqualTo: jobRefNo).get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                } else {
+                  try{
+                    snapshot =
+                    await FirebaseFirestore.instance.collection('patient_observation_timesheets')
+                        .where(Strings.jobRefNo, isEqualTo: jobRefNo)
+                        .get()
+                        .timeout(Duration(seconds: 90));
+                  } catch(e){
+                    print(e);
+                  }
+                }
+
 
 
 
@@ -994,49 +1102,83 @@ class PatientObservationModel extends ChangeNotifier {
             }
 
           } else {
-
 
             if(dateFrom != null && dateTo != null){
 
 
-              if(jobRef == null || jobRef.trim() == ''){
+              if(jobRefRef == 'Select One' && (jobRefNo == null)){
+
 
                 try{
                   snapshot =
-                  await FirebaseFirestore.instance.collection('patient_observation_timesheets')
-                      .where(Strings.uid, isEqualTo: user.uid).orderBy('timestamp', descending: true)
-                      .startAt([dateTo]).endAt([dateFrom]).get()
+                  await FirebaseFirestore.instance.collection('patient_observation_timesheets').where(Strings.uid, isEqualTo: user.uid).where(Strings.patientObservationDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.patientObservationDate, isLessThanOrEqualTo: dateTo)
+                      .get()
                       .timeout(Duration(seconds: 90));
                 } catch(e){
                   print(e);
                 }
 
 
-              } else {
 
+              } else if(jobRefRef != 'Select One' && jobRefNo != null) {
 
                 try{
                   snapshot =
-                  await FirebaseFirestore.instance.collection('patient_observation_timesheets')
-                      .where(Strings.jobRefLowercase, isEqualTo: jobRef.toLowerCase())
-                      .where(Strings.uid, isEqualTo: user.uid).orderBy('timestamp', descending: true)
-                      .startAt([dateTo]).endAt([dateFrom]).get()
+                  await FirebaseFirestore.instance.collection('patient_observation_timesheets').where(Strings.uid, isEqualTo: user.uid).where(Strings.patientObservationDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.patientObservationDate, isLessThanOrEqualTo: dateTo)
+                      .where(Strings.jobRefRef, isEqualTo: jobRefRef).where(Strings.jobRefNo, isEqualTo: jobRefNo)
+                      .get()
                       .timeout(Duration(seconds: 90));
                 } catch(e){
                   print(e);
                 }
+
+
+
+
+
+              } else if(jobRefRef != 'Select One' && (jobRefNo == null)) {
+
+
+                try{
+                  snapshot =
+                  await FirebaseFirestore.instance.collection('patient_observation_timesheets').where(Strings.uid, isEqualTo: user.uid).where(Strings.patientObservationDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.patientObservationDate, isLessThanOrEqualTo: dateTo)
+                      .where(Strings.jobRefRef, isEqualTo: jobRefRef)
+                      .get()
+                      .timeout(Duration(seconds: 90));
+                } catch(e){
+                  print(e);
+                }
+
+
+
+
+
+              } else if(jobRefRef == 'Select One' && jobRefNo != null) {
+
+                try{
+                  snapshot =
+                  await FirebaseFirestore.instance.collection('patient_observation_timesheets').where(Strings.uid, isEqualTo: user.uid).where(Strings.patientObservationDate, isGreaterThanOrEqualTo: dateFrom).where(Strings.patientObservationDate, isLessThanOrEqualTo: dateTo)
+                      .where(Strings.jobRefNo, isEqualTo: jobRefNo)
+                      .get()
+                      .timeout(Duration(seconds: 90));
+                } catch(e){
+                  print(e);
+                }
+
+
+
+
+
               }
-
 
             } else {
 
 
-              if(jobRef == null || jobRef.trim() == ''){
+              if(jobRefRef == 'Select One' && (jobRefNo == null)){
 
                 try{
                   snapshot =
-                  await FirebaseFirestore.instance.collection('patient_observation_timesheets')
-                      .where(Strings.uid, isEqualTo: user.uid).orderBy('timestamp', descending: true)
+                  await FirebaseFirestore.instance.collection('patient_observation_timesheets').where(Strings.uid, isEqualTo: user.uid)
                       .get()
                       .timeout(Duration(seconds: 90));
                 } catch(e){
@@ -1044,21 +1186,55 @@ class PatientObservationModel extends ChangeNotifier {
                 }
 
 
-              } else {
+
+              } else if(jobRefRef != 'Select One' && jobRefNo != null) {
+
 
                 try{
                   snapshot =
-                  await FirebaseFirestore.instance.collection('patient_observation_timesheets')
-                      .where(Strings.jobRefLowercase, isEqualTo: jobRef.toLowerCase())
-                      .where(Strings.uid, isEqualTo: user.uid).orderBy('timestamp', descending: true)
+                  await FirebaseFirestore.instance.collection('patient_observation_timesheets').where(Strings.uid, isEqualTo: user.uid)
+                      .where(Strings.jobRefRef, isEqualTo: jobRefRef).where(Strings.jobRefNo, isEqualTo: jobRefNo)
                       .get()
                       .timeout(Duration(seconds: 90));
                 } catch(e){
                   print(e);
                 }
+
+
+
+
+
+              } else if(jobRefRef != 'Select One' && (jobRefNo == null)) {
+
+                try{
+                  snapshot =
+                  await FirebaseFirestore.instance.collection('patient_observation_timesheets').where(Strings.uid, isEqualTo: user.uid)
+                      .where(Strings.jobRefRef, isEqualTo: jobRefRef)
+                      .get()
+                      .timeout(Duration(seconds: 90));
+                } catch(e){
+                  print(e);
+                }
+
+
+
+
+
+              } else if(jobRefRef == 'Select One' && jobRefNo != null) {
+                try{
+                  snapshot =
+                  await FirebaseFirestore.instance.collection('patient_observation_timesheets').where(Strings.uid, isEqualTo: user.uid)
+                      .where(Strings.jobRefNo, isEqualTo: jobRefNo)
+                      .get()
+                      .timeout(Duration(seconds: 90));
+                } catch(e){
+                  print(e);
+                }
+
               }
 
             }
+
 
 
 
@@ -1070,7 +1246,10 @@ class PatientObservationModel extends ChangeNotifier {
           if(snapshot.docs.length < 1){
             message = 'No Patient Observation Timesheets found';
           } else {
-            for (DocumentSnapshot snap in snapshot.docs) {
+            List<QueryDocumentSnapshot> snapDocs = snapshot.docs;
+            snapDocs.sort((a, b) => (b.get('job_ref_no')).compareTo(a.get('job_ref_no')));
+
+            for (DocumentSnapshot snap in snapDocs) {
 
               snapshotData = snap.data();
 
@@ -1082,17 +1261,19 @@ class PatientObservationModel extends ChangeNotifier {
 
                 if(kIsWeb){
                   storageRef = FirebaseStorage.instance.ref().child(firebaseStorageBucket + '/patientObservationImages/' + snap.id + '/patientObservationSignature.jpg');
+
                 }
+
                 patientObservationSignature = await storageRef.getData(dataLimit);
               }
 
               final Map<String, dynamic> patientObservation = onlinePatientObservation(snapshotData, snap.id, patientObservationSignature);
 
-              _fetchedPatientObservationList.add(patientObservation);
+              _fetchedPatientObservationsList.add(patientObservation);
 
             }
 
-            _patientObservations = _fetchedPatientObservationList;
+            _patientObservations = _fetchedPatientObservationsList;
             success = true;
           }
 
@@ -1119,118 +1300,6 @@ class PatientObservationModel extends ChangeNotifier {
     return success;
 
   }
-
-
-  Future<bool> searchMorePatientObservations(DateTime dateFrom, DateTime dateTo) async{
-
-    _isLoading = true;
-    notifyListeners();
-    bool success = false;
-    String message = '';
-    GlobalFunctions.showLoadingDialog('Searching Forms');
-    List<Map<String, dynamic>> _fetchedPatientObservationList = [];
-
-    try {
-
-      bool hasDataConnection = await GlobalFunctions.hasDataConnection();
-
-      if(!hasDataConnection){
-
-        message = 'No Data Connection, unable to search Patient Observation Timesheets';
-
-      } else {
-
-
-        bool isTokenExpired = GlobalFunctions.isTokenExpired();
-        bool authenticated = true;
-
-        if(isTokenExpired) authenticated = await authenticationModel.reAuthenticate();
-
-        if(authenticated){
-
-
-          QuerySnapshot snapshot;
-          int currentLength = _patientObservations.length;
-          DateTime latestDate = DateTime.parse(_patientObservations[currentLength - 1]['timestamp']);
-
-          if(user.role == 'Super User'){
-            try{
-              snapshot =
-              await FirebaseFirestore.instance.collection('patient_observation_timesheets').orderBy('timestamp', descending: true)
-                  .startAfter([Timestamp.fromDate(latestDate)]).endAt([dateFrom]).limit(10).get()
-                  .timeout(Duration(seconds: 90));
-            } catch(e){
-              print(e);
-            }
-
-          } else {
-
-            try{
-              snapshot =
-              await FirebaseFirestore.instance.collection('patient_observation_timesheets').where('uid', isEqualTo: user.uid).orderBy('timestamp', descending: true)
-                  .startAfter([Timestamp.fromDate(latestDate)]).endAt([dateFrom]).limit(10).get()
-                  .timeout(Duration(seconds: 90));
-            } catch(e){
-              print(e);
-            }
-
-          }
-
-          Map<String, dynamic> snapshotData = {};
-
-          if(snapshot.docs.length < 1){
-            message = 'No Patient Observation Timesheets found';
-          } else {
-            for (DocumentSnapshot snap in snapshot.docs) {
-
-              snapshotData = snap.data();
-
-              Uint8List patientObservationSignature;
-
-              if (snapshotData[Strings.patientObservationSignature] != null) {
-                Reference storageRef =
-                FirebaseStorage.instance.ref().child('patientObservationImages/' + snap.id + '/patientObservationSignature.jpg');
-
-                if(kIsWeb){
-                  storageRef = FirebaseStorage.instance.ref().child(firebaseStorageBucket + '/patientObservationImages/' + snap.id + '/patientObservationSignature.jpg');
-                }
-                patientObservationSignature = await storageRef.getData(dataLimit);
-              }
-
-              final Map<String, dynamic> patientObservation = onlinePatientObservation(snapshotData, snap.id, patientObservationSignature);
-
-              _fetchedPatientObservationList.add(patientObservation);
-
-            }
-
-            _patientObservations.addAll(_fetchedPatientObservationList);
-            success = true;
-          }
-
-
-        }
-
-      }
-
-
-    } on TimeoutException catch (_) {
-      // A timeout occurred.
-      message = 'Network Timeout communicating with the server, unable to search Patient Observation Timesheets';
-    } catch(e){
-      print(e);
-      message = 'Something went wrong. Please try again';
-
-    }
-
-    _isLoading = false;
-    notifyListeners();
-    _selPatientObservationId = null;
-    GlobalFunctions.dismissLoadingDialog();
-    if(message != '') GlobalFunctions.showToast(message);
-    return success;
-
-  }
-
 
   Map<String, dynamic> localPatientObservation(Map<String, dynamic> localRecord){
     return {
@@ -1239,6 +1308,8 @@ class PatientObservationModel extends ChangeNotifier {
       Strings.jobId: localRecord[Strings.jobId],
       Strings.formVersion: localRecord[Strings.formVersion],
       Strings.jobRef: localRecord[Strings.jobRef],
+      Strings.jobRefRef: localRecord[Strings.jobRefRef],
+      Strings.jobRefNo: localRecord[Strings.jobRefNo],
       Strings.patientObservationDate: localRecord[Strings.patientObservationDate],
       Strings.patientObservationHospital: localRecord[Strings.patientObservationHospital],
       Strings.patientObservationWard: localRecord[Strings.patientObservationWard],
@@ -1262,6 +1333,8 @@ class PatientObservationModel extends ChangeNotifier {
       Strings.jobId: localRecord[Strings.jobId],
       Strings.formVersion: localRecord[Strings.formVersion],
       Strings.jobRef: localRecord[Strings.jobRef],
+      Strings.jobRefRef: localRecord[Strings.jobRefRef],
+      Strings.jobRefNo: localRecord[Strings.jobRefNo].toString(),
       Strings.patientObservationDate: localRecord[Strings.patientObservationDate] == null ? null : DateTime
           .fromMillisecondsSinceEpoch(
           localRecord[Strings.patientObservationDate].millisecondsSinceEpoch)
@@ -1293,6 +1366,8 @@ class PatientObservationModel extends ChangeNotifier {
       Strings.jobId: localRecord[Strings.jobId],
       Strings.formVersion: localRecord[Strings.formVersion],
       Strings.jobRef: localRecord[Strings.jobRef],
+      Strings.jobRefRef: localRecord[Strings.jobRefRef],
+      Strings.jobRefNo: localRecord[Strings.jobRefNo],
       Strings.patientObservationDate: localRecord[Strings.patientObservationDate],
       Strings.patientObservationHospital: localRecord[Strings.patientObservationHospital],
       Strings.patientObservationWard: localRecord[Strings.patientObservationWard],
@@ -1345,8 +1420,10 @@ class PatientObservationModel extends ChangeNotifier {
             Strings.uid: user.uid,
             Strings.jobId: '1',
             Strings.formVersion: '1',
-            Strings.jobRef: GlobalFunctions.databaseValueString(patientObservation[Strings.jobRef]),
-            Strings.jobRefLowercase: GlobalFunctions.databaseValueString(patientObservation[Strings.jobRef]).toLowerCase(),
+            Strings.jobRef: GlobalFunctions.databaseValueString(patientObservation[Strings.jobRefRef]) + GlobalFunctions.databaseValueString(patientObservation[Strings.jobRefNo]),
+            Strings.jobRefLowercase: GlobalFunctions.databaseValueString(patientObservation[Strings.jobRefRef]).toLowerCase() + GlobalFunctions.databaseValueString(patientObservation[Strings.jobRefNo]).toLowerCase(),
+            Strings.jobRefRef: GlobalFunctions.databaseValueString(patientObservation[Strings.jobRefRef]),
+            Strings.jobRefNo: int.parse(patientObservation[Strings.jobRefNo]),
             Strings.patientObservationDate: patientObservation[Strings.patientObservationDate] == null ? null : DateTime.parse(patientObservation[Strings.patientObservationDate]),
             Strings.patientObservationHospital: patientObservation[Strings.patientObservationHospital],
             Strings.patientObservationWard: patientObservation[Strings.patientObservationWard],
@@ -1506,52 +1583,14 @@ class PatientObservationModel extends ChangeNotifier {
             width: width,
             padding: const EdgeInsets.all(5),
             decoration: BoxDecoration(
-              borderRadius: 5,
-              border: BoxBorder(
-                top: true,
-                left: true,
-                right: true,
-                bottom: true,
-                width: 1,
-                color: PdfColors.grey,
-              ),
+              borderRadius: BorderRadius.all(Radius.circular(5)),
+              border: Border.all(width: 1, color: PdfColors.grey,),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(value, style: TextStyle(fontSize: 8)),
-              ],
-            ),
-          ));
-    }
-
-    Widget signatureField(FlutterImage.Image signature, PdfDocument doc) {
-
-      return ConstrainedBox(constraints: BoxConstraints(minHeight: 20),
-          child: Container(
-            width: 120,
-            padding: const EdgeInsets.all(2),
-            decoration: BoxDecoration(
-              borderRadius: 5,
-              border: BoxBorder(
-                top: true,
-                left: true,
-                right: true,
-                bottom: true,
-                width: 1,
-                color: PdfColors.grey,
-              ),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                signature == null ? Text('') : Container(height: 20, child: FittedBox(alignment: Alignment.centerLeft, child: Image(PdfImage(doc,
-                    image: signature.data.buffer
-                        .asUint8List(),
-                    width: signature.width,
-                    height: signature.height)))),
               ],
             ),
           ));
@@ -1610,15 +1649,8 @@ class PatientObservationModel extends ChangeNotifier {
                         width: 158,
                         padding: const EdgeInsets.all(3),
                         decoration: BoxDecoration(
-                          borderRadius: 5,
-                          border: BoxBorder(
-                            top: true,
-                            left: true,
-                            right: true,
-                            bottom: true,
-                            width: 1,
-                            color: PdfColors.grey,
-                          ),
+                          borderRadius: BorderRadius.all(Radius.circular(5)),
+                          border: Border.all(width: 1, color: PdfColors.grey),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -1631,15 +1663,8 @@ class PatientObservationModel extends ChangeNotifier {
                       child: Container(
                         padding: const EdgeInsets.all(3),
                         decoration: BoxDecoration(
-                          borderRadius: 5,
-                          border: BoxBorder(
-                            top: true,
-                            left: true,
-                            right: true,
-                            bottom: true,
-                            width: 1,
-                            color: PdfColors.grey,
-                          ),
+                          borderRadius: BorderRadius.all(Radius.circular(5)),
+                          border: Border.all(width: 1, color: PdfColors.grey),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -1746,25 +1771,18 @@ class PatientObservationModel extends ChangeNotifier {
                       child: Container(
                         padding: const EdgeInsets.all(3),
                         decoration: BoxDecoration(
-                          borderRadius: 5,
-                          border: BoxBorder(
-                            top: true,
-                            left: true,
-                            right: true,
-                            bottom: true,
-                            width: 1,
-                            color: PdfColors.grey,
-                          ),
+                          borderRadius: BorderRadius.all(Radius.circular(5)),
+                          border: Border.all(width: 1, color: PdfColors.grey),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            value1 == 'signature' && signature != null ? Container(height: 20, child: FittedBox(alignment: Alignment.centerLeft, child: Image(PdfImage(doc,
+                            value1 == 'signature' && signature != null ? Container(height: 20, child: FittedBox(alignment: Alignment.centerLeft, child: Image(ImageProxy(PdfImage(doc,
                                 image: signature.data.buffer
                                     .asUint8List(),
                                 width: signature.width,
-                                height: signature.height)))) : Text(value1 == null || value1 == 'signature' ? '' : value1, style: TextStyle(fontSize: 8))
+                                height: signature.height))))) : Text(value1 == null || value1 == 'signature' ? '' : value1, style: TextStyle(fontSize: 8))
                           ],
                         ),
                       ))),
@@ -1775,25 +1793,18 @@ class PatientObservationModel extends ChangeNotifier {
                       child: Container(
                         padding: const EdgeInsets.all(3),
                         decoration: BoxDecoration(
-                          borderRadius: 5,
-                          border: BoxBorder(
-                            top: true,
-                            left: true,
-                            right: true,
-                            bottom: true,
-                            width: 1,
-                            color: PdfColors.grey,
-                          ),
+                          borderRadius: BorderRadius.all(Radius.circular(5)),
+                          border: Border.all(width: 1, color: PdfColors.grey),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            value2 == 'signature' && signature != null ? Container(height: 20, child: FittedBox(alignment: Alignment.centerLeft, child: Image(PdfImage(doc,
+                            value2 == 'signature' && signature != null ? Container(height: 20, child: FittedBox(alignment: Alignment.centerLeft, child: Image(ImageProxy(PdfImage(doc,
                                 image: signature.data.buffer
                                     .asUint8List(),
                                 width: signature.width,
-                                height: signature.height)))) : Text(value2 == null || value2 == 'signature' ? '' : value2, style: TextStyle(fontSize: 8)),
+                                height: signature.height))))) : Text(value2 == null || value2 == 'signature' ? '' : value2, style: TextStyle(fontSize: 8)),
                           ],
                         ),
                       ))),
@@ -1811,7 +1822,10 @@ class PatientObservationModel extends ChangeNotifier {
       pdf = Document();
       PdfDocument pdfDoc = pdf.document;
       FlutterImage.Image patientObservationSignatureImage;
-      PdfImage pegasusLogo = await pdfImageFromImageProvider(pdf: pdfDoc, image: Material.AssetImage('assets/images/pegasusLogo.png'),);
+      //PdfImage pegasusLogo = await pdfImageFromImageProvider(pdf: pdfDoc, image: Material.AssetImage('assets/images/pegasusLogo.png'),);
+
+
+      final pegasusLogo = MemoryImage((await rootBundle.load('assets/images/pegasusLogo.png')).buffer.asUint8List(),);
 
       if (selectedPatientObservation[Strings.patientObservationSignature] != null) {
         Uint8List decryptedSignature = await GlobalFunctions.decryptSignature(selectedPatientObservation[Strings.patientObservationSignature]);
@@ -1820,7 +1834,7 @@ class PatientObservationModel extends ChangeNotifier {
 
 
       pdf.addPage(MultiPage(
-          theme: Theme.withFont(base: ttf, bold: ttfBold),
+          theme: ThemeData.withFont(base: ttf, bold: ttfBold),
           pageFormat: PdfPageFormat.a4,
           crossAxisAlignment: CrossAxisAlignment.start,
           margin: EdgeInsets.all(40),
@@ -1850,7 +1864,8 @@ class PatientObservationModel extends ChangeNotifier {
                       ]
                   ),
 
-                  Container(height: 50, child: Image(pegasusLogo)),
+                  Container(height: 50, child: Image(pegasusLogo)
+),
 
                 ]
             ),
@@ -1886,8 +1901,9 @@ class PatientObservationModel extends ChangeNotifier {
       if(kIsWeb){
 
         if(option == ShareOption.Download){
-          List<int> pdfList = pdf.save();
-          Uint8List pdfInBytes = Uint8List.fromList(pdfList);
+          //List<int> pdfList = pdf.save();
+          Uint8List pdfInBytes = await pdf.save();
+          //Uint8List pdfInBytes = Uint8List.fromList(pdfList);
 
 //Create blob and link from bytes
           final blob = html.Blob([pdfInBytes], 'application/pdf');
@@ -1915,14 +1931,13 @@ class PatientObservationModel extends ChangeNotifier {
         final File file = File('$pdfPath/patient_observation_timesheet_${formDate}_$id.pdf');
 
         if(option == ShareOption.Email){
-          file.writeAsBytesSync(pdf.save());
-        }
+await file.writeAsBytes(await pdf.save());}
 
         ConnectivityResult connectivityResult = await Connectivity().checkConnectivity();
 
         if(connectivityResult != ConnectivityResult.none) {
 
-          if(option == ShareOption.Share) Printing.sharePdf(bytes: pdf.save(),filename: 'patient_observation_timesheet_${formDate}_$id.pdf');
+          if(option == ShareOption.Share) Printing.sharePdf(bytes: await pdf.save(),filename: 'patient_observation_timesheet_${formDate}_$id.pdf');
           if(option == ShareOption.Print) await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save());
 
           if(option == ShareOption.Email) {

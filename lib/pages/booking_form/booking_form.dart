@@ -1,8 +1,11 @@
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:pegasus_medical_1808/models/booking_form_model.dart';
+import 'package:pegasus_medical_1808/models/job_refs_model.dart';
 import 'package:pegasus_medical_1808/shared/global_config.dart';
 import 'package:pegasus_medical_1808/shared/global_functions.dart';
 import 'package:pegasus_medical_1808/shared/strings.dart';
@@ -40,6 +43,7 @@ class _BookingFormState extends State<BookingForm> {
 
   bool _loadingTemporary = false;
   BookingFormModel bookingFormModel;
+  JobRefsModel jobRefsModel;
   final dateFormat = DateFormat("dd/MM/yyyy");
   final dateTimeFormat = DateFormat("dd/MM/yyyy HH:mm");
   final timeFormat = DateFormat("HH:mm");
@@ -112,12 +116,19 @@ class _BookingFormState extends State<BookingForm> {
     '5',
   ];
 
+  String jobRefRef = 'Select One';
+
+  List<String> jobRefDrop = [
+    'Select One',
+  ];
+
   Map<String, dynamic> selectedUser;
 
   @override
   void initState() {
     _loadingTemporary = true;
     bookingFormModel = Provider.of<BookingFormModel>(context, listen: false);
+    jobRefsModel = context.read<JobRefsModel>();
     _setUpTextControllerListeners();
     _getTemporaryBookingForm();
     super.initState();
@@ -204,7 +215,7 @@ class _BookingFormState extends State<BookingForm> {
 
   _setUpTextControllerListeners() {
 
-    _addListener(jobRef, Strings.jobRef, false, true);
+    _addListener(jobRef, Strings.jobRefNo, false, true);
     _addListener(bfRequestedBy, Strings.bfRequestedBy);
     _addListener(bfJobTitle, Strings.bfJobTitle);
     _addListener(bfJobContact, Strings.bfJobContact);
@@ -244,6 +255,14 @@ class _BookingFormState extends State<BookingForm> {
   _getTemporaryBookingForm() async {
     if (mounted) {
 
+      await jobRefsModel.getJobRefs();
+
+      if(jobRefsModel.allJobRefs.isNotEmpty){
+        for(Map<String, dynamic> jobRefMap in jobRefsModel.allJobRefs){
+          jobRefDrop.add(jobRefMap['job_ref']);
+        }
+      }
+
     await bookingFormModel.setupTemporaryRecord();
 
     bool hasRecord = await bookingFormModel.checkRecordExists(widget.edit, widget.jobId, widget.saved, widget.savedId);
@@ -251,12 +270,22 @@ class _BookingFormState extends State<BookingForm> {
     if(hasRecord){
       Map<String, dynamic> bookingForm = await bookingFormModel.getTemporaryRecord(widget.edit, widget.jobId, widget.saved, widget.savedId);
 
-      if (bookingForm[Strings.jobRef] != null) {
-          jobRef.text = GlobalFunctions.databaseValueString(
-              bookingForm[Strings.jobRef]);
+      if (bookingForm[Strings.jobRefNo] != null) {
+        jobRef.text = GlobalFunctions.databaseValueString(
+            bookingForm[Strings.jobRefNo]);
+      } else {
+        jobRef.text = '';
+      }
+
+      if (bookingForm[Strings.jobRefRef] != null) {
+
+        if(jobRefDrop.contains(GlobalFunctions.databaseValueString(bookingForm[Strings.jobRefRef]))){
+          jobRefRef = GlobalFunctions.databaseValueString(bookingForm[Strings.jobRefRef]);
         } else {
-          jobRef.text = '';
+          jobRefRef = 'Select One';
         }
+
+      }
 
         GlobalFunctions.getTemporaryValue(bookingForm, bfRequestedBy, Strings.bfRequestedBy);
         GlobalFunctions.getTemporaryValue(bookingForm, bfJobTitle, Strings.bfJobTitle);
@@ -382,8 +411,51 @@ class _BookingFormState extends State<BookingForm> {
 
   }
 
+  Widget _buildJobRefDrop() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        RichText(
+          text: TextSpan(
+              text: 'Reference',
+              style: TextStyle(
+                  fontSize: 16.0, fontFamily: 'Open Sans', color: bluePurple),
+              children:
+              [
+                TextSpan(
+                  text: ' *',
+                  style: TextStyle(
+                      color: Colors.red,
+                      fontSize: 16.0),
+                ),                                           ]
+          ),
+        ),
+        Container(
+          color: jobRefRef == 'Select One' ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: DropdownFormField(
+            expanded: false,
+            value: jobRefRef,
+            items: jobRefDrop.toList(),
+            onChanged: (val) => setState(() {
+              jobRefRef = val;
+              if(val == 'Select One'){
+                bookingFormModel.updateTemporaryRecord(widget.edit, Strings.jobRefRef, null, widget.jobId, widget.saved, widget.savedId);
+              } else {
+                bookingFormModel.updateTemporaryRecord(widget.edit, Strings.jobRefRef, val, widget.jobId, widget.saved, widget.savedId);
+              }
 
-  Widget _textFormField(String label, TextEditingController controller, [int lines = 1, bool required = false, TextInputType textInputType = TextInputType.text]) {
+              FocusScope.of(context).unfocus();
+            }),
+            initialValue: jobRefRef,
+          ),
+        ),
+        SizedBox(height: 15,),
+      ],
+    );
+  }
+
+
+  Widget _textFormField(String label, TextEditingController controller, [int lines = 1, bool required = false, TextInputType textInputType = TextInputType.text, bool patientReport = false]) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -395,7 +467,7 @@ class _BookingFormState extends State<BookingForm> {
               children:
               [
                 TextSpan(
-                  text: required ? ' *' : '',
+                  text: required && patientReport == false ? ' *' : '',
                   style: TextStyle(
                       color: Colors.red,
                       fontSize: 16.0),
@@ -404,6 +476,9 @@ class _BookingFormState extends State<BookingForm> {
         ),
         TextFormField(
           keyboardType: textInputType,
+          inputFormatters: textInputType == TextInputType.number ? <TextInputFormatter>[
+            FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
+          ] : null,
           validator: (String value) {
             String message;
             if(required){
@@ -415,6 +490,7 @@ class _BookingFormState extends State<BookingForm> {
           },
           maxLines: lines,
           decoration: InputDecoration(
+              filled: required && controller.text.isEmpty ? true : false, fillColor: Color(0xFF0000).withOpacity(0.3),
               suffixIcon: controller.text == ''
                   ? null
                   : IconButton(
@@ -433,7 +509,6 @@ class _BookingFormState extends State<BookingForm> {
       ],
     );
   }
-
   Widget _buildDateField(String label, TextEditingController controller, String value, [bool required = false, bool encrypt = false]) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -458,6 +533,7 @@ class _BookingFormState extends State<BookingForm> {
             Flexible(
               child: IgnorePointer(
                 child: TextFormField(
+                  decoration: InputDecoration(filled: required && controller.text.isEmpty ? true : false, fillColor: Color(0xFF0000).withOpacity(0.3)),
                   enabled: true,
                   initialValue: null,
                   controller: controller,
@@ -508,6 +584,7 @@ class _BookingFormState extends State<BookingForm> {
                         if(encrypt){
                           bookingFormModel.updateTemporaryRecord(widget.edit, value, GlobalFunctions.encryptString(DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String()), widget.jobId, widget.saved, widget.savedId);
                         } else {
+
                           bookingFormModel.updateTemporaryRecord(widget.edit, value, DateTime.fromMillisecondsSinceEpoch(newDate.millisecondsSinceEpoch).toIso8601String(), widget.jobId, widget.saved, widget.savedId);
                         }
 
@@ -547,6 +624,7 @@ class _BookingFormState extends State<BookingForm> {
             Flexible(
               child: IgnorePointer(
                 child: TextFormField(
+                  decoration: InputDecoration(filled: required && controller.text.isEmpty ? true : false, fillColor: Color(0xFF0000).withOpacity(0.3)),
                   enabled: true,
                   initialValue: null,
                   controller: controller,
@@ -635,6 +713,8 @@ class _BookingFormState extends State<BookingForm> {
             Flexible(
               child: IgnorePointer(
                 child: TextFormField(
+                  decoration: InputDecoration(filled: bfCollectionDateTime.text.isEmpty ? true : false, fillColor: Color(0xFF0000).withOpacity(0.3)),
+
                   enabled: true,
                   initialValue: null,
                   controller: bfCollectionDateTime,
@@ -814,37 +894,40 @@ class _BookingFormState extends State<BookingForm> {
                 ),                                           ]
           ),
         ),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: bfGenderConcernsYes,
-                onChanged: (bool value) => setState(() {
-                  bfGenderConcernsYes = value;
-                  bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfGenderConcernsYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (bfGenderConcernsNo == true){
-                    bfGenderConcernsNo = false;
-                    bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfGenderConcernsNo, null, widget.jobId, widget.saved, widget.savedId);
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: bfGenderConcernsNo,
-                onChanged: (bool value) => setState(() {
-                  bfGenderConcernsNo = value;
-                  bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfGenderConcernsNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (bfGenderConcernsYes == true){
-                    bfGenderConcernsYes = false;
-                    bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfGenderConcernsYes, null, widget.jobId, widget.saved, widget.savedId);
-                  }
-                }))
-          ],
+        Container(
+          color: bfGenderConcernsYes == false && bfGenderConcernsNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: bfGenderConcernsYes,
+                  onChanged: (bool value) => setState(() {
+                    bfGenderConcernsYes = value;
+                    bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfGenderConcernsYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (bfGenderConcernsNo == true){
+                      bfGenderConcernsNo = false;
+                      bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfGenderConcernsNo, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: bfGenderConcernsNo,
+                  onChanged: (bool value) => setState(() {
+                    bfGenderConcernsNo = value;
+                    bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfGenderConcernsNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (bfGenderConcernsYes == true){
+                      bfGenderConcernsYes = false;
+                      bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfGenderConcernsYes, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -870,37 +953,40 @@ class _BookingFormState extends State<BookingForm> {
                 ),                                           ]
           ),
         ),
-        Row(
-          children: <Widget>[
-            Text(
-              'Yes',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: bfSafeguardingConcernsYes,
-                onChanged: (bool value) => setState(() {
-                  bfSafeguardingConcernsYes = value;
-                  bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfSafeguardingConcernsYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (bfSafeguardingConcernsNo == true){
-                    bfSafeguardingConcernsNo = false;
-                    bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfSafeguardingConcernsNo, null, widget.jobId, widget.saved, widget.savedId);
-                  }
-                })),
-            Text(
-              'No',
-            ),
-            Checkbox(
-                activeColor: bluePurple,
-                value: bfSafeguardingConcernsNo,
-                onChanged: (bool value) => setState(() {
-                  bfSafeguardingConcernsNo = value;
-                  bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfSafeguardingConcernsNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
-                  if (bfSafeguardingConcernsYes == true){
-                    bfSafeguardingConcernsYes = false;
-                    bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfSafeguardingConcernsYes, null, widget.jobId, widget.saved, widget.savedId);
-                  }
-                }))
-          ],
+        Container(
+          color: bfSafeguardingConcernsYes == false && bfSafeguardingConcernsNo == false ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: Row(
+            children: <Widget>[
+              Text(
+                'Yes',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: bfSafeguardingConcernsYes,
+                  onChanged: (bool value) => setState(() {
+                    bfSafeguardingConcernsYes = value;
+                    bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfSafeguardingConcernsYes, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (bfSafeguardingConcernsNo == true){
+                      bfSafeguardingConcernsNo = false;
+                      bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfSafeguardingConcernsNo, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  })),
+              Text(
+                'No',
+              ),
+              Checkbox(
+                  activeColor: bluePurple,
+                  value: bfSafeguardingConcernsNo,
+                  onChanged: (bool value) => setState(() {
+                    bfSafeguardingConcernsNo = value;
+                    bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfSafeguardingConcernsNo, GlobalFunctions.boolToTinyInt(value), widget.jobId, widget.saved, widget.savedId);
+                    if (bfSafeguardingConcernsYes == true){
+                      bfSafeguardingConcernsYes = false;
+                      bookingFormModel.updateTemporaryRecord(widget.edit, Strings.bfSafeguardingConcernsYes, null, widget.jobId, widget.saved, widget.savedId);
+                    }
+                  }))
+            ],
+          ),
         )
       ],
     );
@@ -997,6 +1083,7 @@ class _BookingFormState extends State<BookingForm> {
                   FocusScope.of(context).requestFocus(new FocusNode());
                   setState(() {
                     jobRef.clear();
+                    jobRefRef = 'Select One';
                     bfRequestedBy.clear();
                     bfJobTitle.clear();
                     bfJobContact.clear();
@@ -1121,6 +1208,7 @@ class _BookingFormState extends State<BookingForm> {
       if (success) {
         setState(() {
           jobRef.clear();
+          jobRefRef = 'Select One';
           bfRequestedBy.clear();
           bfJobTitle.clear();
           bfJobContact.clear();
@@ -1291,92 +1379,130 @@ class _BookingFormState extends State<BookingForm> {
 
       if(submitForm){
 
+        List<String> assignedUsers = [];
+
+
 
 
         bool hasSelectedUser = await showDialog(
             context: context,
             builder: (BuildContext context) {
-              return AlertDialog(
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(32.0))),
-                contentPadding: EdgeInsets.fromLTRB(10, 10, 10, 0),
-                titlePadding: EdgeInsets.all(0),
-                title: Container(
-                  padding: EdgeInsets.only(top: 10, bottom: 10),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [purpleDesign, purpleDesign]),
-                    borderRadius: BorderRadius.only(topLeft: Radius.circular(32), topRight: Radius.circular(32)),
+
+              return StatefulBuilder(builder: (context, setState) {
+                return AlertDialog(
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(32.0))),
+                  contentPadding: EdgeInsets.fromLTRB(10, 10, 10, 0),
+                  titlePadding: EdgeInsets.all(0),
+                  title: Container(
+                    padding: EdgeInsets.only(top: 10, bottom: 10),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [purpleDesign, purpleDesign]),
+                      borderRadius: BorderRadius.only(topLeft: Radius.circular(32), topRight: Radius.circular(32)),
+                    ),
+                    child: Center(child: Text("Assign Users", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),),),
                   ),
-                  child: Center(child: Text("Assign User", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),),),
-                ),
-                content: Container(
-                  width: double.maxFinite,
-                  child: StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance.collection('users').orderBy(Strings.nameLowercase, descending: false).snapshots(),
-                    builder: (context, snapshot) {
+                  content: Container(
+                    width: double.maxFinite,
+                    child: StreamBuilder<QuerySnapshot>(
+                      stream: FirebaseFirestore.instance.collection('users').where('deleted', isEqualTo: false).orderBy(Strings.nameLowercase, descending: false).snapshots(),
+                      builder: (context, snapshot) {
 
 
-                      if (snapshot.hasData) {
+                        if (snapshot.hasData) {
 
-                        if (snapshot.data.docs.isEmpty) {
-                          return Center(child: Text('Unable to load users'));
+                          if (snapshot.data.docs.isEmpty) {
+                            return Center(child: Text('Unable to load users'));
+                          }
+
+                          return ListView.builder(shrinkWrap: true,
+                            itemBuilder: (BuildContext context, int index) {
+
+                              int present = assignedUsers.indexWhere((element) => element == snapshot.data.docs[index].id);
+                              bool inList = present == - 1 ? false : true;
+
+                              return Column(
+                                children: <Widget>[
+                                  user == null ? Container() : ListTile(
+                                    // onTap: () async {
+                                    //
+                                    //   await bookingFormModel.updateTemporaryRecord(widget.edit, Strings.assignedUserId, snapshot.data.docs[index].id, widget.jobId, widget.saved, widget.savedId);
+                                    //   await bookingFormModel.updateTemporaryRecord(widget.edit, Strings.assignedUserName, snapshot.data.docs[index].get(Strings.name), widget.jobId, widget.saved, widget.savedId);
+                                    //   Navigator.of(context).pop(true);
+                                    // },
+                                    leading: Icon(Icons.person, color: bluePurple,),
+                                    title: Text(snapshot.data.docs[index].get(Strings.name)),
+                                    trailing: Checkbox(
+                                        activeColor: bluePurple,
+                                        value: inList,
+                                        onChanged: (bool value) => setState(() {
+                                          if(value == true){
+                                            assignedUsers.add(snapshot.data.docs[index].id);
+                                            inList = true;
+                                          } else {
+                                            assignedUsers.removeWhere((element) => element == snapshot.data.docs[index].id);
+                                            inList = false;
+                                          }
+                                        })),
+
+                                  ),
+                                  Divider(),
+                                ],
+                              );
+                            },
+                            itemCount: snapshot.data.docs.length,
+                          );
                         }
 
-                        return ListView.builder(shrinkWrap: true,
-                          itemBuilder: (BuildContext context, int index) {
+                        if (snapshot.hasError) {
+                          return Text(snapshot.error.toString());
+                        }
 
-                            return Column(
-                              children: <Widget>[
-                                user == null ? Container() : ListTile(
-                                  onTap: () async {
-
-                                    await bookingFormModel.updateTemporaryRecord(widget.edit, Strings.assignedUserId, snapshot.data.docs[index].id, widget.jobId, widget.saved, widget.savedId);
-                                    await bookingFormModel.updateTemporaryRecord(widget.edit, Strings.assignedUserName, snapshot.data.docs[index].data()[Strings.name], widget.jobId, widget.saved, widget.savedId);
-                                    Navigator.of(context).pop(true);
-                                  },
-                                  leading: Icon(Icons.person, color: bluePurple,),
-                                  title: Text(snapshot.data.docs[index].data()[Strings.name]),
-                                ),
-                                Divider(),
-                              ],
-                            );
-                          },
-                          itemCount: snapshot.data.docs.length,
-                        );
-                      }
-
-                      if (snapshot.hasError) {
-                        return Text(snapshot.error.toString());
-                      }
-
-                      return Container(height: 100, child: Center(child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                            bluePurple),
-                      ),),);
-                    },
-                  ),
-                ),
-                actions: <Widget>[
-                  TextButton(
-                    onPressed: () {
-                      FocusScope.of(context).requestFocus(new FocusNode());
-                      Navigator.of(context).pop(false);
-                    },
-                    child: Text(
-                      'Cancel',
-                      style: TextStyle(color: blueDesign, fontWeight: FontWeight.bold),
+                        return Container(height: 100, child: Center(child: CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                              bluePurple),
+                        ),),);
+                      },
                     ),
                   ),
-                ],
-              );
+                  actions: <Widget>[
+                    TextButton(
+                      onPressed: () {
+                        FocusScope.of(context).requestFocus(new FocusNode());
+                        Navigator.of(context).pop(false);
+                      },
+                      child: Text(
+                        'Cancel',
+                        style: TextStyle(color: blueDesign, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        if(assignedUsers.isEmpty){
+                          GlobalFunctions.showToast(
+                              'Please assign a user');
+                        } else {
+                          FocusScope.of(context).requestFocus(new FocusNode());
+                          Navigator.of(context).pop(true);
+                        }
+                      },
+                      child: Text(
+                        'Ok',
+                        style: TextStyle(color: blueDesign, fontWeight: FontWeight.bold),
+                      ),
+                    )
+                  ],
+                );
+              });
             });
 
 
         if(hasSelectedUser){
 
+          await bookingFormModel.updateTemporaryRecord(widget.edit, Strings.assignedUsers, jsonEncode(assignedUsers), widget.jobId, widget.saved, widget.savedId);
           bool success;
 
           if(widget.edit){
@@ -1391,6 +1517,7 @@ class _BookingFormState extends State<BookingForm> {
           if(success){
             setState(() {
               jobRef.clear();
+              jobRefRef = 'Select One';
               bfRequestedBy.clear();
               bfJobTitle.clear();
               bfJobContact.clear();
@@ -1470,7 +1597,14 @@ class _BookingFormState extends State<BookingForm> {
             child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  _textFormField('Reference', jobRef, 1, true),
+                  Row(
+                    children: [
+                      Flexible(child: _buildJobRefDrop()),
+                      Container(width: 10,),
+                      Flexible(child: _textFormField('', jobRef, 1, true, TextInputType.number),),
+                    ],
+                  ),
+                  //TextButton(onPressed: () => context.read<BookingFormModel>().amendingJobRefs(), child: Text('fix forms')),
                   _textFormField('Requested by', bfRequestedBy, 1, true),
                   _textFormField('Job Title', bfJobTitle, 1, true),
                   _textFormField('Contact Telephone Number', bfJobContact, 1, true),

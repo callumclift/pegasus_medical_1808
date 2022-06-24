@@ -229,7 +229,7 @@ class _ProfilePictureEditState extends State<ProfilePictureEdit> {
                         {Strings.profilePicture : null}).timeout(Duration(seconds: 60));
 
                     user.profilePicture = null;
-                    sharedPreferences.setString(Strings.profilePicture, null);
+                    sharedPreferences.setString(Strings.profilePicture, '');
 
 
                 } on TimeoutException catch(_){
@@ -257,7 +257,7 @@ class _ProfilePictureEditState extends State<ProfilePictureEdit> {
       ),
       body: loading ? Container(color: Colors.black, child: Center(child: CircularProgressIndicator(
         valueColor: new AlwaysStoppedAnimation<Color>(bluePurple),
-      ),),) : user.profilePicture == null ? Container(color: Colors.black, child: Center(child: CircleAvatar(
+      ),),) : user.profilePicture == null || user.profilePicture == '' ? Container(color: Colors.black, child: Center(child: CircleAvatar(
         radius: MediaQuery.of(context).size.width *0.4,
         backgroundColor: bluePurple,
         child: FittedBox(

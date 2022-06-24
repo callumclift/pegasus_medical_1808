@@ -1,3 +1,7 @@
+import 'package:pegasus_medical_1808/pages/bed_rota/bed_rota.dart';
+import 'package:pegasus_medical_1808/pages/bed_rota/bed_rota_list.dart';
+import 'package:pegasus_medical_1808/pages/bed_rota/bed_rota_search.dart';
+import 'package:pegasus_medical_1808/pages/bed_rota/saved_bed_rota_list.dart';
 import 'package:pegasus_medical_1808/pages/booking_form/booking_form.dart';
 import 'package:pegasus_medical_1808/pages/booking_form/booking_form_list.dart';
 import 'package:pegasus_medical_1808/pages/booking_form/booking_form_search.dart';
@@ -10,6 +14,7 @@ import 'package:pegasus_medical_1808/pages/incident_report/saved_incident_report
 import 'package:pegasus_medical_1808/pages/login_page/change_password_page.dart';
 import 'package:pegasus_medical_1808/pages/login_page/terms_conditions_page.dart';
 import 'package:pegasus_medical_1808/pages/chat/messaging.dart';
+import 'package:pegasus_medical_1808/pages/manage_job_refs/manage_job_refs.dart';
 import 'package:pegasus_medical_1808/pages/observation_booking/observation_booking.dart';
 import 'package:pegasus_medical_1808/pages/observation_booking/observation_booking_list.dart';
 import 'package:pegasus_medical_1808/pages/observation_booking/observation_booking_search.dart';
@@ -67,6 +72,16 @@ Route<dynamic> generateRoute(RouteSettings settings){
       return MaterialPageRoute(builder: (context) => CompletedObservationBookingsListPage());
     case routes.ObservationBookingSearchPageRoute:
       return MaterialPageRoute(builder: (context) => ObservationBookingSearch());
+
+    case routes.BedRotaPageRoute:
+      var argument = settings.arguments;
+      return MaterialPageRoute(builder: (context) => BedRota());
+    case routes.BedRotaListPageRoute:
+      return MaterialPageRoute(builder: (context) => CompletedBedRotasListPage());
+    case routes.BedRotaSearchPageRoute:
+      return MaterialPageRoute(builder: (context) => BedRotaSearch());
+
+
     case routes.SpotChecksPageRoute:
       var argument = settings.arguments;
       return MaterialPageRoute(builder: (context) => SpotChecks());
@@ -83,6 +98,8 @@ Route<dynamic> generateRoute(RouteSettings settings){
       return MaterialPageRoute(builder: (context) => SavedIncidentReportsListPage());
     case routes.SavedObservationBookingListPageRoute:
       return MaterialPageRoute(builder: (context) => SavedObservationBookingsListPage());
+    case routes.SavedBedRotaListPageRoute:
+      return MaterialPageRoute(builder: (context) => SavedBedRotasListPage());
     case routes.SavedTransferReportListPageRoute:
       return MaterialPageRoute(builder: (context) => SavedTransferReportsListPage());
     case routes.SavedPatientObservationListPageRoute:
@@ -95,6 +112,8 @@ Route<dynamic> generateRoute(RouteSettings settings){
       return MaterialPageRoute(builder: (context) => LoginPage());
     case routes.SettingsPageRoute:
       return MaterialPageRoute(builder: (context) => SettingsPage());
+    case routes.ManageJobRefsPageRoute:
+      return MaterialPageRoute(builder: (context) => ManageJobRefsPage());
     case routes.UsersRoute:
       return MaterialPageRoute(builder: (context) => UsersAdminPage());
     case routes.MessagesRoute:

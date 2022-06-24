@@ -4,11 +4,13 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
+import 'package:pegasus_medical_1808/models/job_refs_model.dart';
 import 'package:pegasus_medical_1808/models/patient_observation_model.dart';
 import 'package:pegasus_medical_1808/shared/global_config.dart';
 import 'package:pegasus_medical_1808/shared/global_functions.dart';
 import 'package:pegasus_medical_1808/shared/strings.dart';
 import 'package:pegasus_medical_1808/widgets/app_bar_gradient.dart';
+import 'package:pegasus_medical_1808/widgets/dropdown_form_field.dart';
 import 'package:pegasus_medical_1808/widgets/side_drawer.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -42,6 +44,8 @@ class _PatientObservationState extends State<PatientObservation> {
 
   bool _loadingTemporary = false;
   PatientObservationModel patientObservationModel;
+  JobRefsModel jobRefsModel;
+
   final dateFormat = DateFormat("dd/MM/yyyy");
   final timeFormat = DateFormat("HH:mm");
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
@@ -62,11 +66,19 @@ class _PatientObservationState extends State<PatientObservation> {
   Signature patientObservationSignature;
   Uint8List patientObservationImageBytes;
 
+  String jobRefRef = 'Select One';
+
+  List<String> jobRefDrop = [
+    'Select One',
+  ];
+
+
   @override
   void initState() {
     // TODO: implement initState
     _loadingTemporary = true;
     patientObservationModel = Provider.of<PatientObservationModel>(context, listen: false);
+    jobRefsModel = context.read<JobRefsModel>();
     _setUpTextControllerListeners();
     _getTemporaryPatientObservation();
     super.initState();
@@ -122,7 +134,7 @@ class _PatientObservationState extends State<PatientObservation> {
 
   _setUpTextControllerListeners() {
 
-    _addListener(jobRef, Strings.jobRef, false, true);
+    _addListener(jobRef, Strings.jobRefNo, false, true);
     _addListener(patientObservationHospital, Strings.patientObservationHospital);
     _addListener(patientObservationWard, Strings.patientObservationWard);
     _addListener(patientObservationName, Strings.patientObservationName, true, false, true);
@@ -134,6 +146,14 @@ class _PatientObservationState extends State<PatientObservation> {
 
     //Sembast
     if (mounted) {
+
+      await jobRefsModel.getJobRefs();
+
+      if(jobRefsModel.allJobRefs.isNotEmpty){
+        for(Map<String, dynamic> jobRefMap in jobRefsModel.allJobRefs){
+          jobRefDrop.add(jobRefMap['job_ref']);
+        }
+      }
 
       await patientObservationModel.setupTemporaryRecord();
 
@@ -177,11 +197,21 @@ class _PatientObservationState extends State<PatientObservation> {
 
         }
 
-        if (patientObservation[Strings.jobRef] != null) {
+        if (patientObservation[Strings.jobRefNo] != null) {
           jobRef.text = GlobalFunctions.databaseValueString(
-              patientObservation[Strings.jobRef]);
+              patientObservation[Strings.jobRefNo]);
         } else {
           jobRef.text = '';
+        }
+
+        if (patientObservation[Strings.jobRefRef] != null) {
+
+          if(jobRefDrop.contains(GlobalFunctions.databaseValueString(patientObservation[Strings.jobRefRef]))){
+            jobRefRef = GlobalFunctions.databaseValueString(patientObservation[Strings.jobRefRef]);
+          } else {
+            jobRefRef = 'Select One';
+          }
+
         }
         if (patientObservation[Strings.patientObservationDate] != null) {
           patientObservationDate.text =
@@ -220,6 +250,49 @@ class _PatientObservationState extends State<PatientObservation> {
     }
   }
 
+  Widget _buildJobRefDrop() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        RichText(
+          text: TextSpan(
+              text: 'Reference',
+              style: TextStyle(
+                  fontSize: 16.0, fontFamily: 'Open Sans', color: bluePurple),
+              children:
+              [
+                TextSpan(
+                  text: ' *',
+                  style: TextStyle(
+                      color: Colors.red,
+                      fontSize: 16.0),
+                ),                                           ]
+          ),
+        ),
+        Container(
+          color: jobRefRef == 'Select One' ? Color(0xFF0000).withOpacity(0.3) : null,
+          child: DropdownFormField(
+            expanded: false,
+            value: jobRefRef,
+            items: jobRefDrop.toList(),
+            onChanged: (val) => setState(() {
+              jobRefRef = val;
+              if(val == 'Select One'){
+                patientObservationModel.updateTemporaryRecord(widget.edit, Strings.jobRefRef, null, widget.jobId, widget.saved, widget.savedId);
+              } else {
+                patientObservationModel.updateTemporaryRecord(widget.edit, Strings.jobRefRef, val, widget.jobId, widget.saved, widget.savedId);
+              }
+
+              FocusScope.of(context).unfocus();
+            }),
+            initialValue: jobRefRef,
+          ),
+        ),
+        SizedBox(height: 15,),
+      ],
+    );
+  }
+
   Widget _buildPatientObservationSignatureRow() {
     return Column(
       children: <Widget>[
@@ -255,7 +328,8 @@ class _PatientObservationState extends State<PatientObservation> {
           height: 10.0,
         ),
         Container(
-          child: Center(
+          color: patientObservationImageBytes == null ? Color(0xFF0000).withOpacity(0.3) : null,
+child: Center(
             child: GestureDetector(
               onTap: () {
                 FocusScope.of(context).unfocus();
@@ -427,6 +501,9 @@ class _PatientObservationState extends State<PatientObservation> {
         ),
         TextFormField(
           keyboardType: textInputType,
+          inputFormatters: textInputType == TextInputType.number ? <TextInputFormatter>[
+            FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
+          ] : null,
           validator: (String value) {
             String message;
             if(required){
@@ -438,6 +515,8 @@ class _PatientObservationState extends State<PatientObservation> {
           },
           maxLines: lines,
           decoration: InputDecoration(
+              filled: required && controller.text.isEmpty ? true : false, fillColor: Color(0xFF0000).withOpacity(0.3),
+
               suffixIcon: controller.text == ''
                   ? null
                   : IconButton(
@@ -481,6 +560,8 @@ class _PatientObservationState extends State<PatientObservation> {
             Flexible(
               child: IgnorePointer(
                 child: TextFormField(
+                  decoration: InputDecoration(              filled: required && controller.text.isEmpty ? true : false, fillColor: Color(0xFF0000).withOpacity(0.3),
+                  ),
                   enabled: true,
                   initialValue: null,
                   controller: controller,
@@ -666,6 +747,8 @@ class _PatientObservationState extends State<PatientObservation> {
             Flexible(
               child: IgnorePointer(
                 child: TextFormField(
+                  decoration: InputDecoration(              filled: patientObservationStartTime.text.isEmpty ? true : false, fillColor: Color(0xFF0000).withOpacity(0.3),
+                  ),
                   enabled: true,
                   initialValue: null,
                   controller: patientObservationStartTime,
@@ -783,6 +866,8 @@ class _PatientObservationState extends State<PatientObservation> {
             Flexible(
               child: IgnorePointer(
                 child: TextFormField(
+                  decoration: InputDecoration(              filled: patientObservationFinishTime.text.isEmpty ? true : false, fillColor: Color(0xFF0000).withOpacity(0.3),
+                  ),
                   enabled: true,
                   initialValue: null,
                   controller: patientObservationFinishTime,
@@ -916,6 +1001,7 @@ class _PatientObservationState extends State<PatientObservation> {
                   FocusScope.of(context).requestFocus(new FocusNode());
                   setState(() {
                     jobRef.clear();
+                    jobRefRef = 'Select One';
                     patientObservationDate.clear();
                     patientObservationHospital.clear();
                     patientObservationWard.clear();
@@ -1003,6 +1089,7 @@ class _PatientObservationState extends State<PatientObservation> {
       if (success) {
         setState(() {
           jobRef.clear();
+          jobRefRef = 'Select One';
           patientObservationDate.clear();
           patientObservationHospital.clear();
           patientObservationWard.clear();
@@ -1025,7 +1112,7 @@ class _PatientObservationState extends State<PatientObservation> {
   void _submitForm() async {
 
     FocusScope.of(context).unfocus();
-    if (patientObservationImageBytes == null || jobRef.text.isEmpty || patientObservationDate.text.isEmpty || patientObservationHospital.text.isEmpty || patientObservationWard.text.isEmpty || patientObservationStartTime.text.isEmpty || patientObservationFinishTime.text.isEmpty || patientObservationName.text.isEmpty || patientObservationPosition.text.isEmpty || patientObservationAuthorisedDate.text.isEmpty) {
+    if (patientObservationImageBytes == null || jobRef.text.isEmpty || jobRefRef == 'Select One' || patientObservationDate.text.isEmpty || patientObservationHospital.text.isEmpty || patientObservationWard.text.isEmpty || patientObservationStartTime.text.isEmpty || patientObservationFinishTime.text.isEmpty || patientObservationName.text.isEmpty || patientObservationPosition.text.isEmpty || patientObservationAuthorisedDate.text.isEmpty) {
       showDialog(
           context: context,
           builder: (BuildContext context) {
@@ -1145,6 +1232,7 @@ class _PatientObservationState extends State<PatientObservation> {
         if(success){
           setState(() {
             jobRef.clear();
+            jobRefRef = 'Select One';
             patientObservationDate.clear();
             patientObservationHospital.clear();
             patientObservationWard.clear();
@@ -1192,7 +1280,13 @@ class _PatientObservationState extends State<PatientObservation> {
                     Text('PATIENT OBSERVATION TIMESHEET', style: TextStyle(color: bluePurple, fontWeight: FontWeight.bold, fontSize: 18),),
                   ],),
                   SizedBox(height: 20,),
-                  _textFormField('Job Ref', jobRef, 1, true),
+                  Row(
+                    children: [
+                      Flexible(child: _buildJobRefDrop()),
+                      Container(width: 10,),
+                      Flexible(child: _textFormField('', jobRef, 1, true, TextInputType.number),),
+                    ],
+                  ),
                   _buildDateField('Date', patientObservationDate, Strings.patientObservationDate, true, false),
                   _textFormField('Hospital', patientObservationHospital, 1, true),
                   _textFormField('Ward', patientObservationWard, 1, true),

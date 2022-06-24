@@ -159,7 +159,15 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
     FocusScope.of(context).unfocus();
     if (_formKey.currentState.validate()) {
       bool success = await context.read<AuthenticationModel>().changePassword(_newPasswordController.text);
-      if(success) _navigationService.navigateToReplacement(routes.TransferReportPageRoute);
+      if(success) {
+        if(user.role != 'Normal User'){
+          _navigationService.navigateToReplacement(routes.TransferReportPageRoute);
+
+        } else {
+          _navigationService.navigateToReplacement(routes.PatientObservationPageRoute);
+
+        }
+      }
     }
   }
 

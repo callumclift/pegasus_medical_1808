@@ -70,7 +70,7 @@ class _PatientObservationSearchResultsState extends State<PatientObservationSear
       itemBuilder: (BuildContext context, int index) {
         return _buildListTile(index, patientObservations);
       },
-      itemCount: patientObservations.length >= 10 ? patientObservations.length + 1 : patientObservations.length,
+      itemCount: patientObservations.length,
     );
   }
 
